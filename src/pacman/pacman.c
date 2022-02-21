@@ -104,7 +104,7 @@ static void usage(int op, const char * const myname)
 	char const *const str_opr  = _("operation");
 
 	/* please limit your strings to 80 characters in width */
-	if(op == PM_OP_MAIN) {
+	if(op == PM_OP_NONE) {
 		printf("%s:  %s <%s> [...]\n", str_usg, myname, str_opr);
 		printf(_("operations:\n"));
 		printf("    %s {-h --help}\n", myname);
@@ -340,25 +340,25 @@ static int parsearg_op(int opt, int dryrun)
 		/* operations */
 		case 'D':
 			if(dryrun) break;
-			config->op = (config->op != PM_OP_MAIN ? 0 : PM_OP_DATABASE); break;
+			config->op = (config->op != PM_OP_NONE ? PM_OP_INVALID : PM_OP_DATABASE); break;
 		case 'F':
 			if(dryrun) break;
-			config->op = (config->op != PM_OP_MAIN ? 0 : PM_OP_FILES); break;
+			config->op = (config->op != PM_OP_NONE ? PM_OP_INVALID : PM_OP_FILES); break;
 		case 'Q':
 			if(dryrun) break;
-			config->op = (config->op != PM_OP_MAIN ? 0 : PM_OP_QUERY); break;
+			config->op = (config->op != PM_OP_NONE ? PM_OP_INVALID : PM_OP_QUERY); break;
 		case 'R':
 			if(dryrun) break;
-			config->op = (config->op != PM_OP_MAIN ? 0 : PM_OP_REMOVE); break;
+			config->op = (config->op != PM_OP_NONE ? PM_OP_INVALID : PM_OP_REMOVE); break;
 		case 'S':
 			if(dryrun) break;
-			config->op = (config->op != PM_OP_MAIN ? 0 : PM_OP_SYNC); break;
+			config->op = (config->op != PM_OP_NONE ? PM_OP_INVALID : PM_OP_SYNC); break;
 		case 'T':
 			if(dryrun) break;
-			config->op = (config->op != PM_OP_MAIN ? 0 : PM_OP_DEPTEST); break;
+			config->op = (config->op != PM_OP_NONE ? PM_OP_INVALID : PM_OP_DEPTEST); break;
 		case 'U':
 			if(dryrun) break;
-			config->op = (config->op != PM_OP_MAIN ? 0 : PM_OP_UPGRADE); break;
+			config->op = (config->op != PM_OP_NONE ? PM_OP_INVALID : PM_OP_UPGRADE); break;
 		case 'V':
 			if(dryrun) break;
 			config->version = 1; break;
@@ -996,7 +996,7 @@ static int parseargs(int argc, char *argv[])
 		parsearg_op(opt, 0);
 	}
 
-	if(config->op == 0) {
+	if(config->op == PM_OP_INVALID) {
 		pm_printf(ALPM_LOG_ERROR, _("only one operation may be used at a time\n"));
 		return 1;
 	}
@@ -1124,6 +1124,7 @@ int main(int argc, char *argv[])
 {
 	int ret = 0;
 	uid_t myuid = getuid();
+	targets_t targets = {0};
 
 	console_cursor_hide();
 	install_segv_handler();
@@ -1276,23 +1277,26 @@ int main(int argc, char *argv[])
 		case PM_OP_DATABASE:
 			ret = pacman_database(pm_targets);
 			break;
-		case PM_OP_REMOVE:
-			ret = pacman_remove(pm_targets);
-			break;
-		case PM_OP_UPGRADE:
-			ret = pacman_upgrade(pm_targets);
-			break;
 		case PM_OP_QUERY:
 			ret = pacman_query(pm_targets);
-			break;
-		case PM_OP_SYNC:
-			ret = pacman_sync(pm_targets);
 			break;
 		case PM_OP_DEPTEST:
 			ret = pacman_deptest(pm_targets);
 			break;
 		case PM_OP_FILES:
 			ret = pacman_files(pm_targets);
+			break;
+		case PM_OP_SYNC:
+			targets.sync = pm_targets;
+			ret = do_transaction(&targets);
+			break;
+		case PM_OP_UPGRADE:
+			targets.upgrade = pm_targets;
+			ret = do_transaction(&targets);
+			break;
+		case PM_OP_REMOVE:
+			targets.remove = pm_targets;
+			ret = do_transaction(&targets);
 			break;
 		default:
 			pm_printf(ALPM_LOG_ERROR, _("no operation specified (use -h for help)\n"));
