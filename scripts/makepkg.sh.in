@@ -78,6 +78,7 @@ SKIPPGPCHECK=0
 SIGNPKG=''
 SPLITPKG=0
 SOURCEONLY=0
+STASHFUNC=0
 VERIFYSOURCE=0
 
 MAKEPKG_LINT_PKGBUILD=${MAKEPKG_LINT_PKGBUILD:-1}
@@ -153,6 +154,9 @@ clean_up() {
 			fi
 			if (( CHECKFUNC )); then
 				rm -f "${pkgbase}-${fullver}-${CARCH}-check.log"*
+			fi
+			if (( STASHFUNC )); then
+				rm -f "${pkgbase}-${fullver}-${CARCH}-stash.log"*
 			fi
 			if (( PKGFUNC )); then
 				rm -f "${pkgbase}-${fullver}-${CARCH}-package.log"*
@@ -463,6 +467,10 @@ run_build() {
 
 run_check() {
 	run_function_safe "check"
+}
+
+run_stash() {
+	run_function_safe "stash"
 }
 
 run_package() {
@@ -849,9 +857,92 @@ restore_package_variables() {
 	done
 }
 
+package_stashed_files() {
+	local package=$1
+	local filelist
+
+	get_pkgbuild_attribute "$package" 'filelist' 1 filelist
+
+	if (( ${#filelist[@]} == 0 )); then
+		return 0;
+	fi
+
+	cd $stashdir
+
+	mapfile -t stashfiles < <(find "$stashdir" -type d -exec sh -c 'printf "%s/\n" "$0"' {} \; -or -print)
+	stashfiles=("${stashfiles[@]#$stashdir/}")
+
+	# match inclusions
+	declare -a match
+
+	for m in "${stashfiles[@]}"; do
+		for ((i=${#filelist[@]}-1; i >= 0; i--)); do
+			f="${filelist[$i]}"
+			if [[ "$f" =~ ^!.* ]]; then
+				if [[ "$m" == ${f:1} ]]; then
+					continue 2
+				fi
+			else
+				if [[ "$m" == $f ]]; then
+					match+=("$m")
+					continue 2
+				fi
+			fi
+		done
+	done
+
+	# gather a list of directories to be created in package
+	declare -a dirlist
+
+	for f in "${match[@]}"; do
+		if [[ "${f:-1}" == '/' ]]; then
+			dirlist+=("$f")
+		fi
+		while [[ "$f" =~ / ]]; do
+			f="${f%/*}"
+			dirlist+=("$f")
+		done
+	done
+
+	mapfile -t dirlist < <(printf "%s\n" "${dirlist[@]}" | LC_ALL=C sort -u)
+
+	# exclude directories from the filelist
+	mapfile -t filelist < <(
+		for f in ${match[@]}; do
+			[[ ! -d "$f" ]] && echo "$f"
+		done
+	)
+
+	# ensure directories are explicitly included so permissions are maintained
+	local tmptar=$(mktemp $pkgname.tar.XXXXXXXX)
+
+	for d in "${dirlist[@]}"; do
+		bsdtar --append -f "$tmptar" --exclude "$d\/*" $d/
+	done
+
+	bsdtar -xf "$tmptar" -C "$pkgdir"
+	rm "$tmptar"
+
+	# move files into package
+	for f in ${filelist[@]}; do
+		mv "$stashdir/$f" "$pkgdir/$f"
+	done
+
+	# delete any directories that are now empty
+	mapfile -t dirlist < <(printf "%s\n" "${dirlist[@]}" | tac)
+	for d in "${dirlist[@]}"; do
+		if dir_is_empty "$d"; then
+			rmdir "$d"
+		fi
+	done
+}
+
 run_single_packaging() {
 	local pkgdir="$pkgdirbase/$pkgname"
 	mkdir "$pkgdir"
+	if (( STASHFUNC )); then
+		package_stashed_files $1
+	fi
 	if [[ -n $1 ]] || (( PKGFUNC )); then
 		run_package $1
 	fi
@@ -862,6 +953,10 @@ run_single_packaging() {
 
 run_split_packaging() {
 	local pkgname_backup=("${pkgname[@]}")
+	if (( STASHFUNC )); then
+		stashdir=$(mktemp -d $pkgdirbase/stash_XXXXXX)
+		run_stash
+	fi
 	# We might run this function when we only have package_pkgname
 	# and we don't want that marked as a split package
 	(( ${#pkgname[@]} > 1 )) && pkgtype=split
@@ -1176,7 +1271,6 @@ if [[ $BUILDDIR -ef "$startdir" ]]; then
 else
 	srcdir="$BUILDDIR/$pkgbase/src"
 	pkgdirbase="$BUILDDIR/$pkgbase/pkg"
-
 fi
 
 # set pkgdir to something "sensible" for (not recommended) use during build()
@@ -1221,6 +1315,9 @@ if have_function check; then
 		CHECKFUNC=1
 	fi
 fi
+if have_function stash; then
+	STASHFUNC=1
+fi
 if have_function package; then
 	PKGFUNC=1
 fi
@@ -1257,6 +1354,14 @@ if (( INFAKEROOT )); then
 	fi
 
 	create_debug_package
+
+	if (( STASHFUNC )); then
+		mapfile -t leftovers < <(find "$stashdir" ! -type d)
+		if (( ${#leftovers[@]} > 0 )); then
+			warning "$(gettext "Files in the stash area remain unpackaged")"
+			printf "%s\n" "${leftovers[@]#$stashdir/}"
+		fi
+	fi
 
 	msg "$(gettext "Leaving %s environment.")" "fakeroot"
 	exit $E_OK
