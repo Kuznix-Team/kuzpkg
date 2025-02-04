@@ -2816,7 +2816,8 @@ typedef enum _alpm_transflag_t {
 	ALPM_TRANS_FLAG_NOSCRIPTLET = (1 << 10),
 	/** Ignore dependency conflicts. */
 	ALPM_TRANS_FLAG_NOCONFLICTS = (1 << 11),
-	/* (1 << 12) flag can go here */
+	/** Cancel removal of package if it's optdepends of another package. */
+	ALPM_TRANS_KEEP_OPTIONALS = (1 << 12),
 	/** Do not install a package if it is already installed and up to date. */
 	ALPM_TRANS_FLAG_NEEDED = (1 << 13),
 	/** Use ALPM_PKG_REASON_EXPLICIT when installing packages. */

@@ -257,6 +257,7 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 
 	/* Note packages being removed that are optdepends for installed packages */
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {
+		/*DEV_COMMENT: This is where the check is done, use this logic to check flag ALPM_TRANS_KEEP_OPTIONALS and abort transaction if flag set */
 		remove_notify_needed_optdepends(handle, trans->remove);
 	}
 
