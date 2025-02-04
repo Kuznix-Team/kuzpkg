@@ -733,7 +733,7 @@ static int parsearg_remove(int opt)
 			if (config->flags & ALPM_TRANS_FLAG_RECURSE || config->flags & ALPM_TRANS_FLAG_RECURSEALL) {
 				config->flags |= ALPM_TRANS_KEEP_OPTIONALS;
 			}
-          break;
+			break;
 		default:
 			return 1;
 	}
