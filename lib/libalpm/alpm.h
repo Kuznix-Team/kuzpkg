@@ -307,6 +307,8 @@ typedef enum _alpm_errno_t {
 	ALPM_ERR_CONFLICTING_DEPS,
 	/** Files conflict */
 	ALPM_ERR_FILE_CONFLICTS,
+	/** Removing optdepends of another dependency*/
+	ALPM_ERR_REMOVING_OPTDEPENDS_DEPS,
 	/* Misc */
 	/** Download failed */
 	ALPM_ERR_RETRIEVE,
@@ -2817,7 +2819,7 @@ typedef enum _alpm_transflag_t {
 	/** Ignore dependency conflicts. */
 	ALPM_TRANS_FLAG_NOCONFLICTS = (1 << 11),
 	/** Cancel removal of package if it's optdepends of another package. */
-	ALPM_TRANS_KEEP_OPTIONALS = (1 << 12),
+	ALPM_TRANS_FLAG_KEEPOPTIONALS = (1 << 12),
 	/** Do not install a package if it is already installed and up to date. */
 	ALPM_TRANS_FLAG_NEEDED = (1 << 13),
 	/** Use ALPM_PKG_REASON_EXPLICIT when installing packages. */

@@ -160,9 +160,12 @@ static void remove_prepare_keep_needed(alpm_handle_t *handle, alpm_list_t *lp)
  *
  * @param handle the context handle
  * @param lp list of packages to be removed
+ *
+ * @return 0 when no optdepends of other packages are going to be removed, 1 in case it will remove optdepends of other packages
  */
-static void remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp)
+static int remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp)
 {
+	int result = 0;
 	alpm_list_t *i;
 
 	for(i = _alpm_db_get_pkgcache(handle->db_local); i; i = alpm_list_next(i)) {
@@ -180,12 +183,15 @@ static void remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *
 						.pkg = pkg,
 						.optdep = optdep
 					};
+					result = 1;
 					EVENT(handle, &event);
 				}
 				free(optstring);
 			}
 		}
 	}
+
+	return result;
 }
 
 /**
@@ -206,6 +212,7 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 	alpm_trans_t *trans = handle->trans;
 	alpm_db_t *db = handle->db_local;
 	alpm_event_t event;
+	int removing_optdepends;
 
 	if((trans->flags & ALPM_TRANS_FLAG_RECURSE)
 			&& !(trans->flags & ALPM_TRANS_FLAG_CASCADE)) {
@@ -257,8 +264,11 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 
 	/* Note packages being removed that are optdepends for installed packages */
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {
-		/*DEV_COMMENT: This is where the check is done, use this logic to check flag ALPM_TRANS_KEEP_OPTIONALS and abort transaction if flag set */
-		remove_notify_needed_optdepends(handle, trans->remove);
+		removing_optdepends = remove_notify_needed_optdepends(handle, trans->remove);
+	}
+
+	if (trans->flags & ALPM_TRANS_FLAG_KEEPOPTIONALS && removing_optdepends == 1) {
+		RET_ERR(handle, ALPM_ERR_REMOVING_OPTDEPENDS_DEPS, -1);
 	}
 
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {

@@ -731,7 +731,7 @@ static int parsearg_remove(int opt)
 			break;
 		case 'k':
 			if (config->flags & ALPM_TRANS_FLAG_RECURSE || config->flags & ALPM_TRANS_FLAG_RECURSEALL) {
-				config->flags |= ALPM_TRANS_KEEP_OPTIONALS;
+				config->flags |= ALPM_TRANS_FLAG_KEEPOPTIONALS;
 			}
 			break;
 		default:
