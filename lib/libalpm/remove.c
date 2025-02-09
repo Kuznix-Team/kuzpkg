@@ -164,9 +164,9 @@ static void remove_prepare_keep_needed(alpm_handle_t *handle, alpm_list_t *lp)
  *
  * @return false when no optdepends of other packages are going to be removed, true in case it will remove optdepends of other packages
  */
-static int remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp)
+static bool remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp)
 {
-	int result = 0;
+	bool deleting_optdepends = false;
 	alpm_list_t *i;
 
 	for(i = _alpm_db_get_pkgcache(handle->db_local); i; i = alpm_list_next(i)) {
@@ -184,7 +184,7 @@ static int remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *l
 						.pkg = pkg,
 						.optdep = optdep
 					};
-					result = 1;
+					deleting_optdepends = true;
 					EVENT(handle, &event);
 				}
 				free(optstring);
@@ -192,7 +192,7 @@ static int remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *l
 		}
 	}
 
-	return result;
+	return deleting_optdepends;
 }
 
 /**
