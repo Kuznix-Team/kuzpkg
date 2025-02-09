@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <stdbool.h>
 
 /* libalpm */
 #include "remove.h"
@@ -161,7 +162,7 @@ static void remove_prepare_keep_needed(alpm_handle_t *handle, alpm_list_t *lp)
  * @param handle the context handle
  * @param lp list of packages to be removed
  *
- * @return 0 when no optdepends of other packages are going to be removed, 1 in case it will remove optdepends of other packages
+ * @return false when no optdepends of other packages are going to be removed, true in case it will remove optdepends of other packages
  */
 static int remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp)
 {
@@ -212,7 +213,7 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 	alpm_trans_t *trans = handle->trans;
 	alpm_db_t *db = handle->db_local;
 	alpm_event_t event;
-	int removing_optdepends;
+	bool removing_optdepends;
 
 	if((trans->flags & ALPM_TRANS_FLAG_RECURSE)
 			&& !(trans->flags & ALPM_TRANS_FLAG_CASCADE)) {
@@ -270,7 +271,7 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 	/* -Rks or Rsk == -Rs then -Rk */
 	if (trans->flags & ALPM_TRANS_FLAG_RECURSE
 			&& trans->flags & ALPM_TRANS_FLAG_KEEPOPTIONALS
-			&& removing_optdepends == 1) {
+			&& removing_optdepends) {
 		RET_ERR(handle, ALPM_ERR_REMOVING_OPTDEPENDS_DEPS, -1);
 	}
 
