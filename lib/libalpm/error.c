@@ -138,7 +138,7 @@ const char SYMEXPORT *alpm_strerror(alpm_errno_t err)
 		case ALPM_ERR_FILE_CONFLICTS:
 			return _("conflicting files");
 		case ALPM_ERR_REMOVING_OPTDEPENDS_DEPS:
-			return _("removing optdepends of another dependency");
+			return _("removing optdepends of another package");
 		/* Miscellaenous */
 		case ALPM_ERR_RETRIEVE:
 			return _("failed to retrieve some files");
