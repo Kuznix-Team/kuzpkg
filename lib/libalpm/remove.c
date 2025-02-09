@@ -267,8 +267,16 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 		removing_optdepends = remove_notify_needed_optdepends(handle, trans->remove);
 	}
 
-	if (trans->flags & ALPM_TRANS_FLAG_KEEPOPTIONALS && removing_optdepends == 1) {
+	/* -Rks or Rsk == -Rs then -Rk */
+	if (trans->flags & ALPM_TRANS_FLAG_RECURSE
+			&& trans->flags & ALPM_TRANS_FLAG_KEEPOPTIONALS
+			&& removing_optdepends == 1) {
 		RET_ERR(handle, ALPM_ERR_REMOVING_OPTDEPENDS_DEPS, -1);
+	}
+
+	if (!(trans->flags & ALPM_TRANS_FLAG_RECURSE)
+			&& trans->flags & ALPM_TRANS_FLAG_KEEPOPTIONALS) {
+				_alpm_log(handle, ALPM_LOG_WARNING, _("-k is set without -s or --recursive, ignoring flag...\n"));
 	}
 
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {

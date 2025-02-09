@@ -126,6 +126,8 @@ static void usage(int op, const char * const myname)
 			addlist(_("  -n, --nosave         remove configuration files\n"));
 			addlist(_("  -s, --recursive      remove unnecessary dependencies\n"
 			          "                       (-ss includes explicitly installed dependencies)\n"));
+			addlist(_("  -k, --keepoptdep     keep the packages flagged as optdepends by other packages\n"
+			          "                       (only applied when using -s or --recursive)\n"));
 			addlist(_("  -u, --unneeded       remove unneeded packages\n"));
 		} else if(op == PM_OP_UPGRADE) {
 			printf("%s:  %s {-U --upgrade} [%s] <%s>\n", str_usg, myname, str_opt, str_file);
@@ -729,10 +731,9 @@ static int parsearg_remove(int opt)
 		case 'u':
 			config->flags |= ALPM_TRANS_FLAG_UNNEEDED;
 			break;
+		case OP_KEEPOPTDEP:
 		case 'k':
-			if (config->flags & ALPM_TRANS_FLAG_RECURSE || config->flags & ALPM_TRANS_FLAG_RECURSEALL) {
-				config->flags |= ALPM_TRANS_FLAG_KEEPOPTIONALS;
-			}
+			config->flags |= ALPM_TRANS_FLAG_KEEPOPTIONALS;
 			break;
 		default:
 			return 1;
@@ -959,6 +960,7 @@ static int parseargs(int argc, char *argv[])
 		{"upgrades",   no_argument,       0, OP_UPGRADES},
 		{"sysupgrade", no_argument,       0, OP_SYSUPGRADE},
 		{"unneeded",   no_argument,       0, OP_UNNEEDED},
+		{"keepoptdep", no_argument,       0, OP_KEEPOPTDEP},
 		{"verbose",    no_argument,       0, OP_VERBOSE},
 		{"downloadonly", no_argument,     0, OP_DOWNLOADONLY},
 		{"refresh",    no_argument,       0, OP_REFRESH},
