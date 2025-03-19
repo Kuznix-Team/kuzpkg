@@ -450,7 +450,7 @@ run_function() {
 }
 
 run_verify() {
-	run_function_safe "verify" "$startdir"
+	run_function_safe "verify" "$SRCDEST"
 }
 
 run_prepare() {
