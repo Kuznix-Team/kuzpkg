@@ -744,9 +744,9 @@ static int find_dl_candidates(alpm_handle_t *handle, alpm_list_t **files)
 			ASSERT(spkg->filename != NULL, RET_ERR(handle, ALPM_ERR_PKG_INVALID_NAME, -1));
 
 			need_download = spkg->download_size != 0 || !_alpm_filecache_exists(handle, spkg->filename);
-			/* even if the package file in the cache we need to check for
-			 * accompanion *.sig file as well.
-			 * If *.sig is not cached then force download the package + its signature file.
+			/* even if the package file is in the cache, we need to check for
+			 * a companion *.sig file as well.
+			 * If *.sig is not cached, then force download the package + its signature file.
 			 */
 			if(!need_download && (siglevel & ALPM_SIG_PACKAGE)) {
 				char *sig_filename = NULL;

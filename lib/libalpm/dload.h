@@ -51,7 +51,7 @@ struct dload_payload {
 	int allow_resume;
 	int errors_ok;
 	int unlink_on_fail;
-	int download_signature; /* specifies if an accompanion *.sig file need to be downloaded*/
+	int download_signature; /* specifies if a companion *.sig file need to be downloaded*/
 	int signature_optional; /* *.sig file is optional */
 #ifdef HAVE_LIBCURL
 	CURL *curl;
