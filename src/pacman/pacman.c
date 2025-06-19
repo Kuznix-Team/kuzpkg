@@ -196,6 +196,8 @@ static void usage(int op, const char * const myname)
 				addlist(_("      --ignore <pkg>   ignore a package upgrade (can be used more than once)\n"));
 				addlist(_("      --ignoregroup <grp>\n"
 				          "                       ignore a group upgrade (can be used more than once)\n"));
+				addlist(_("      --preremove <pkg>\n"));
+				addlist(_("                       uninstall <pkg> before performing installation\n"));
 				__attribute__((fallthrough));
 			case PM_OP_REMOVE:
 				addlist(_("  -d, --nodeps         skip dependency version checks (-dd to skip all checks)\n"));
@@ -770,6 +772,9 @@ static int parsearg_upgrade(int opt)
 		case OP_IGNOREGROUP:
 			parsearg_util_addlist(&(config->ignoregrp));
 			break;
+		case OP_PREREMOVE:
+			parsearg_util_addlist(&(config->preremove));
+			break;
 		case OP_DOWNLOADONLY:
 		case 'w':
 			config->op_s_downloadonly = 1;
@@ -982,6 +987,7 @@ static int parseargs(int argc, char *argv[])
 		{"color",      required_argument, 0, OP_COLOR},
 		{"disable-download-timeout", no_argument, 0, OP_DISABLEDLTIMEOUT},
 		{"disable-sandbox", no_argument, 0, OP_DISABLESANDBOX},
+		{"preremove", required_argument, 0, OP_PREREMOVE},
 		{0, 0, 0, 0}
 	};
 
