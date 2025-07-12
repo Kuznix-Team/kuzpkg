@@ -835,6 +835,19 @@ int _alpm_ldconfig(alpm_handle_t *handle)
 	return 0;
 }
 
+/** Helper function for comparing names of a dependency and a package
+ * @param p1 void pointer of the package
+ * @param p2 void pointer of the dependency
+ * @return result of the comparison of the names
+ * */
+int _alpm_pkg_dep_cmp(const void *p1, const void *p2)
+{
+	alpm_pkg_t *pkg = (alpm_pkg_t *) p1;
+	alpm_depend_t *dep = (alpm_depend_t *) p2;
+
+	return _alpm_str_cmp(pkg->name, dep->name);
+}
+
 /** Helper function for comparing strings using the alpm "compare func"
  * signature.
  * @param s1 first string to be compared
