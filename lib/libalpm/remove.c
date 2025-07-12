@@ -164,10 +164,10 @@ static void remove_prepare_keep_needed(alpm_handle_t *handle, alpm_list_t *lp)
  *
  * @return false when no optdepends of other packages are going to be removed, true in case it will remove optdepends of other packages
  */
-static bool remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp)
+static alpm_list_t remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp)
 {
-	bool deleting_optdepends = false;
 	alpm_list_t *i;
+	alpm_list_t *result = NULL;
 
 	for(i = _alpm_db_get_pkgcache(handle->db_local); i; i = alpm_list_next(i)) {
 		alpm_pkg_t *pkg = i->data;
@@ -184,7 +184,7 @@ static bool remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *
 						.pkg = pkg,
 						.optdep = optdep
 					};
-					deleting_optdepends = true;
+					alpm_list_add(result, j->data);
 					EVENT(handle, &event);
 				}
 				free(optstring);
@@ -192,7 +192,7 @@ static bool remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *
 		}
 	}
 
-	return deleting_optdepends;
+	return *result;
 }
 
 /**
@@ -213,7 +213,7 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 	alpm_trans_t *trans = handle->trans;
 	alpm_db_t *db = handle->db_local;
 	alpm_event_t event;
-	bool removing_optdepends;
+	alpm_list_t optdep_to_keep;
 
 	if((trans->flags & ALPM_TRANS_FLAG_RECURSE)
 			&& !(trans->flags & ALPM_TRANS_FLAG_CASCADE)) {
@@ -264,14 +264,12 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 	}
 
 	/* Note packages being removed that are optdepends for installed packages */
-	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {
-		removing_optdepends = remove_notify_needed_optdepends(handle, trans->remove);
-	}
-
-	if ((trans->flags & ALPM_TRANS_FLAG_RECURSE)
-			&& !(trans->flags & ALPM_TRANS_FLAG_RECURSEALL)
-			&& removing_optdepends) {
-		RET_ERR(handle, ALPM_ERR_REMOVING_OPTDEPENDS_DEPS, -1);
+	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)
+		&& !(trans->flags & ALPM_TRANS_FLAG_RECURSEALL)
+		&& (trans->flags & ALPM_TRANS_FLAG_RECURSE)) {
+		optdep_to_keep = remove_notify_needed_optdepends(handle, trans->remove);
+		alpm_list_remove_item(trans->remove, &optdep_to_keep);
+		alpm_list_free(&optdep_to_keep);
 	}
 
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {
