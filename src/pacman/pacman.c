@@ -1,7 +1,7 @@
 /*
  *  pacman.c
  *
- *  Copyright (c) 2006-2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+ *  Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
  *  Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -18,7 +18,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* special handling of package version for GIT */
+/* special handling of package version for Git */
 #if defined(GIT_VERSION)
 #undef PACKAGE_VERSION
 #define PACKAGE_VERSION GIT_VERSION
@@ -243,7 +243,7 @@ static void version(void)
 {
 	printf("\n");
 	printf(" .--.                  Pacman v%s - libalpm v%s\n", PACKAGE_VERSION, alpm_version());
-	printf("/ _.-' .-.  .-.  .-.   Copyright (C) 2006-2024 Pacman Development Team\n");
+	printf("/ _.-' .-.  .-.  .-.   Copyright (C) 2006-2025 Pacman Development Team\n");
 	printf("\\  '-. '-'  '-'  '-'   Copyright (C) 2002-2006 Judd Vinet\n");
 	printf(" '--'\n");
 	printf(_("                       This program may be freely redistributed under\n"

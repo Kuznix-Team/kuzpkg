@@ -29,9 +29,10 @@ specified on the command line. Multiple packages to remove can be specified
 on the command line.
 
 A package database is a tar file, optionally compressed. Valid extensions are
-``.db'' followed by an archive extension of ``.tar'', ``.tar.gz'', ``.tar.bz2'',
-``.tar.xz'', or ``.tar.Z''. The file does not need to exist, but all parent
-directories must exist.
+``.db'' followed by an archive extension of ``.tar'', ``.tar.bz2'',
+``.tar.gz'', ``.tar.lrz'', ``.tar.lz'', ``.tar.lz4'', ``.tar.lzo'',
+``.tar.xz'', ``.tar.zst'' or ``.tar.Z''. The file does not need to exist, but
+all parent directories must exist.
 
 
 Common Options
@@ -59,16 +60,20 @@ Common Options
 *\--nocolor*::
 	Remove color from 'repo-add' and 'repo-remove' output.
 
+*-R, \--remove*::
+	Remove old package files from the disk when updating or removing their
+	entry in the database.
+
+*-w, \--wait-for-lock*::
+	Wait for the lock file to be acquired. If unset, command will fail with
+	exit code 2 if acquiring the lock fails. If set, it will retry to acquire
+	lock until success.
 
 repo-add Options
 ----------------
 *-n, \--new*::
 	Only add packages that are not already in the database.  Warnings will be
 	printed upon detection of existing packages, but they will not be re-added.
-
-*-R, \--remove*::
-	Remove old package files from the disk when updating their entry in the
-	database.
 
 *\--include-sigs*::
 	Include package PGP signatures in the repository database (if available)

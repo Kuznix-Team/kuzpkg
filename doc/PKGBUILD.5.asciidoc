@@ -313,6 +313,15 @@ underscore and the architecture name e.g., 'replaces_x86_64=()'.
 		Enable building packages using link time optimization. Adds '-flto'
 		to both CFLAGS and CXXFLAGS.
 
+*xdata (array)*::
+	This array allows you to add additional metadata to the package.
+	This data is neither used by pacman nor by makepkg;
+	It has purely informational purpose, or may be interpreted by third-party tools.
++
+All entries in that array must have the form 'key=value', where
+'key' is an arbitrary non-empty string and 'value' must not contain an equal sign.
+Furthermore, the key ``pkgtype'' is reserved for the makepkg program.
+
 
 Packaging Functions
 -------------------

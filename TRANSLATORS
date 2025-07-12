@@ -3,7 +3,7 @@ currently. Our translations are currently maintained in Transifex; please read
 doc/translation-help.txt for more details.
 
 Below is a list of past translators before we switched to Transifex; more can
-be found by looking in the GIT history.
+be found by looking in the Git history.
 
 If your language is not already in the various po/ subdirectories and you wish
 it was, set up a team in Transifex for your language and we will be happy to

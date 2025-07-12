@@ -1,7 +1,7 @@
 /*
  *  util.c
  *
- *  Copyright (c) 2006-2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+ *  Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
  *  Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
  *  Copyright (c) 2005 by Aurelien Foret <orelien@chez.com>
  *  Copyright (c) 2005 by Christian Hamar <krics@linuxforum.hu>
@@ -967,8 +967,7 @@ char *_alpm_temporary_download_dir_setup(const char *dir, const char *user)
 	char *newdir = NULL;
 	MALLOC(newdir, newdirlen, return NULL);
 	snprintf(newdir, newdirlen - 1, "%s%s", dir, template);
-	newdir = mkdtemp(newdir);
-	if(newdir == NULL) {
+	if(mkdtemp(newdir) == NULL) {
 		free(newdir);
 		return NULL;
 	}

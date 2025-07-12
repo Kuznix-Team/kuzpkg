@@ -25,6 +25,7 @@ sources = [
   'source.sh.in',
   'util.sh.in',
   'variable.sh.in',
+  'xdata.sh.in',
 ]
 
 foreach src : sources

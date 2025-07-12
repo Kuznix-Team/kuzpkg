@@ -1,7 +1,7 @@
 /*
  *  error.c
  *
- *  Copyright (c) 2006-2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+ *  Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
  *  Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -137,9 +137,7 @@ const char SYMEXPORT *alpm_strerror(alpm_errno_t err)
 			return _("conflicting dependencies");
 		case ALPM_ERR_FILE_CONFLICTS:
 			return _("conflicting files");
-		case ALPM_ERR_REMOVING_OPTDEPENDS_DEPS:
-			return _("removing optdepends of another package");
-		/* Miscellaenous */
+		/* Miscellaneous */
 		case ALPM_ERR_RETRIEVE:
 			return _("failed to retrieve some files");
 		case ALPM_ERR_INVALID_REGEX:

@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-#   emptydirs.sh - Remove empty directories from the package
+#   purge.sh - Remove unwanted files from the package
 #
-#   Copyright (c) 2013-2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+#   Copyright (c) 2008-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-[[ -n "$LIBMAKEPKG_TIDY_EMPTYDIRS_SH" ]] && return
-LIBMAKEPKG_TIDY_EMPTYDIRS_SH=1
+[[ -n "$LIBMAKEPKG_TIDY_PURGE_SH" ]] && return
+LIBMAKEPKG_TIDY_PURGE_SH=1
 
 MAKEPKG_LIBRARY=${MAKEPKG_LIBRARY:-'@libmakepkgdir@'}
 
@@ -27,13 +27,19 @@ source "$MAKEPKG_LIBRARY/util/message.sh"
 source "$MAKEPKG_LIBRARY/util/option.sh"
 
 
-packaging_options+=('emptydirs')
-tidy_remove+=('tidy_emptydirs')
+packaging_options+=('purge')
+tidy_remove+=('tidy_purge')
 
-tidy_emptydirs() {
-	if check_option "emptydirs" "n"; then
-		msg2 "$(gettext "Removing empty directories...")"
-		# we are unable to use '-empty' as it is non-POSIX and not supported by all find variants
-		find . -depth -type d -exec rmdir '{}' \; 2>/dev/null
+tidy_purge() {
+	if check_option "purge" "y" && [[ -n ${PURGE_TARGETS[*]} ]]; then
+		msg2 "$(gettext "Purging unwanted files...")"
+		local pt
+		for pt in "${PURGE_TARGETS[@]}"; do
+			if [[ ${pt} = "${pt//\/}" ]]; then
+				find . ! -type d -name "${pt}" -exec rm -f -- '{}' +
+			else
+				rm -f ${pt}
+			fi
+		done
 	fi
 }

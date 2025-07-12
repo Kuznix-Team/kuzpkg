@@ -11,9 +11,9 @@ NOTE: Some of this is paraphrased from the kernel documentation's
 
 Getting the most recent source
 ------------------------------
-Patches need to be submitted in GIT format and are best if they are against the
+Patches need to be submitted in Git format and are best if they are against the
 latest version of the code. There are several helpful tutorials for getting
-started with GIT if you have not worked with it before.
+started with Git if you have not worked with it before.
 
 * https://www.kernel.org/pub/software/scm/git/docs/gittutorial.html
 * https://wiki.archlinux.org/index.php/Super_Quick_Git_Guide

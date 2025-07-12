@@ -6,7 +6,7 @@ Package Management) library. This document, while not exhaustive, also
 indicates some limitations (on purpose, or sometimes due to its poor design) of
 the library at the present time.
 
-There is one special file,"alpm.h", which is the public interface that
+There is one special file, "alpm.h", which is the public interface that
 should be distributed and installed on systems with the library. Only
 structures, data and functions declared within this file are made available to
 the frontend. Lots of structures are of an opaque type and their fields are
@@ -239,7 +239,7 @@ API CHANGES BETWEEN 3.1 AND 3.2
 - alpm_checkdbconflicts()
 - alpm_sync_newversion()
 - alpm_deptest()
-- error codes :
+- error codes:
     PM_ERR_DLT_INVALID, PM_ERR_LIBARCHIVE, PM_ERR_LIBDOWNLOAD and
     PM_ERR_EXTERNAL_DOWNLOAD
 - flags:
@@ -352,7 +352,7 @@ API CHANGES BETWEEN 3.4 AND 3.5
      - alpm_db_get_pkg() for normal targets
      - alpm_find_dbs_satisfier() for versioned provisions
      - alpm_find_grp_pkgs() for groups
-- alpm_deptest() is replaced by the more flexibile alpm_find_satisfier()
+- alpm_deptest() is replaced by the more flexible alpm_find_satisfier()
 - size_t used for alpm_list_t sizes
   - return type for alpm_list_count()
   - parameter type in alpm_list_msort() and alpm_list_nth()
@@ -362,11 +362,11 @@ API CHANGES BETWEEN 3.4 AND 3.5
 - alpm_find_grp_pkgs()
 - alpm_trans_get_flags()
 - error codes:
-   PM_ERR_DISK_SPACE, PM_ERR_WRITE
-- flags
-   PM_TRANS_FLAG_NODEPVERSION, PM_TRANS_EVT_DISKSPACE_START,
-   PM_TRANS_EVT_DISKSPACE_DONE, PM_TRANS_CONV_SELECT_PROVIDER,
-   PM_TRANS_PROGRESS_DISKSPACE_START, PM_TRANS_PROGRESS_INTEGRITY_START
+    PM_ERR_DISK_SPACE, PM_ERR_WRITE
+- flags:
+    PM_TRANS_FLAG_NODEPVERSION, PM_TRANS_EVT_DISKSPACE_START,
+    PM_TRANS_EVT_DISKSPACE_DONE, PM_TRANS_CONV_SELECT_PROVIDER,
+    PM_TRANS_PROGRESS_DISKSPACE_START, PM_TRANS_PROGRESS_INTEGRITY_START
 
 
 API CHANGES BETWEEN 3.5 AND 4.0
@@ -419,7 +419,7 @@ API CHANGES BETWEEN 3.5 AND 4.0
   - alpm_release
   - alpm_remove_pkg
   - alpm_sync_sysupgrade
-- several structs are no longer opaque
+- several structs are no longer opaque:
   - alpm_conflict_t
   - alpm_delta_t
   - alpm_depend_t
@@ -431,19 +431,33 @@ API CHANGES BETWEEN 3.5 AND 4.0
 
 [ADDED]
 - option functions:
-    alpm_{get,set}_eventcb(), alpm_option_{get,set}_convcb(),
-	alpm_option_{get,set}_progresscb()
+  - alpm_{get,set}_eventcb()
+  - alpm_option_{get,set}_convcb()
+  - alpm_option_{get,set}_progresscb()
 - package signing functions:
-    alpm_option_get_default_siglevel(), alpm_option_set_default_siglevel(),
-    alpm_option_get_gpgdir(), alpm_option_set_gpgdir(), alpm_db_get_siglevel(),
-    alpm_siglist_cleanup(), alpm_db_check_pgp_signature(), alpm_pkg_check_pgp_signature(),
-    alpm_pkg_get_origin(), alpm_pkg_get_sha256sum(), alpm_pkg_get_base64_sig()
+  - alpm_option_get_default_siglevel()
+  - alpm_option_set_default_siglevel()
+  - alpm_option_get_gpgdir()
+  - alpm_option_set_gpgdir()
+  - alpm_db_get_siglevel()
+  - alpm_siglist_cleanup()
+  - alpm_db_check_pgp_signature()
+  - alpm_pkg_check_pgp_signature()
+  - alpm_pkg_get_origin()
+  - alpm_pkg_get_sha256sum()
+  - alpm_pkg_get_base64_sig()
 - list functions:
-    alpm_list_to_array(), alpm_list_previous()
+  - alpm_list_to_array()
+  - alpm_list_previous()
 - structs:
-    alpm_backup_t, alpm_file_t, alpm_filelist_t
+  - alpm_backup_t
+  - alpm_file_t
+  - alpm_filelist_t
 - enums:
-    alpm_siglevel_t, alpm_sigstatus_t, alpm_sigvalidity_t, alpm_pkgfrom_t
+  - alpm_siglevel_t
+  - alpm_sigstatus_t
+  - alpm_sigvalidity_t
+  - alpm_pkgfrom_t
 - error codes:
     ALPM_ERR_DB_INVALID, ALPM_ERR_DB_INVALID_SIG, ALPM_ERR_GPGME,
     ALPM_ERR_PKG_INVALID_CHECKSUM, ALPM_ERR_PKG_INVALID_SIG, ALPM_ERR_SIG_INVALID,
@@ -470,10 +484,10 @@ API CHANGES BETWEEN 4.0 AND 4.1
   - alpm_db_unregister_all -> alpm_unregister_all_syncdbs
   - alpm_db_readgroup -> alpm_db_get_group
   - alpm_db_set_pkgreason -> alpm_pkg_set_reason (handle parameter removed)
-- alpm_time_t typedef used for all times
+- alpm_time_t typedef used for all times:
   - members of alpm_pgpkey_t
   - return types of alpm_pkg_get_builddate and alpm_pkg_get_installdate
-- delta options now use required ratio rather than on/off
+- delta options now use required ratio rather than on/off:
   - alpm_option_get_usedelta -> alpm_option_get_deltaratio
   - alpm_option_set_usedelta -> alpm_option_set_deltaratio
 
@@ -490,21 +504,21 @@ API CHANGES BETWEEN 4.0 AND 4.1
   - alpm_db_usage_t
   - alpm_db_set_usage()
   - alpm_db_get_usage()
-- wrapper functions for reading mtree files
+- wrapper functions for reading mtree files:
   - alpm_pkg_mtree_open()
   - alpm_pkg_mtree_next()
   - alpm_pkg_mtree_close()
-- utility functions
+- utility functions:
   - alpm_pkg_find()
   - alpm_pkg_compute_optionalfor()
   - alpm_filelist_contains()
-- types
+- types:
   - alpm_time_t
   - alpm_errno_t
-- flags
-   ALPM_EVENT_OPTDEP_REQUIRED, ALPM_EVENT_DATABASE_MISSING,
-   ALPM_EVENT_KEYRING_START, ALPM_EVENT_KEYRING_DONE, ALPM_EVENT_KEY_DOWNLOAD_START,
-   ALPM_EVENT_KEY_DOWNLOAD_DONE, ALPM_PROGRESS_KEYRING_START
+- flags:
+    ALPM_EVENT_OPTDEP_REQUIRED, ALPM_EVENT_DATABASE_MISSING,
+    ALPM_EVENT_KEYRING_START, ALPM_EVENT_KEYRING_DONE, ALPM_EVENT_KEY_DOWNLOAD_START,
+    ALPM_EVENT_KEY_DOWNLOAD_DONE, ALPM_PROGRESS_KEYRING_START
 
 
 API CHANGES BETWEEN 4.1 AND 4.2
@@ -513,49 +527,49 @@ API CHANGES BETWEEN 4.1 AND 4.2
 [CHANGED]
 - alpm_filelist_t - removed member resolved_path
 - alpm_filelist_contains - now returns alpm_file_t
-- event callback
-   - alpm_event_t renamed to alpm_event_type_t
-   - alpm_event_t union added
-   - alpm_event_cb now takes only an alpm_event_t parameter
-   - alpm_event_any_t, alpm_package_operation_t, alpm_event_package_operation_t,
-     alpm_event_optdep_removal_t, alpm_event_delta_patch_t, alpm_event_scriptlet_info_t,
-     alpm_event_database_missing_t, alpm_event_pkgdownload_t, alpm_event_pacnew_created_t,
-     alpm_event_pacsave_created_t, alpm_event_pacorig_created_t added
-   - ALPM_EVENT_*_START -> ALPM_EVENT_PACKAGE_OPERATION_START
-   - ALPM_EVENT_*_DONE -> ALPM_EVENT_PACKAGE_OPERATION_DONE
-- question callback
-   - alpm_question_t renamed to alpm_question_type_t
-   - alpm_question_t union added
-   - alpm_cb_question now takes only an alpm_question_t parameter
-   - alpm_question_any_t, alpm_question_install_ignorepkg_t, alpm_question_replace_t
-     alpm_question_conflict_t, alpm_question_corrupted_t, alpm_question_remove_pkgs_t,
-     alpm_question_select_provider_t, alpm_question_import_key_t added
+- event callback:
+  - alpm_event_t renamed to alpm_event_type_t
+  - alpm_event_t union added
+  - alpm_event_cb now takes only an alpm_event_t parameter
+  - alpm_event_any_t, alpm_package_operation_t, alpm_event_package_operation_t,
+    alpm_event_optdep_removal_t, alpm_event_delta_patch_t, alpm_event_scriptlet_info_t,
+    alpm_event_database_missing_t, alpm_event_pkgdownload_t, alpm_event_pacnew_created_t,
+    alpm_event_pacsave_created_t, alpm_event_pacorig_created_t added
+  - ALPM_EVENT_*_START -> ALPM_EVENT_PACKAGE_OPERATION_START
+  - ALPM_EVENT_*_DONE -> ALPM_EVENT_PACKAGE_OPERATION_DONE
+- question callback:
+  - alpm_question_t renamed to alpm_question_type_t
+  - alpm_question_t union added
+  - alpm_cb_question now takes only an alpm_question_t parameter
+  - alpm_question_any_t, alpm_question_install_ignorepkg_t, alpm_question_replace_t
+    alpm_question_conflict_t, alpm_question_corrupted_t, alpm_question_remove_pkgs_t,
+    alpm_question_select_provider_t, alpm_question_import_key_t added
 
 [ADDED]
-- memory management
+- memory management:
   - alpm_fileconflict_free()
   - alpm_depmissing_free()
   - alpm_conflict_free()
   - alpm_dep_free()
-- database usage
+- database usage:
   - alpm_db_usage_t
   - alpm_db_set_usage()
   - alpm_db_get_usage()
-- assume installed
+- assume installed:
   - alpm_option_get_assumeinstalled()
   - alpm_option_add_assumeinstalled()
   - alpm_option_set_assumeinstalled()
   - alpm_option_remove_assumeinstalled()
-- using noupgrade/noextract
+- using noupgrade/noextract:
   - alpm_option_match_noupgrade()
   - alpm_option_match_noextract()
-- utility functions
+- utility functions:
   - alpm_dep_from_string()
   - alpm_pkg_should_ignore()
   - alpm_decode_signature()
   - alpm_extract_keyid()
-- flags
-  - ALPM_EVENT_RETRIEVE_DONE, ALPM_EVENT_RETRIEVE_FAILED, ALPM_EVENT_PKGDOWNLOAD_START,
+- flags:
+    ALPM_EVENT_RETRIEVE_DONE, ALPM_EVENT_RETRIEVE_FAILED, ALPM_EVENT_PKGDOWNLOAD_START,
     ALPM_EVENT_PKGDOWNLOAD_DONE, ALPM_EVENT_PKGDOWNLOAD_FAILED, ALPM_EVENT_OPTDEP_REMOVAL,
     ALPM_EVENT_PACNEW_CREATED, ALPM_EVENT_PACSVAE_CREATED, ALPM_EVENT_PACORIG_CREATED
 
@@ -565,13 +579,13 @@ API CHANGES BETWEEN 4.2 AND 5.0
 
 [REMOVED]
 - alpm_siglevel_t - removed members ALPM_SIG_PACKAGE_SET, ALPM_SIG_PACKAGE_TRUST_SET
-- removed .pacorig generation
+- removed .pacorig generation:
   - ALPM_EVENT_PACORIG_CREATED
   - alpm_event_pacorig_created_t
   - alpm_event_t.pacorig_created
 
 [ADDED]
-- hook support
+- hook support:
   - alpm_option_get_hookdirs()
   - alpm_option_set_hookdirs()
   - alpm_option_add_hookdir()
@@ -581,14 +595,14 @@ API CHANGES BETWEEN 4.2 AND 5.0
   - ALPM_EVENT_HOOK_START, ALPM_EVENT_HOOK_DONE
   - ALPM_EVENT_HOOK_RUN_START, ALPM_EVENT_HOOK_RUN_DONE
   - ALPM_ERR_TRANS_HOOK_FAILED
-- different database extension support
+- different database extension support:
   - alpm_option_get_dbext()
   - alpm_option_set_dbext()
-- pkgbase accessor
+- pkgbase accessor:
   - alpm_pkg_get_base()
-- transaction events
+- transaction events:
   - ALPM_EVENT_TRANSACTION_START, ALPM_EVENT_TRANSACTION_DONE
-- database unlocking
+- database unlocking:
   - alpm_unlock()
 
 
@@ -598,7 +612,7 @@ API CHANGES BETWEEN 5.0 AND 5.1
 [CHANGED]
 - alpm_errno_t - added member ALPM_ERR_OK
 - alpm_siglevel_t - value of ALPM_SIG_USE_DEFAULT changed
-- functions using bitfields return/pass an int instead of an enum
+- functions using bitfields return/pass an int instead of an enum:
   - alpm_option_get_default_siglevel()
   - alpm_option_set_default_siglevel()
   - alpm_option_get_remote_file_siglevel()
@@ -615,19 +629,19 @@ API CHANGES BETWEEN 5.0 AND 5.1
   - alpm_option_set_local_file_siglevel()
 
 [ADDED]
-- overwrite support
+- overwrite support:
   - alpm_option_get_overwrite_files()
   - alpm_option_set_overwrite_files()
   - alpm_option_add_overwrite_file()
   - alpm_option_remove_overwrite_file()
-- download timeout control
+- download timeout control:
   - alpm_option_set_disable_dl_timeout()
-- access make/checkdepends info
+- access make/checkdepends info:
   - alpm_pkg_get_checkdepends()
   - alpm_pkg_get_makedepends()
-- check pacman capabilities
+- check pacman capabilities:
   - alpm_capabilities()
-- duplicate and add to list
+- duplicate and add to list:
   - alpm_list_append_strdup()
 
 
@@ -635,7 +649,7 @@ API CHANGES BETWEEN 5.1 AND 5.2
 ===============================
 
 [REMOVED]
-- package delta support
+- package delta support:
   - alpm_delta_t
   - alpm_event_delta_patch_t
   - alpm_event_t union - removed alpm_event_delta_patch_t
@@ -662,10 +676,10 @@ API CHANGES BETWEEN 5.2 AND 6.0
 [REMOVED]
 - ALPM_EVENT_PKGDOWNLOAD_START, ALPM_EVENT_PKGDOWNLOAD_DONE, ALPM_EVENT_PKGDOWNLOAD_FAILED
 - ALPM_ERR_PKG_REPO_NOT_FOUND
-- old TotalDownload implementation
- - alpm_cb_totaldl
- - alpm_option_get_totaldlcb()
- - alpm_option_set_totaldlcb()
+- old TotalDownload implementation:
+  - alpm_cb_totaldl
+  - alpm_option_get_totaldlcb()
+  - alpm_option_set_totaldlcb()
 
 [CHANGED]
 - alpm_db_update() now accepts a list of databases rather than a single database.
@@ -673,29 +687,29 @@ API CHANGES BETWEEN 5.2 AND 6.0
 - alpm_db_search() now has an additional parameter and returns success status
 - ALPM_EVENT_RETRIEVE_* -> ALPM_EVENT_DB_RETRIEVE_* and ALPM_EVENT_PKG_RETRIEVE_*
 - alpm_cb_download pass event and data
-- multi architecture support
- - alpm_option_get_arch() -> alpm_option_get_architectures()
- - alpm_option_set_arch() -> alpm_option_set_architectures()
+- multi architecture support:
+  - alpm_option_get_arch() -> alpm_option_get_architectures()
+  - alpm_option_set_arch() -> alpm_option_set_architectures()
 - alpm_db_get_servers() copies parameter data
 
 [ADDED]
-- parallel download support
- - alpm_option_set_parallel_downloads()
- - alpm_option_get_parallel_downloads()
-- file download events
- - alpm_download_event_type_t
- - alpm_download_event_init_t
- - alpm_download_event_progress_t
- - alpm_download_event_completed_t
-- download misc
- - ALPM_DOWNLOAD_RETRY
- - alpm_download_event_retry_t
- - alpm_event_pkg_retrieve_t
-- multiarchitecture support
- - alpm_option_add_architecture()
- - alpm_option_remove_architecture()
-- misc
- - alpm_pkg_get_sig()
+- parallel download support:
+  - alpm_option_set_parallel_downloads()
+  - alpm_option_get_parallel_downloads()
+- file download events:
+  - alpm_download_event_type_t
+  - alpm_download_event_init_t
+  - alpm_download_event_progress_t
+  - alpm_download_event_completed_t
+- download misc:
+  - ALPM_DOWNLOAD_RETRY
+  - alpm_download_event_retry_t
+  - alpm_event_pkg_retrieve_t
+- multiarchitecture support:
+  - alpm_option_add_architecture()
+  - alpm_option_remove_architecture()
+- misc:
+  - alpm_pkg_get_sig()
 - callbacks add front-end provided context
 
 
@@ -713,23 +727,32 @@ API CHANGES BETWEEN 6.0 AND 6.1
 - alpm_transflag_t - added ALPM_TRANS_FLAG_NOHOOKS
 
 [ADDED]
-- extensible package data type
- - alpm_pkg_xdata_t
- - alpm_pkg_get_xdata()
-- accessor functions
- - alpm_db_get_handle()
- - alpm_pkg_get_handle()
-- cache server support
- - alpm_db_get_cache_servers()
- - alpm_db_set_cache_servers()
- - alpm_db_add_cache_server()
+- extensible package data type:
+  - alpm_pkg_xdata_t
+  - alpm_pkg_get_xdata()
+- accessor functions:
+  - alpm_db_get_handle()
+  - alpm_pkg_get_handle()
+- cache server support:
+  - alpm_db_get_cache_servers()
+  - alpm_db_set_cache_servers()
+  - alpm_db_add_cache_server()
+
 
 API CHANGES BETWEEN 6.1 AND 7.0
 ===============================
 
 [ADDED]
-- sandbox functions
- - alpm_option_get_sandboxuser()
- - alpm_option_set_sandboxuser()
- - alpm_option_set_disable_sandbox()
- - alpm_sandbox_setup_child()
+- sandbox functions:
+  - alpm_option_get_sandboxuser()
+  - alpm_option_set_sandboxuser()
+  - alpm_option_set_disable_sandbox()
+  - alpm_sandbox_setup_child()
+
+
+API CHANGES BETWEEN 7.0 AND 7.1
+===============================
+
+[CHANGED]
+- error codes:
+    PM_ERR_TRANS_COMMITING renamed to PM_ERR_TRANS_COMMITTING

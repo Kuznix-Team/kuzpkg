@@ -1,4 +1,4 @@
-self.description = "Upgrade with a replacement in a repo with lower prioriy"
+self.description = "Upgrade with a replacement in a repo with lower priority"
 
 sp1 = pmpkg("pkg2")
 self.addpkg2db("sync1", sp1)

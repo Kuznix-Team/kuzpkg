@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#   backup.sh - Check the 'backup' array conforms to requirements.
+#   xdata.sh - Check the 'xdata' array conforms to requirements.
 #
 #   Copyright (c) 2014-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
 #
@@ -18,8 +18,8 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-[[ -n "$LIBMAKEPKG_LINT_PKGBUILD_BACKUP_SH" ]] && return
-LIBMAKEPKG_LINT_PKGBUILD_BACKUP_SH=1
+[[ -n "$LIBMAKEPKG_LINT_PKGBUILD_XDATA_SH" ]] && return
+LIBMAKEPKG_LINT_PKGBUILD_XDATA_SH=1
 
 MAKEPKG_LIBRARY=${MAKEPKG_LIBRARY:-'@libmakepkgdir@'}
 
@@ -27,22 +27,29 @@ source "$MAKEPKG_LIBRARY/util/message.sh"
 source "$MAKEPKG_LIBRARY/util/pkgbuild.sh"
 
 
-lint_pkgbuild_functions+=('lint_backup')
+lint_pkgbuild_functions+=('lint_xdata')
 
 
-lint_backup() {
-	local list name backup_list ret=0
+lint_xdata() {
+	local xdata_list entry key value ret=0
 
-	backup_list=("${backup[@]}")
-	for name in "${pkgname[@]}"; do
-		if extract_function_variable "package_$name" backup 1 list; then
-			backup_list+=("${list[@]}")
-		fi
-	done
+	get_pkgbuild_all_split_attributes xdata xdata_list
 
-	for name in "${backup_list[@]}"; do
-		if [[ ${name:0:1} = "/" ]]; then
-			error "$(gettext "%s entry should not contain leading slash : %s")" "backup" "$name"
+	for entry in "${xdata_list[@]}"; do
+		key="${entry%%=*}"
+		value="${entry##*=}"
+
+		if [[ "${entry}" == "${key}=${value}" ]]; then
+			# Entries must contain exactly one equal sign.
+			error "$(gettext "%s array: Entries must contain exactly one equal sign, e.g. key=value.")" "xdata"
+			ret=1
+		elif [[ "${key}" == '' ]]; then
+			# Do not allow keys without values.
+			error "$(gettext "%s array: The key part of an entry must not be empty.")" "xdata"
+			ret=1
+		elif [[ "${key}" == "pkgtype" ]]; then
+			# The key "pkgtype" is reserved for makepkg.
+			error "$(gettext "%s array: The key 'pkgtype' is reserved for makepkg.")" "xdata"
 			ret=1
 		fi
 	done

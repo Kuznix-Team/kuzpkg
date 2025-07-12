@@ -1,7 +1,7 @@
 /*
  *  sync.c
  *
- *  Copyright (c) 2006-2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+ *  Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
  *  Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
  *  Copyright (c) 2005 by Aurelien Foret <orelien@chez.com>
  *  Copyright (c) 2005 by Christian Hamar <krics@linuxforum.hu>
@@ -817,6 +817,8 @@ static int download_files(alpm_handle_t *handle)
 		}
 
 		event.type = ALPM_EVENT_PKG_RETRIEVE_START;
+		event.pkg_retrieve.total_size = 0;
+		event.pkg_retrieve.num = 0;
 
 		/* sum up the number of packages to download and its total size */
 		for(i = files; i; i = i->next) {
@@ -880,7 +882,6 @@ finish:
 		pkg->infolevel &= ~INFRQ_DSIZE;
 		pkg->download_size = 0;
 	}
-	_alpm_remove_temporary_download_dir(temporary_cachedir);
 	FREE(temporary_cachedir);
 
 	return ret;

@@ -247,6 +247,11 @@ Environment Variables
 	Use an alternate config file instead of the +{sysconfdir}/makepkg.conf+
 	default.
 
+**MAKEPKG_GIT_CONFIG=**"/path/to/file"::
+	Use an alternate config file for Git instead of the
+	+{sysconfdir}/makepkg.d/gitconfig+ default. makepkg always prevents Git
+	from loading any other config files.
+
 **PKGDEST=**"/path/to/directory"::
 	Directory where the resulting packages will be stored. Overrides the
 	corresponding value defined in linkman:makepkg.conf[5].

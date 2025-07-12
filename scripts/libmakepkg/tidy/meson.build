@@ -1,13 +1,13 @@
 libmakepkg_module = 'tidy'
 
 sources = [
-  'docs.sh.in',
-  'emptydirs.sh.in',
-  'libtool.sh.in',
-  'purge.sh.in',
-  'staticlibs.sh.in',
-  'strip.sh.in',
-  'zipman.sh.in',
+  '10-docs.sh.in',
+  '10-libtool.sh.in',
+  '10-staticlibs.sh.in',
+  '50-purge.sh.in',
+  '50-strip.sh.in',
+  '50-zipman.sh.in',
+  '90-emptydirs.sh.in',
 ]
 
 foreach src : sources

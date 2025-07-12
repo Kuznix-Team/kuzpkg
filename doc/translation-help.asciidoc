@@ -4,10 +4,10 @@ Pacman - Translating
 This document is here to guide you in helping translate pacman messages,
 libalpm messages, and the manual pages for the entire pacman package.
 
-We are currently using https://www.transifex.com/[Transifex] as the translation
+We are currently using https://app.transifex.com/[Transifex] as the translation
 platform for pacman and libalpm. You will need to sign up for an account there
 and then register with a translation team on the
-https://www.transifex.com/projects/p/archlinux-pacman/[pacman project page].
+https://explore.transifex.com/toofishes/archlinux-pacman/[pacman project page].
 
 NOTE: This may be old information due to our switch to Transifex, but the
 gettext website is a very useful guide to read before embarking on translation
@@ -31,7 +31,7 @@ either be hand-edited, or modified with a tool such as poedit, gtranslator or
 kbabel. Using a translation tool tends to make the job easier.
 
 Please read up on Transifex usage using the
-https://docs.transifex.com/[Transifex Help] if you are not familiar.
+https://help.transifex.com/[Transifex Help] if you are not familiar.
 
 Transifex provides a command-line client to help with translations.  Here is
 an example set of commands if you have a source code checkout and are not
@@ -56,19 +56,19 @@ Pre-release Updates
 
 A week or two before each release, the codebase will go into a string freeze
 and an email will be sent to the mailto:pacman-dev@lists.archlinux.org[pacman-dev]
-mailing list asking for translations. This email will have a prefix of
-*[translation]* for anyone looking to set up an email filter.
+mailing list asking for translations. An announcement in Transifex is also made,
+which reaches everyone that is member of the translation team.
 
 At this time, the latest `.po` language files will be made available at the
-Transifex project page.  Each language will have two files available (back-end
-and front-end). Translators interested in helping are encouraged to use the
+Transifex project page.  Each language will have three files available (libalpm,
+pacman and pacman-scripts). Translators interested in helping are encouraged to use the
 features of Transifex to let others know they are currently translating their
 language.
 
-Once a translator has completed the translation (*OR* realizes they do not have
+Once a translator has completed the translation offline (*OR* realizes they do not have
 time to finish), please upload your progress back to the Transifex site.
 
-NOTE: Please upload your translations as soon as possible- this will give other
+NOTE: Please upload your translations as soon as possible - this will give other
 speakers of your language time to review your translations and update them as
 necessary.
 
@@ -80,21 +80,25 @@ repository.
 
 	git clone https://gitlab.archlinux.org/pacman/pacman.git
 
-Next, you will need to run `./autogen.sh` and `./configure` in the base
-directory to generate the correct Makefiles. At this point, all necessary
-make targets will be generated and we can begin updating the translation
-files.
+Next, you will need to configure the build environment. From the base directory,
+run:
 
-We need to first update the main message catalog file. Navigate into either the
-`lib/libalpm/po` or `po` directory depending on which translation you wish to
-work on first, and execute the following command.  If you are working in the
-`po/` tree, replace 'libalpm.pot' with 'pacman.pot':
+	meson setup . build
 
-	make libalpm.pot-update
+If any required dependencies are missing, please install. After that,
+update the template translation (.pot) files to the latest state of
+the source code by running:
+	
+	meson compile -C build pacman-scripts-pot pacman-pot libalpm-pot
+	
+We need to first update the main message catalog file. Navigate into either
+the `lib/libalpm/po`, `scripts/po` or `src/pacman/po` directory depending
+on which translation you wish to work on first, and execute the following
+command to update your specific language's translation file
+(replace `lang_code` with your language code e.g. 'pt_BR', and `pot_file`
+with `libalpm.pot`, `pacman.pot` or `pacman-scripts.pot`):
 
-Next, update your specific language's translation file:
-
-	make <po file>-update
+	msgmerge --update --previous <lang_code>.po  <pot_filename>.pot
 
 At this point, you can do the translation. To submit your changes, either email
 the new `.po` file to the mailing-list with *[translation]* in the subject, or
@@ -103,7 +107,7 @@ submit a Git-formatted patch (please do not include any `.pot` file changes).
 As a shortcut, all translation files (including `.pot` files) can be updated
 with the following command:
 
-	make update-po
+	./build-aux/update-po
 
 Adding a New Language
 ~~~~~~~~~~~~~~~~~~~~~
@@ -112,10 +116,10 @@ Making a new language is not too hard, but be sure to follow all the steps.
 You will have to do the following steps in both the `lib/libalpm/po/` and `po/`
 directories, substituting where appropriate. First, edit the `LINGUAS` file and
 add your new language code at the bottom. Next, run the following command,
-substituting 'libalpm.pot' or 'pacman.pot' for potfile depending on which
+substituting `libalpm.pot` or `pacman.pot` for potfile depending on which
 directory you are currently working in:
 
-	msginit -l <lang code> -o <lang code>.po -i <potfile>
+	msginit -l <lang_code> -o <lang_code>.po -i <potfile>
 
 You can then also add your language code to the end of the `LINGUAS` file
 located in each po directory.
@@ -137,11 +141,13 @@ following two translations are equivalent:
 	msgstr ""
 	"This is a test translation"
 
-If you want to test the translation (for example, the front-end one):
+If you want to test the translation (copy the .po file you want to test,
+you may ignore the rest), replacing `<lang_code>` accordingly:
 
-	rm *.gmo stamp-po
-	make
-	cp <lang code>.gmo /usr/share/locale/<lang code>/LC_MESSAGES/pacman.mo
+	meson compile -C build pacman-scripts-gmo pacman-gmo libalpm-gmo
+	cp ./build/lib/libalpm/po/<lang_code>/LC_MESSAGES/libalpm.mo    /usr/share/locale/<lang_code>/LC_MESSAGES/libalpm.mo
+	cp ./build/scripts/po/<lang_code>/LC_MESSAGES/pacman-scripts.mo /usr/share/locale/<lang_code>/LC_MESSAGES/pacman-scripts.mo
+	cp ./build/src/pacman/po/<lang_code>/LC_MESSAGES/pacman.mo      /usr/share/locale/<lang_code>/LC_MESSAGES/pacman.mo
 
 
 Translating Manpages

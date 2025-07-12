@@ -1,7 +1,7 @@
 /*
  *  be_sync.c : backend for sync databases
  *
- *  Copyright (c) 2006-2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+ *  Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
  *  Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -268,7 +268,6 @@ cleanup:
 		alpm_list_free_inner(payloads, (alpm_list_fn_free)_alpm_dload_payload_reset);
 		FREELIST(payloads);
 	}
-	_alpm_remove_temporary_download_dir(temporary_syncpath);
 	FREE(temporary_syncpath);
 	FREE(syncpath);
 	umask(oldmask);
@@ -309,11 +308,11 @@ static int _sync_get_validation(alpm_pkg_t *pkg)
 static const struct pkg_operations *get_sync_pkg_ops(void)
 {
 	static struct pkg_operations sync_pkg_ops;
-	static int sync_pkg_ops_initalized = 0;
-	if(!sync_pkg_ops_initalized) {
+	static int sync_pkg_ops_initialized = 0;
+	if(!sync_pkg_ops_initialized) {
 		sync_pkg_ops = default_pkg_ops;
 		sync_pkg_ops.get_validation = _sync_get_validation;
-		sync_pkg_ops_initalized = 1;
+		sync_pkg_ops_initialized = 1;
 	}
 	return &sync_pkg_ops;
 }

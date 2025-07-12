@@ -1,7 +1,7 @@
 /*
  *  conf.c
  *
- *  Copyright (c) 2006-2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+ *  Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
  *  Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -938,7 +938,11 @@ static int setup_libalpm(void)
 	alpm_option_set_architectures(handle, config->architectures);
 	alpm_option_set_checkspace(handle, config->checkspace);
 	alpm_option_set_usesyslog(handle, config->usesyslog);
-	alpm_option_set_sandboxuser(handle, config->sandboxuser);
+
+	if(config->sandboxuser) {
+		alpm_option_set_sandboxuser(handle, config->sandboxuser);
+	}
+
 	alpm_option_set_disable_sandbox(handle, config->disable_sandbox);
 
 	alpm_option_set_ignorepkgs(handle, config->ignorepkg);

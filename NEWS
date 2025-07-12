@@ -1,6 +1,6 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
-7.0.0         - Add DownloadUser configuation option used to drop-privileges
+7.0.0         - Add DownloadUser configuration option used to drop-privileges
                 when downloading files.
               - Download files to a temporary directory owned by DownloadUser
               - On Linux systems, ensure the download process does not write
@@ -649,7 +649,7 @@ VERSION         DESCRIPTION
                 file overwrites from malicious databases
               - makepkg:
                 - restrict package name from starting with a dot
-                - fix BZR source revision support (FS#35281)
+                - fix Bazaar source revision support (FS#35281)
                 - Use LOGDEST for log pipe
                 - fix distcc disabling (FS#35741)
                 - correct stat usage on BSD/Darwin (FS#35469)
@@ -665,7 +665,7 @@ VERSION         DESCRIPTION
                 FS#34716, FS#35097)
               - makepkg:
                 - improve SVN VCS PKGBUILD handling (FS#34675, FS#34636)
-                - allow "lp:" URLs for BZR sources (FS#34650)
+                - allow "lp:" URLs for Bazaar sources (FS#34650)
                 - prevent pkgver() capturing stderr (FS#34974)
                 - fix attempt to remove package twice on failure (FS#34672)
               - contrib:
@@ -1338,7 +1338,7 @@ VERSION         DESCRIPTION
                 - add source package creation option
               - rankmirrors- allow reading from stdin (FS#8043)
               - and many other updates: 198 bugs/FRs closed since 3.0.0 release
-              - switch to GIT for source code management
+              - switch to Git for source code management
 3.0.6         - config files updated to reflect current -> core change
               - fix symlink overwriting issue (FS#7484)
               - fix config parsing with tr_TR locale (FS#7235)
@@ -1490,7 +1490,7 @@ VERSION         DESCRIPTION
                 - Cleanup db_loadpkgs(), add list_add_sorted()
               - Fixed a memory leak in db_find_conflicts()
 2.8.3         - Fixed a little makepkg bug with bash 3.0
-              - Fixed resolvedeps to always prefer literals over provisios
+              - Fixed resolvedeps to always prefer literals over providers
               - Added --config option to specify an alternate config file
               - Added "Include" directive to include repositories from
                 config files (inspired by Michael Baehr's patch)

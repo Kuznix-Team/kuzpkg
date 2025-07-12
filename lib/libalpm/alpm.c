@@ -1,7 +1,7 @@
 /*
  *  alpm.c
  *
- *  Copyright (c) 2006-2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+ *  Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
  *  Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
  *  Copyright (c) 2005 by Aurelien Foret <orelien@chez.com>
  *  Copyright (c) 2005 by Christian Hamar <krics@linuxforum.hu>
@@ -85,7 +85,7 @@ alpm_handle_t SYMEXPORT *alpm_initialize(const char *root, const char *dbpath,
 	/* set default sandboxuser */
 	ASSERT((pw = getpwuid(0)) != NULL, myerr = errno; goto cleanup);
 	STRDUP(myhandle->sandboxuser, pw->pw_name, goto nomem);
-
+	
 #ifdef ENABLE_NLS
 	bindtextdomain("libalpm", LOCALEDIR);
 #endif

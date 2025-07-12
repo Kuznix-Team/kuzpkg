@@ -433,6 +433,8 @@ configure_file(
   configuration : substs,
   install_dir : join_paths(SYSCONFDIR, 'makepkg.conf.d/'))
 
+install_emptydir(join_paths(SYSCONFDIR, 'makepkg.d/'))
+
 configure_file(
   input : 'etc/pacman.conf.in',
   output : 'pacman.conf',

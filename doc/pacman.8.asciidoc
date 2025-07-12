@@ -151,7 +151,8 @@ Options
 	+{localstatedir}/cache/pacman/pkg+). Multiple cache directories can be
 	specified, and they are tried in the order they are passed to pacman.
 	*NOTE*: This is an absolute path, and the root path is not automatically
-	prepended.
+	prepended. If DownloadUser is set in linkman:pacman.conf[5], then the
+	specified user must have permission to access the cache directory.
 
 *\--color* <when>::
 	Specify when to enable coloring. Valid options are 'always', 'never', or
