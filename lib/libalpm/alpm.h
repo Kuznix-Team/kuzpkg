@@ -307,8 +307,6 @@ typedef enum _alpm_errno_t {
 	ALPM_ERR_CONFLICTING_DEPS,
 	/** Files conflict */
 	ALPM_ERR_FILE_CONFLICTS,
-	/** Removing optdepends of another dependency*/
-	ALPM_ERR_REMOVING_OPTDEPENDS_DEPS,
 	/* Misc */
 	/** Download failed */
 	ALPM_ERR_RETRIEVE,
