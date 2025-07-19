@@ -189,7 +189,7 @@ static void remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *
 					EVENT(handle, &event);
 				} else {
 					// -Rs, we keep optdepends
-					alpm_list_remove(lp, optdep, _alpm_pkg_dep_cmp,NULL);
+					alpm_list_remove(lp, optdep, _alpm_pkg_dep_cmp, NULL);
 				}
 			}
 			free(optstring);
