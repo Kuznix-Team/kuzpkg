@@ -376,6 +376,7 @@ static int key_search_keyserver(alpm_handle_t *handle, const char *fpr,
 	pgpkey->expires = key->subkeys->expires;
 	pgpkey->length = key->subkeys->length;
 	pgpkey->revoked = key->subkeys->revoked;
+	ret = 1;
 
 gpg_error:
 	if(ret != 1) {
