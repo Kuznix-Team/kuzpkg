@@ -766,6 +766,7 @@ int SYMEXPORT alpm_pkg_load(alpm_handle_t *handle, const char *filename, int ful
 
 			if(fail) {
 				_alpm_log(handle, ALPM_LOG_ERROR, _("required key missing from keyring\n"));
+				handle->pm_errno = ALPM_ERR_KEY_MISSING;
 				free(sigpath);
 				return -1;
 			}

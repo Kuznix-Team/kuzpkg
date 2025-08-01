@@ -975,6 +975,7 @@ static int check_keyring(alpm_handle_t *handle)
 		EVENT(handle, &event);
 		if(fail) {
 			_alpm_log(handle, ALPM_LOG_ERROR, _("required key missing from keyring\n"));
+			handle->pm_errno = ALPM_ERR_KEY_MISSING;
 			return -1;
 		}
 	}

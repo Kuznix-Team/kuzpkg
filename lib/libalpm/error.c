@@ -130,6 +130,8 @@ const char SYMEXPORT *alpm_strerror(alpm_errno_t err)
 			return _("missing PGP signature");
 		case ALPM_ERR_SIG_INVALID:
 			return _("invalid PGP signature");
+		case ALPM_ERR_KEY_MISSING:
+			return _("PGP key missing from keyring");
 		/* Dependencies */
 		case ALPM_ERR_UNSATISFIED_DEPS:
 			return _("could not satisfy dependencies");

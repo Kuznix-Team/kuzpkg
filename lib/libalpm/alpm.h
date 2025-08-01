@@ -300,6 +300,8 @@ typedef enum _alpm_errno_t {
 	ALPM_ERR_SIG_MISSING,
 	/** Signatures are invalid */
 	ALPM_ERR_SIG_INVALID,
+	/** Keys are missing from keyring */
+	ALPM_ERR_KEY_MISSING,
 	/* Dependencies */
 	/** Dependencies could not be satisfied */
 	ALPM_ERR_UNSATISFIED_DEPS,
