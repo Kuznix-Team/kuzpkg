@@ -821,8 +821,10 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 		size_t num;
 		for(num = 0; !ret && num < siglist->count; num++) {
 			switch(siglist->results[num].status) {
-				case ALPM_SIGSTATUS_VALID:
 				case ALPM_SIGSTATUS_KEY_EXPIRED:
+					_alpm_log(handle, ALPM_LOG_DEBUG, "key is expired\n");
+					/* fallthrough */
+				case ALPM_SIGSTATUS_VALID:
 					_alpm_log(handle, ALPM_LOG_DEBUG, "signature is valid\n");
 					switch(siglist->results[num].validity) {
 						case ALPM_SIGVALIDITY_FULL:
@@ -896,8 +898,12 @@ int _alpm_process_siglist(alpm_handle_t *handle, const char *identifier,
 		alpm_sigresult_t *result = siglist->results + i;
 		const char *name = result->key.uid ? result->key.uid : result->key.fingerprint;
 		switch(result->status) {
-			case ALPM_SIGSTATUS_VALID:
 			case ALPM_SIGSTATUS_KEY_EXPIRED:
+				_alpm_log(handle, ALPM_LOG_ERROR,
+						_("%s: key \"%s\" (%s) is expired\n"),
+						identifier, name, result->key.fingerprint);
+				break;
+			case ALPM_SIGSTATUS_VALID:
 				switch(result->validity) {
 					case ALPM_SIGVALIDITY_FULL:
 						break;
