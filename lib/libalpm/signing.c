@@ -792,7 +792,7 @@ char *_alpm_sigpath(alpm_handle_t *handle, const char *path)
  * @param marginal whether signatures with marginal trust are acceptable
  * @param unknown whether signatures with unknown trust are acceptable
  * @param sigdata a pointer to storage for signature results
- * @return 0 on success, -1 on error (consult pm_errno or sigdata)
+ * @return 0 on success, -1 on error, -2 on key error (consult pm_errno or sigdata)
  */
 int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 		const char *base64_sig, int optional, int marginal, int unknown,
@@ -800,6 +800,7 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 {
 	alpm_siglist_t *siglist;
 	int ret;
+	int key_invalid = 0;
 
 	CALLOC(siglist, 1, sizeof(alpm_siglist_t),
 			RET_ERR(handle, ALPM_ERR_MEMORY, -1));
@@ -823,7 +824,8 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 			switch(siglist->results[num].status) {
 				case ALPM_SIGSTATUS_KEY_EXPIRED:
 					_alpm_log(handle, ALPM_LOG_DEBUG, "key is expired\n");
-					/* fallthrough */
+					key_invalid = 1;
+					__attribute__((fallthrough));
 				case ALPM_SIGSTATUS_VALID:
 					_alpm_log(handle, ALPM_LOG_DEBUG, "signature is valid\n");
 					switch(siglist->results[num].validity) {
@@ -848,9 +850,12 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 							break;
 					}
 					break;
-				case ALPM_SIGSTATUS_SIG_EXPIRED:
 				case ALPM_SIGSTATUS_KEY_UNKNOWN:
 				case ALPM_SIGSTATUS_KEY_DISABLED:
+				case ALPM_SIGSTATUS_SIG_EXPIRED:
+					_alpm_log(handle, ALPM_LOG_DEBUG, "key is not valid\n");
+					key_invalid = 1;
+					__attribute__((fallthrough));
 				case ALPM_SIGSTATUS_INVALID:
 					_alpm_log(handle, ALPM_LOG_DEBUG, "signature is not valid\n");
 					ret = -1;
@@ -866,7 +871,7 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 		free(siglist);
 	}
 
-	return ret;
+	return key_invalid ? -2 : ret;
 }
 
 /**

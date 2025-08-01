@@ -126,6 +126,7 @@ static int sync_db_validate(alpm_db_t *db)
 			db->status &= ~DB_STATUS_VALID;
 			db->status |= DB_STATUS_INVALID;
 			db->handle->pm_errno = ALPM_ERR_DB_INVALID_SIG;
+			db->handle->pm_errno = ret == -1 ? ALPM_ERR_PKG_INVALID_SIG : ALPM_ERR_PKG_INVALID_KEY;
 			return 1;
 		}
 	}

@@ -1054,6 +1054,7 @@ static int check_validity(alpm_handle_t *handle,
 							_("%s: missing required signature\n"), v->pkg->name);
 					break;
 				case ALPM_ERR_PKG_INVALID_SIG:
+				case ALPM_ERR_PKG_INVALID_KEY:
 					_alpm_process_siglist(handle, v->pkg->name, v->siglist,
 							v->siglevel & ALPM_SIG_PACKAGE_OPTIONAL,
 							v->siglevel & ALPM_SIG_PACKAGE_MARGINAL_OK,

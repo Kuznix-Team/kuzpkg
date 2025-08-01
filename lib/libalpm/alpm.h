@@ -242,6 +242,8 @@ typedef enum _alpm_errno_t {
 	ALPM_ERR_DB_INVALID,
 	/** Database has an invalid signature */
 	ALPM_ERR_DB_INVALID_SIG,
+	/** Database is signed by an invalid key */
+	ALPM_ERR_DB_INVALID_KEY,
 	/** The localdb is in a newer/older format than libalpm expects */
 	ALPM_ERR_DB_VERSION,
 	/** Failed to write to the database */
@@ -285,6 +287,8 @@ typedef enum _alpm_errno_t {
 	ALPM_ERR_PKG_INVALID_CHECKSUM,
 	/** Package has an invalid signature */
 	ALPM_ERR_PKG_INVALID_SIG,
+	/** Package is signed by an invalid key */
+	ALPM_ERR_PKG_INVALID_KEY,
 	/** Package does not have a signature */
 	ALPM_ERR_PKG_MISSING_SIG,
 	/** Cannot open the package file */
