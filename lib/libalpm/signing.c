@@ -233,9 +233,14 @@ int _alpm_key_in_keychain(alpm_handle_t *handle, const char *fpr)
 		_alpm_log(handle, ALPM_LOG_DEBUG, "key lookup failed, unknown key\n");
 		ret = 0;
 	} else if(gpg_err_code(gpg_err) == GPG_ERR_NO_ERROR) {
-		_alpm_log(handle, ALPM_LOG_DEBUG, "key lookup success, key exists\n");
-		handle->known_keys = alpm_list_add(handle->known_keys, strdup(fpr));
-		ret = 1;
+		if(key->expired) {
+			_alpm_log(handle, ALPM_LOG_DEBUG, "key lookup success, but key is expired\n");
+			ret = 0;
+		} else {
+			_alpm_log(handle, ALPM_LOG_DEBUG, "key lookup success, key exists\n");
+			handle->known_keys = alpm_list_add(handle->known_keys, strdup(fpr));
+			ret = 1;
+		}
 	} else {
 		_alpm_log(handle, ALPM_LOG_DEBUG, "gpg error: %s\n", gpgme_strerror(gpg_err));
 	}
@@ -268,7 +273,7 @@ static int key_import_wkd(alpm_handle_t *handle, const char *email, const char *
 	CHECK_ERR();
 
 	mode = gpgme_get_keylist_mode(ctx);
-	mode |= GPGME_KEYLIST_MODE_LOCATE;
+	mode |= GPGME_KEYLIST_MODE_LOCATE_EXTERNAL;
 	gpg_err = gpgme_set_keylist_mode(ctx, mode);
 	CHECK_ERR();
 
@@ -279,7 +284,7 @@ static int key_import_wkd(alpm_handle_t *handle, const char *email, const char *
 		if(fpr && _alpm_key_in_keychain(handle, fpr)) {
 			ret = 0;
 		} else {
-			_alpm_log(handle, ALPM_LOG_DEBUG, "key lookup failed: WKD imported wrong fingerprint\n");
+			_alpm_log(handle, ALPM_LOG_DEBUG, "key lookup failed: WKD imported wrong fingerprint or key expired\n");
 		}
 	}
 	gpgme_key_unref(key);
@@ -371,6 +376,7 @@ static int key_search_keyserver(alpm_handle_t *handle, const char *fpr,
 	pgpkey->expires = key->subkeys->expires;
 	pgpkey->length = key->subkeys->length;
 	pgpkey->revoked = key->subkeys->revoked;
+	ret = 1;
 
 gpg_error:
 	if(ret != 1) {
@@ -792,7 +798,7 @@ char *_alpm_sigpath(alpm_handle_t *handle, const char *path)
  * @param marginal whether signatures with marginal trust are acceptable
  * @param unknown whether signatures with unknown trust are acceptable
  * @param sigdata a pointer to storage for signature results
- * @return 0 on success, -1 on error (consult pm_errno or sigdata)
+ * @return 0 on success, -1 on error, -2 on key error (consult pm_errno or sigdata)
  */
 int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 		const char *base64_sig, int optional, int marginal, int unknown,
@@ -800,6 +806,7 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 {
 	alpm_siglist_t *siglist;
 	int ret;
+	int key_invalid = 0;
 
 	CALLOC(siglist, 1, sizeof(alpm_siglist_t),
 			RET_ERR(handle, ALPM_ERR_MEMORY, -1));
@@ -821,8 +828,11 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 		size_t num;
 		for(num = 0; !ret && num < siglist->count; num++) {
 			switch(siglist->results[num].status) {
-				case ALPM_SIGSTATUS_VALID:
 				case ALPM_SIGSTATUS_KEY_EXPIRED:
+					_alpm_log(handle, ALPM_LOG_DEBUG, "key is expired\n");
+					key_invalid = 1;
+					__attribute__((fallthrough));
+				case ALPM_SIGSTATUS_VALID:
 					_alpm_log(handle, ALPM_LOG_DEBUG, "signature is valid\n");
 					switch(siglist->results[num].validity) {
 						case ALPM_SIGVALIDITY_FULL:
@@ -846,9 +856,12 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 							break;
 					}
 					break;
-				case ALPM_SIGSTATUS_SIG_EXPIRED:
 				case ALPM_SIGSTATUS_KEY_UNKNOWN:
 				case ALPM_SIGSTATUS_KEY_DISABLED:
+				case ALPM_SIGSTATUS_SIG_EXPIRED:
+					_alpm_log(handle, ALPM_LOG_DEBUG, "key is not valid\n");
+					key_invalid = 1;
+					__attribute__((fallthrough));
 				case ALPM_SIGSTATUS_INVALID:
 					_alpm_log(handle, ALPM_LOG_DEBUG, "signature is not valid\n");
 					ret = -1;
@@ -864,7 +877,7 @@ int _alpm_check_pgp_helper(alpm_handle_t *handle, const char *path,
 		free(siglist);
 	}
 
-	return ret;
+	return key_invalid ? -2 : ret;
 }
 
 /**
@@ -897,7 +910,6 @@ int _alpm_process_siglist(alpm_handle_t *handle, const char *identifier,
 		const char *name = result->key.uid ? result->key.uid : result->key.fingerprint;
 		switch(result->status) {
 			case ALPM_SIGSTATUS_VALID:
-			case ALPM_SIGSTATUS_KEY_EXPIRED:
 				switch(result->validity) {
 					case ALPM_SIGVALIDITY_FULL:
 						break;
@@ -923,6 +935,16 @@ int _alpm_process_siglist(alpm_handle_t *handle, const char *identifier,
 								identifier, name);
 						break;
 				}
+				break;
+			case ALPM_SIGSTATUS_KEY_EXPIRED:
+				_alpm_log(handle, ALPM_LOG_ERROR,
+						_("%s: key \"%s\" (%s) is expired\n"),
+						identifier, name, result->key.fingerprint);
+
+				if(_alpm_key_import(handle, result->key.uid, result->key.fingerprint) == 0) {
+					retry = 1;
+				}
+
 				break;
 			case ALPM_SIGSTATUS_KEY_UNKNOWN:
 				/* ensure this key is still actually unknown; we may have imported it

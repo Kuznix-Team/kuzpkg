@@ -72,6 +72,8 @@ const char SYMEXPORT *alpm_strerror(alpm_errno_t err)
 			return _("invalid or corrupted database");
 		case ALPM_ERR_DB_INVALID_SIG:
 			return _("invalid or corrupted database (PGP signature)");
+		case ALPM_ERR_DB_INVALID_KEY:
+			return _("database signature has missing or invalid PGP key");
 		case ALPM_ERR_DB_VERSION:
 			return _("database is incorrect version");
 		case ALPM_ERR_DB_WRITE:
@@ -115,6 +117,8 @@ const char SYMEXPORT *alpm_strerror(alpm_errno_t err)
 			return _("invalid or corrupted package (checksum)");
 		case ALPM_ERR_PKG_INVALID_SIG:
 			return _("invalid or corrupted package (PGP signature)");
+		case ALPM_ERR_PKG_INVALID_KEY:
+			return _("package signature has missing or invalid PGP key");
 		case ALPM_ERR_PKG_MISSING_SIG:
 			return _("package missing required signature");
 		case ALPM_ERR_PKG_OPEN:
@@ -130,6 +134,8 @@ const char SYMEXPORT *alpm_strerror(alpm_errno_t err)
 			return _("missing PGP signature");
 		case ALPM_ERR_SIG_INVALID:
 			return _("invalid PGP signature");
+		case ALPM_ERR_KEY_MISSING:
+			return _("PGP key missing from keyring");
 		/* Dependencies */
 		case ALPM_ERR_UNSATISFIED_DEPS:
 			return _("could not satisfy dependencies");

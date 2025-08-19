@@ -975,6 +975,7 @@ static int check_keyring(alpm_handle_t *handle)
 		EVENT(handle, &event);
 		if(fail) {
 			_alpm_log(handle, ALPM_LOG_ERROR, _("required key missing from keyring\n"));
+			handle->pm_errno = ALPM_ERR_KEY_MISSING;
 			return -1;
 		}
 	}
@@ -1053,6 +1054,7 @@ static int check_validity(alpm_handle_t *handle,
 							_("%s: missing required signature\n"), v->pkg->name);
 					break;
 				case ALPM_ERR_PKG_INVALID_SIG:
+				case ALPM_ERR_PKG_INVALID_KEY:
 					_alpm_process_siglist(handle, v->pkg->name, v->siglist,
 							v->siglevel & ALPM_SIG_PACKAGE_OPTIONAL,
 							v->siglevel & ALPM_SIG_PACKAGE_MARGINAL_OK,

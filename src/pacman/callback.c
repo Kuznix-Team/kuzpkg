@@ -529,10 +529,17 @@ void cb_question(void *ctx, alpm_question_t *question)
 		case ALPM_QUESTION_CORRUPTED_PKG:
 			{
 				alpm_question_corrupted_t *q = &question->corrupted;
-				q->remove = yesno(_("File %s is corrupted (%s).\n"
-							"Do you want to delete it?"),
-						q->filepath,
-						alpm_strerror(q->reason));
+				if(q->reason == ALPM_ERR_PKG_INVALID_KEY || q->reason == ALPM_ERR_DB_INVALID_KEY) {
+					q->remove = yesno(_("Can't get PGP key for file %s (%s)\n"
+								"Do you want to delete it?"),
+							q->filepath,
+							alpm_strerror(q->reason));
+				} else {
+					q->remove = yesno(_("File %s is corrupted (%s).\n"
+								"Do you want to delete it?"),
+							q->filepath,
+							alpm_strerror(q->reason));
+				}
 			}
 			break;
 		case ALPM_QUESTION_IMPORT_KEY:

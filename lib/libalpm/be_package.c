@@ -341,15 +341,17 @@ int _alpm_pkg_validate_internal(alpm_handle_t *handle,
 	/* even if we don't have a sig, run the check code if level tells us to */
 	if(level & ALPM_SIG_PACKAGE) {
 		const char *sig = syncpkg ? syncpkg->base64_sig : NULL;
+		int ret;
 		_alpm_log(handle, ALPM_LOG_DEBUG, "sig data: %s\n", sig ? sig : "<from .sig>");
 		if(!has_sig && !(level & ALPM_SIG_PACKAGE_OPTIONAL)) {
 			handle->pm_errno = ALPM_ERR_PKG_MISSING_SIG;
 			return -1;
 		}
-		if(_alpm_check_pgp_helper(handle, pkgfile, sig,
+		ret = _alpm_check_pgp_helper(handle, pkgfile, sig,
 					level & ALPM_SIG_PACKAGE_OPTIONAL, level & ALPM_SIG_PACKAGE_MARGINAL_OK,
-					level & ALPM_SIG_PACKAGE_UNKNOWN_OK, sigdata)) {
-			handle->pm_errno = ALPM_ERR_PKG_INVALID_SIG;
+					level & ALPM_SIG_PACKAGE_UNKNOWN_OK, sigdata);
+		if(ret) {
+			handle->pm_errno = ret == -1 ? ALPM_ERR_PKG_INVALID_SIG : ALPM_ERR_PKG_INVALID_KEY;
 			return -1;
 		}
 		if(validation && has_sig) {
@@ -766,6 +768,7 @@ int SYMEXPORT alpm_pkg_load(alpm_handle_t *handle, const char *filename, int ful
 
 			if(fail) {
 				_alpm_log(handle, ALPM_LOG_ERROR, _("required key missing from keyring\n"));
+				handle->pm_errno = ALPM_ERR_KEY_MISSING;
 				free(sigpath);
 				return -1;
 			}
