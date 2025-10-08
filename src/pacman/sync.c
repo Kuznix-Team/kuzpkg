@@ -719,6 +719,21 @@ static int sync_trans(alpm_list_t *targets)
 		}
 	}
 
+	for(i = config->preremove; i; i = i->next) {
+		alpm_pkg_t *pkg;
+		const char *pname = i->data;
+		alpm_db_t *db_local = alpm_get_localdb(config->handle);
+
+		if((pkg = alpm_db_get_pkg(db_local, pname)) != NULL) {
+			if(alpm_remove_pkg(config->handle, pkg) == -1) {
+				alpm_errno_t err = alpm_errno(config->handle);
+				pm_printf(ALPM_LOG_ERROR, "'%s': %s\n", pname, alpm_strerror(err));
+				retval = 1;
+			}
+			config->explicit_removes = alpm_list_add(config->explicit_removes, pkg);
+		}
+	}
+
 	if(retval) {
 		trans_release();
 		return retval;

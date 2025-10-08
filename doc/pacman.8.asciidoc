@@ -292,6 +292,9 @@ Upgrade Options (apply to '-S' and '-U')[[UO]]
 	exclamation mark. Subsequent matches will override previous ones. A leading
 	literal exclamation mark or backslash needs to be escaped.
 
+*\--preremove <package>::
+	Uninstall 'package' before performing the requested installation. Multiple
+	packages can be specified by separating them with commas.
 
 Query Options (apply to '-Q')[[QO]]
 -----------------------------------
