@@ -31,5 +31,6 @@ void dump_pkg_changelog(alpm_pkg_t *pkg);
 void print_installed(alpm_db_t *db_local, alpm_pkg_t *pkg);
 void print_groups(alpm_pkg_t *pkg);
 int dump_pkg_search(alpm_db_t *db, alpm_list_t *targets, int show_status);
+const char *get_default_user_note_key(void);
 
 #endif /* PM_PACKAGE_H */

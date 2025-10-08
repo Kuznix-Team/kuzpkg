@@ -28,6 +28,7 @@
 
 /* pacman */
 #include "pacman.h"
+#include "package.h"
 #include "conf.h"
 #include "util.h"
 
@@ -82,6 +83,55 @@ static int change_install_reason(alpm_list_t *targets)
 				}
 			}
 		}
+	}
+
+	/* Unlock database */
+	if(trans_release() == -1) {
+		return 1;
+	}
+	return ret;
+}
+
+/**
+ * @brief Modify the 'local' package database.
+ *
+ * @param targets a list of packages (as strings) to modify
+ * @param add list of alpm_pkg_xdata_t to add
+ * @param remove list of char* keys to remove
+ *
+ * @return 0 on success, 1 on failure
+ */
+static int change_user_notes(alpm_list_t *targets, const alpm_list_t *add, const alpm_list_t *delete) {
+	const alpm_list_t *i;
+	alpm_db_t *db_local;
+	int ret = 0;
+
+	if(targets == NULL) {
+		pm_printf(ALPM_LOG_ERROR, _("no targets specified (use -h for help)\n"));
+		return 1;
+	}
+
+	/* Lock database */
+	if(trans_init(0, 0) == -1) {
+		return 1;
+	}
+
+	db_local = alpm_get_localdb(config->handle);
+	for(i = targets; i; i = alpm_list_next(i)) {
+		char *pkgname = i->data;
+		alpm_pkg_t *pkg = alpm_db_get_pkg(db_local, pkgname);
+		if(pkg == NULL) {
+			pm_printf(ALPM_LOG_ERROR, _("could not get local package %s (%s)\n"),
+							pkgname, alpm_strerror(alpm_errno(config->handle)));
+			ret = 1;
+			continue;
+		}
+		alpm_pkg_user_notes_delete(pkg, delete);
+		alpm_pkg_user_notes_update(pkg, add);
+		alpm_list_t *pkg_notes = alpm_pkg_get_user_notes(pkg);
+		alpm_pkg_set_user_notes(pkg, pkg_notes);
+		alpm_list_free_inner(pkg_notes, (alpm_list_fn_free)alpm_pkg_xdata_free);
+		alpm_list_free(pkg_notes);
 	}
 
 	/* Unlock database */
@@ -299,6 +349,32 @@ int pacman_database(alpm_list_t *targets)
 
 	if(config->flags & (ALPM_TRANS_FLAG_ALLDEPS | ALPM_TRANS_FLAG_ALLEXPLICIT)) {
 		ret = change_install_reason(targets);
+	}
+
+	if(config->user_note || config->user_note_extra || config->user_note_delete) {
+		alpm_list_t *i, *usernote_add = NULL;
+		for(i = config->user_note; i; i = alpm_list_next(i)) {
+			const char *arg = i->data;
+			const char *key = get_default_user_note_key();
+			char *full_note = calloc(1, strlen(key) + 1 + strlen(arg) + 1);
+			sprintf(full_note, "%s=%s", key, arg);
+			alpm_pkg_xdata_t *user_note = alpm_pkg_parse_xdata(full_note);
+			free(full_note);
+			usernote_add = alpm_list_add(usernote_add, user_note);
+		}
+
+		for(i = config->user_note_extra; i; i = alpm_list_next(i)) {
+			const char *arg = i->data;
+			alpm_pkg_xdata_t *user_note = alpm_pkg_parse_xdata(arg);
+			if(user_note == NULL) {
+				pm_printf(ALPM_LOG_ERROR, "failed to parse user note '%s'\n", arg);
+				return -1;
+			}
+			usernote_add = alpm_list_add(usernote_add, user_note);
+		}
+		change_user_notes(targets, usernote_add, config->user_note_delete);
+		alpm_list_free_inner(usernote_add, (alpm_list_fn_free)alpm_pkg_xdata_free);
+		alpm_list_free(usernote_add);
 	}
 
 	return ret;

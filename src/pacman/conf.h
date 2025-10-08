@@ -86,6 +86,7 @@ typedef struct __config_t {
 	unsigned short op_q_upgrade;
 	unsigned short op_q_check;
 	unsigned short op_q_locality;
+	unsigned short op_q_usernote_delete;
 
 	unsigned short op_s_clean;
 	unsigned short op_s_downloadonly;
@@ -127,6 +128,9 @@ typedef struct __config_t {
 	alpm_list_t *noupgrade;
 	alpm_list_t *noextract;
 	alpm_list_t *overwrite_files;
+	alpm_list_t *user_note;
+	alpm_list_t *user_note_extra;
+	alpm_list_t *user_note_delete;
 	char *xfercommand;
 	char **xfercommand_argv;
 	size_t xfercommand_argc;
@@ -214,7 +218,10 @@ enum {
 	OP_REFRESH,
 	OP_ASSUMEINSTALLED,
 	OP_DISABLEDLTIMEOUT,
-	OP_DISABLESANDBOX
+	OP_DISABLESANDBOX,
+	OP_USERNOTE,
+	OP_USERNOTE_EXTRA,
+	OP_USERNOTE_DELETE
 };
 
 /* clean method */

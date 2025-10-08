@@ -35,6 +35,12 @@
 #include "handle.h"
 #include "deps.h"
 
+static const char *XDATA_USERDATA_PREFIX = "user:";
+
+const char SYMEXPORT *alpm_get_userdata_prefix(void) {
+	return XDATA_USERDATA_PREFIX;
+}
+
 int SYMEXPORT alpm_pkg_free(alpm_pkg_t *pkg)
 {
 	ASSERT(pkg != NULL, return -1);
@@ -45,6 +51,109 @@ int SYMEXPORT alpm_pkg_free(alpm_pkg_t *pkg)
 	}
 
 	return 0;
+}
+
+alpm_pkg_xdata_t SYMEXPORT *alpm_pkg_parse_xdata(const char *string) {
+  ASSERT(string != NULL, return NULL);
+
+  return _alpm_pkg_parse_xdata(string);
+}
+
+alpm_list_t SYMEXPORT *alpm_pkg_get_user_notes(alpm_pkg_t *pkg) {
+	ASSERT(pkg != NULL, return NULL);
+	pkg->handle->pm_errno = ALPM_ERR_OK;
+	alpm_list_t *user_notes = NULL;
+	const char *prefix = alpm_get_userdata_prefix();
+	for(alpm_list_t *i = alpm_pkg_get_xdata(pkg); i; i = alpm_list_next(i)) {
+		alpm_pkg_xdata_t *xdata = i->data;
+		if(strncmp(xdata->name, prefix, strlen(prefix)) == 0) {
+			alpm_pkg_xdata_t *user_note = _alpm_pkg_user_note_dup(xdata, NULL);
+			memmove(user_note->name,
+					user_note->name + strlen(prefix),
+					strlen(user_note->name) - strlen(prefix) + 1);
+			user_notes = alpm_list_add(user_notes, user_note);
+		}
+	}
+	return user_notes;
+}
+
+int SYMEXPORT alpm_pkg_user_notes_update(alpm_pkg_t *pkg, const alpm_list_t *notes) {
+	ASSERT(pkg != NULL, return -1);
+	pkg->handle->pm_errno = ALPM_ERR_OK;
+	if(notes == NULL) {
+		return 0;
+	}
+	const char *prefix = alpm_get_userdata_prefix();
+
+	alpm_list_t *pkg_xdata_lst = alpm_pkg_get_xdata(pkg);
+	for(const alpm_list_t *i = notes; i; i = alpm_list_next(i)) {
+		alpm_pkg_xdata_t *xdata = i->data;
+		int found_existing_key = 0;
+		for(alpm_list_t *j = pkg_xdata_lst; j; j = alpm_list_next(j)) {
+			alpm_pkg_xdata_t *pkg_xdata = j->data;
+			if(strncmp(pkg_xdata->name, prefix, strlen(prefix)) != 0) {
+				continue;
+			}
+			if(strcmp(pkg_xdata->name + strlen(prefix), xdata->name) == 0) {
+				found_existing_key = 1;
+				alpm_pkg_xdata_t *new_xdata = _alpm_pkg_user_note_dup(xdata, prefix);
+				if(new_xdata == NULL) {
+					pkg->handle->pm_errno = ALPM_ERR_MEMORY;
+					return -1;
+				}
+				j->data = new_xdata;
+				_alpm_pkg_xdata_free(pkg_xdata);
+			}
+		}
+		if(!found_existing_key) {
+			alpm_pkg_xdata_t *new_xdata = _alpm_pkg_user_note_dup(xdata, prefix);
+			if(new_xdata == NULL) {
+				pkg->handle->pm_errno = ALPM_ERR_MEMORY;
+				return -1;
+			}
+			pkg_xdata_lst = alpm_list_add(pkg_xdata_lst, new_xdata);
+		}
+	}
+	pkg->xdata = pkg_xdata_lst;
+	return 0;
+}
+
+int SYMEXPORT alpm_pkg_user_notes_delete(alpm_pkg_t *pkg, const alpm_list_t *keys) {
+	ASSERT(pkg != NULL, return -1);
+	pkg->handle->pm_errno = ALPM_ERR_OK;
+	if(keys == NULL) {
+		return 0;
+	}
+	const char *prefix = alpm_get_userdata_prefix();
+
+	alpm_list_t *pkg_xdata_lst = alpm_pkg_get_xdata(pkg);
+	alpm_list_t *new_pkg_xdata_lst = NULL;
+	for(alpm_list_t *j = pkg_xdata_lst; j; j = alpm_list_next(j)) {
+		alpm_pkg_xdata_t *pkg_xdata = j->data;
+		int skip_key = 0;
+		for(const alpm_list_t *i = keys; i; i = alpm_list_next(i)) {
+			const char *key = i->data;
+			if(strncmp(pkg_xdata->name, prefix, strlen(prefix)) == 0
+					&& strcmp(pkg_xdata->name + strlen(prefix), key) == 0) {
+				skip_key = 1;
+				break;
+			}
+		}
+		if(!skip_key) {
+			printf("dup %s\n", pkg_xdata->name);
+			alpm_pkg_xdata_t *tmp = _alpm_pkg_xdata_dup(pkg_xdata);
+			alpm_list_append(&new_pkg_xdata_lst, tmp);
+		}
+	}
+	pkg->xdata = new_pkg_xdata_lst;
+	alpm_list_free_inner(pkg_xdata_lst, (alpm_list_fn_free)alpm_pkg_xdata_free);
+	alpm_list_free(pkg_xdata_lst);
+	return 0;
+}
+
+void SYMEXPORT alpm_pkg_xdata_free(alpm_pkg_xdata_t *xdata) {
+	ASSERT(xdata != NULL, return);
+	_alpm_pkg_xdata_free(xdata);
 }
 
 int SYMEXPORT alpm_pkg_checkmd5sum(alpm_pkg_t *pkg)
@@ -700,6 +809,36 @@ alpm_pkg_xdata_t *_alpm_pkg_parse_xdata(const char *string)
 	STRDUP(pd->value, sep + 1, FREE(pd->name); FREE(pd); return NULL);
 
 	return pd;
+}
+
+alpm_pkg_xdata_t *_alpm_pkg_xdata_dup(const alpm_pkg_xdata_t *xdata) {
+	alpm_pkg_xdata_t *pd;
+
+	CALLOC(pd, 1, sizeof(alpm_pkg_xdata_t), return NULL);
+	STRDUP(pd->name, xdata->name, FREE(pd); return NULL);
+	STRDUP(pd->value, xdata->value, FREE(pd->name); FREE(pd); return NULL);
+
+	return pd;
+}
+
+alpm_pkg_xdata_t *_alpm_pkg_user_note_dup(const alpm_pkg_xdata_t *xdata, const char *prefix) {
+  ASSERT(xdata != NULL, return NULL);
+
+  alpm_pkg_xdata_t *new_xdata;
+  CALLOC(new_xdata, 1, sizeof(alpm_pkg_xdata_t), return NULL);
+  int key_alloc_size = strlen(xdata->name) + 1;
+  if(prefix) {
+	key_alloc_size += strlen(prefix);
+  }
+  CALLOC(new_xdata->name, 1, key_alloc_size, FREE(new_xdata); return NULL);
+  if(prefix) {
+	sprintf(new_xdata->name, "%s%s", prefix, xdata->name);
+  } else {
+	sprintf(new_xdata->name, "%s", xdata->name);
+  }
+  STRDUP(new_xdata->value, xdata->value, FREE(new_xdata->name); FREE(new_xdata);
+         return NULL);
+  return new_xdata;
 }
 
 void _alpm_pkg_xdata_free(alpm_pkg_xdata_t *pd)

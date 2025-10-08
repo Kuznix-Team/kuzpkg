@@ -341,6 +341,15 @@ pacman_tests = [
   'tests/upgrade-download-404.py',
   'tests/upgrade-download-pkg-and-sig-with-filename.py',
   'tests/upgrade-download-with-xfercommand.py',
+  'tests/usernote-01-change-localdb.py',
+  'tests/usernote-02-set-localdb.py',
+  'tests/usernote-03-set-sync.py',
+  'tests/usernote-04-prs-sync-reinstall.py',
+  'tests/usernote-05-prs-sync-upgrade.py',
+  'tests/usernote-06-prs-upgrade-from-file.py',
+  'tests/usernote-07-prs-non-user-xdata.py',
+  'tests/usernote-08-query-note-search.py',
+  'tests/usernote-09-query-note-info.py',
 ]
 
 xfail_tests = {

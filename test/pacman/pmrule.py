@@ -33,7 +33,7 @@ class pmrule(object):
         return self.rule
 
     def snapshots_needed(self):
-        (testname, args) = self.rule.split("=")
+        (testname, args) = self.rule.split("=", 1)
         if testname == "FILE_MODIFIED" or testname == "!FILE_MODIFIED":
             return [args]
         return []
@@ -43,7 +43,7 @@ class pmrule(object):
         """
         success = 1
 
-        [testname, args] = self.rule.split("=")
+        [testname, args] = self.rule.split("=", 1)
         if testname[0] == "!":
             self.false = 1
             testname = testname[1:]
@@ -108,6 +108,9 @@ class pmrule(object):
                         if f.startswith(value + "\t"):
                             success = 1
                             break;
+                elif case == "XDATA":
+                    if not value in newpkg.xdata:
+                        success = 0
                 else:
                     tap.diag("PKG rule '%s' not found" % case)
                     success = -1

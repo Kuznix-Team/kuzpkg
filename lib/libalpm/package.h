@@ -163,6 +163,9 @@ int _alpm_pkg_cmp(const void *p1, const void *p2);
 int _alpm_pkg_compare_versions(alpm_pkg_t *local_pkg, alpm_pkg_t *pkg);
 
 alpm_pkg_xdata_t *_alpm_pkg_parse_xdata(const char *string);
+alpm_pkg_xdata_t *_alpm_pkg_xdata_dup(const alpm_pkg_xdata_t *xdata);
+alpm_pkg_xdata_t *_alpm_pkg_user_note_dup(const alpm_pkg_xdata_t *xdata, const char *prefix);
+void _alpm_pkg_set_xdata(alpm_pkg_t *pkg, alpm_list_t *xdata_lst);
 void _alpm_pkg_xdata_free(alpm_pkg_xdata_t *pd);
 
 int _alpm_pkg_check_meta(alpm_pkg_t *pkg);

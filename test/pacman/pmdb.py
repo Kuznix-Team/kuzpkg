@@ -157,6 +157,8 @@ class pmdb(object):
                 pkg.conflicts = _getsection(fd)
             elif line == "%PROVIDES%":
                 pkg.provides = _getsection(fd)
+            elif line == "%XDATA%":
+                pkg.xdata = _getsection(fd)
         fd.close()
 
         # files
@@ -203,6 +205,7 @@ class pmdb(object):
         make_section(data, "OPTDEPENDS", pkg.optdepends)
         make_section(data, "CONFLICTS", pkg.conflicts)
         make_section(data, "PROVIDES", pkg.provides)
+        make_section(data, "XDATA", pkg.xdata)
         make_section(data, "URL", pkg.url)
         if self.is_local:
             make_section(data, "INSTALLDATE", pkg.installdate)

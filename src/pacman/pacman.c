@@ -147,6 +147,9 @@ static void usage(int op, const char * const myname)
 			addlist(_("  -p, --file <package> query a package file instead of the database\n"));
 			addlist(_("  -q, --quiet          show less information for query and search\n"));
 			addlist(_("  -s, --search <regex> search locally-installed packages for matching strings\n"));
+			addlist(_("      --note-search <regex>\n"
+					  "                       search locally-installed packages for matching strings\n"
+					  "                       inside user-added notes\n"));
 			addlist(_("  -t, --unrequired     list packages not (optionally) required by any\n"
 			          "                       package (-tt to ignore optdepends) [filter]\n"));
 			addlist(_("  -u, --upgrades       list outdated packages [filter]\n"));
@@ -171,6 +174,11 @@ static void usage(int op, const char * const myname)
 			addlist(_("      --asexplicit     mark packages as explicitly installed\n"));
 			addlist(_("  -k, --check          test local database for validity (-kk for sync databases)\n"));
 			addlist(_("  -q, --quiet          suppress output of success messages\n"));
+			addlist(_("      --note <note>    set user note for a package (default key: 'note')\n"));
+			addlist(_("      --note-extra <key>=<value>\n"
+					  "                       set extra user note for a package\n"));
+			addlist(_("      --delete-note <key>\n"
+					  "                       delete user note from package\n"));
 		} else if(op == PM_OP_DEPTEST) {
 			printf("%s:  %s {-T --deptest} [%s] [%s]\n", str_usg, myname, str_opt, str_pkg);
 			printf("%s:\n", str_opt);
@@ -193,6 +201,9 @@ static void usage(int op, const char * const myname)
 				          "                       overwrite conflicting files (can be used more than once)\n"));
 				addlist(_("      --asdeps         install packages as non-explicitly installed\n"));
 				addlist(_("      --asexplicit     install packages as explicitly installed\n"));
+				addlist(_("      --note <note>    set user note for a package (default key: 'note')\n"));
+				addlist(_("      --note-extra <key>=<value>\n"
+						  "                       set extra user note for a package\n"));
 				addlist(_("      --ignore <pkg>   ignore a package upgrade (can be used more than once)\n"));
 				addlist(_("      --ignoregroup <grp>\n"
 				          "                       ignore a group upgrade (can be used more than once)\n"));
@@ -521,6 +532,16 @@ static int parsearg_database(int opt)
 		case OP_QUIET:
 		case 'q':
 			config->quiet = 1;
+			break;
+		case OP_USERNOTE:
+			parsearg_util_addlist(&(config->user_note));
+			break;
+		case OP_USERNOTE_EXTRA:
+			parsearg_util_addlist(&(config->user_note_extra));
+			break;
+		case OP_USERNOTE_DELETE:
+			parsearg_util_addlist(&(config->user_note_delete));
+			break;
 		break;
 		default:
 			return 1;
@@ -596,6 +617,10 @@ static int parsearg_query(int opt)
 		case OP_SEARCH:
 		case 's':
 			config->op_q_search = 1;
+			break;
+		case OP_USERNOTE:
+			config->op_q_search = 1;
+			parsearg_util_addlist(&(config->user_note));
 			break;
 		case OP_UNREQUIRED:
 		case 't':
@@ -763,6 +788,12 @@ static int parsearg_upgrade(int opt)
 			break;
 		case OP_NEEDED:
 			config->flags |= ALPM_TRANS_FLAG_NEEDED;
+			break;
+		case OP_USERNOTE:
+			parsearg_util_addlist(&(config->user_note));
+			break;
+		case OP_USERNOTE_EXTRA:
+			parsearg_util_addlist(&(config->user_note_extra));
 			break;
 		case OP_IGNORE:
 			parsearg_util_addlist(&(config->ignorepkg));
@@ -975,6 +1006,10 @@ static int parseargs(int argc, char *argv[])
 		{"ignoregroup", required_argument, 0, OP_IGNOREGROUP},
 		{"needed",     no_argument,       0, OP_NEEDED},
 		{"asexplicit",     no_argument,   0, OP_ASEXPLICIT},
+		{"note",       required_argument,   0, OP_USERNOTE},
+		{"note-extra", required_argument,   0, OP_USERNOTE_EXTRA},
+		{"note-search", required_argument,   0, OP_USERNOTE},
+		{"delete-note", required_argument,   0, OP_USERNOTE_DELETE},
 		{"arch",       required_argument, 0, OP_ARCH},
 		{"print-format", required_argument, 0, OP_PRINTFORMAT},
 		{"gpgdir",     required_argument, 0, OP_GPGDIR},

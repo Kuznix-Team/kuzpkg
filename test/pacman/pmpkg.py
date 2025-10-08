@@ -64,6 +64,7 @@ class pmpkg(object):
         }
         self.path = None
         self.finalized = False
+        self.xdata = []
 
     def __str__(self):
         s = ["%s" % self.fullname()]
@@ -137,6 +138,8 @@ class pmpkg(object):
             data.append("provides = %s" % i)
         for i in self.backup:
             data.append("backup = %s" % i)
+        for i in self.xdata:
+            data.append("xdata = %s" % i)
         archive_files.append((".PKGINFO", "\n".join(data)))
 
         # .INSTALL

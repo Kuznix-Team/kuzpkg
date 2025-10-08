@@ -1175,6 +1175,21 @@ static int load_packages(alpm_handle_t *handle, alpm_list_t **data,
 
 		PROGRESS(handle, ALPM_PROGRESS_LOAD_START, "", percent,
 				total, current);
+
+		/* check localdb for user notes and update new package */
+		alpm_db_t *localdb = alpm_get_localdb(handle);
+		alpm_pkg_t *localpkg = alpm_db_get_pkg(localdb, spkg->name);
+		if(localpkg != NULL) {
+			alpm_list_t *new_notes = alpm_pkg_get_user_notes(spkg);
+			alpm_list_t *old_notes = alpm_pkg_get_user_notes(localpkg);
+			alpm_pkg_user_notes_update(spkg, old_notes);
+			alpm_pkg_user_notes_update(spkg, new_notes);
+			alpm_list_free_inner(old_notes, (alpm_list_fn_free)alpm_pkg_xdata_free);
+			alpm_list_free(old_notes);
+			alpm_list_free_inner(new_notes, (alpm_list_fn_free)alpm_pkg_xdata_free);
+			alpm_list_free(new_notes);
+		}
+
 		if(spkg->origin == ALPM_PKG_FROM_FILE) {
 			continue; /* pkg_load() has been already called, this package is valid */
 		}
@@ -1209,6 +1224,11 @@ static int load_packages(alpm_handle_t *handle, alpm_list_t **data,
 			continue;
 		}
 		free(filepath);
+		/* copy user notes */
+		alpm_list_t *user_notes = alpm_pkg_get_user_notes(spkg);
+		alpm_pkg_user_notes_update(pkgfile, user_notes);
+		alpm_list_free_inner(user_notes, (alpm_list_fn_free)alpm_pkg_xdata_free);
+		alpm_list_free(user_notes);
 		/* copy over the install reason */
 		pkgfile->reason = spkg->reason;
 		/* copy over validation method */
