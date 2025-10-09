@@ -1317,6 +1317,13 @@ msgid ""
 "      --disable-sandbox\n"
 "                       disable the sandbox used for the downloader process\n"
 msgstr ""
+"     --disable-sandbox\n"
+"                      shaltet Sandbox für den Download-Prozess aus\n"
+
+#: src/pacman/pacman.c:231
+#, c-format
+msgid "      --retry-prompt   repeat prompts until a valid answer is supplied\n"
+msgstr "      --retry-prompt   wiederholt Frage, bis eine valide Antwort gegeben wird\n"
 
 #: src/pacman/pacman.c:249
 #, c-format
@@ -1866,6 +1873,11 @@ msgstr "[J/n]"
 msgid "[y/N]"
 msgstr "[j/N]"
 
+#: src/pacman/util.c:1741
+#, c-format
+msgid "vsnprintf failure: Failed to cache prompt: %s\n"
+msgstr "vsnprintf-fehler: Kann Frage nicht cachen: %s\n"
+
 #: src/pacman/util.c:1751
 #, c-format
 msgid "Y"
@@ -1885,6 +1897,11 @@ msgstr "N"
 #, c-format
 msgid "NO"
 msgstr "NEIN"
+
+#: src/pacman/util.c:1769
+#, c-format
+msgid "vsnprintf failure: Failed to cache prompt: Required size changed: %zu -> %i bytes\n"
+msgstr "vsnprintf-fehler: Kann Frage nicht cachen: Benötigte Größe hat sich geändert: %zu -> %i bytes\n"
 
 #: src/pacman/util.c:1820
 #, c-format

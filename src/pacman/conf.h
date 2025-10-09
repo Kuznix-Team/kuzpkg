@@ -59,6 +59,7 @@ typedef struct __config_t {
 	unsigned short color;
 	unsigned short disable_dl_timeout;
 	unsigned short disable_sandbox;
+	unsigned short retry_input;
 	char *print_format;
 	/* unfortunately, we have to keep track of paths both here and in the library
 	 * because they can come from both the command line or config file, and we
@@ -214,7 +215,8 @@ enum {
 	OP_REFRESH,
 	OP_ASSUMEINSTALLED,
 	OP_DISABLEDLTIMEOUT,
-	OP_DISABLESANDBOX
+	OP_DISABLESANDBOX,
+	OP_RETRYINPUT
 };
 
 /* clean method */
