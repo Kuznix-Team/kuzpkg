@@ -332,7 +332,9 @@ static int extract_single_file(alpm_handle_t *handle, struct archive *archive,
 
 	if(backup) {
 		FREE(backup->hash);
+		FREE(backup->sha256sum);
 		backup->hash = alpm_compute_md5sum(filename);
+		backup->sha256sum = alpm_compute_sha256sum(filename);
 	}
 
 	if(notouch) {

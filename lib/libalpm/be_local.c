@@ -1116,6 +1116,7 @@ int _alpm_local_db_write(alpm_db_t *db, alpm_pkg_t *info, int inforeq)
 			for(lp = info->backup; lp; lp = lp->next) {
 				const alpm_backup_t *backup = lp->data;
 				fprintf(fp, "%s\t%s\n", backup->name, backup->hash);
+				fprintf(fp, "%s\t%s\n", backup->name, backup->sha256sum);
 			}
 			fputc('\n', fp);
 		}

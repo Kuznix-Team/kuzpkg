@@ -155,6 +155,7 @@ typedef struct _alpm_backup_t {
        char *name;
        /** Hash of the filename (used internally) */
        char *hash;
+       char *sha256sum;
 } alpm_backup_t;
 
 /** Determines whether a package filelist contains a given path.
