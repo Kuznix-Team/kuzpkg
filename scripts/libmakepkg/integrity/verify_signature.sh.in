@@ -74,6 +74,7 @@ check_pgpsigs() {
 			case "$status" in
 				"missingkey")
 					printf ' (%s)' "$(gettext "unknown public key") $pubkey" >&2
+					printf "\n      $(gettext "Hint: Download the key with: %s")" "gpg --recv-key $pubkey" >&2
 					;;
 				"revokedkey")
 					printf " ($(gettext "public key %s has been revoked"))" "$pubkey" >&2
