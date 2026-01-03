@@ -153,6 +153,7 @@ static void usage(int op, const char * const myname)
 		} else if(op == PM_OP_SYNC) {
 			printf("%s:  %s {-S --sync} [%s] [%s]\n", str_usg, myname, str_opt, str_pkg);
 			printf("%s:\n", str_opt);
+			addlist(_("  -b, --builddep       install build dependencies for package(s)\n"));
 			addlist(_("  -c, --clean          remove old packages from cache directory (-cc for all)\n"));
 			addlist(_("  -g, --groups         view all members of a package group\n"
 			          "                       (-gg to view all groups and members)\n"));
@@ -886,6 +887,10 @@ static int parsearg_sync(int opt)
 		return 0;
 	}
 	switch(opt) {
+		case OP_BUILDDEP:
+		case 'b':
+			(config->op_s_builddep)++;
+			break;
 		case OP_CLEAN:
 		case 'c':
 			(config->op_s_clean)++;
@@ -927,7 +932,12 @@ static int parsearg_sync(int opt)
 static void checkargs_sync(void)
 {
 	checkargs_upgrade();
-	if(config->op_s_clean) {
+	if(config->op_s_builddep) {
+		invalid_opt(config->group, "--builddep", "--groups");
+		invalid_opt(config->op_q_info, "--builddep", "--info");
+		invalid_opt(config->op_q_list, "--builddep", "--list");
+		invalid_opt(config->op_s_search, "--builddep", "--search");
+	} else if(config->op_s_clean) {
 		invalid_opt(config->group, "--clean", "--groups");
 		invalid_opt(config->op_s_info, "--clean", "--info");
 		invalid_opt(config->op_q_list, "--clean", "--list");
@@ -1037,6 +1047,7 @@ static int parseargs(int argc, char *argv[])
 		{"disable-sandbox", no_argument, 0, OP_DISABLESANDBOX},
 		{"disable-sandbox-filesystem", no_argument, 0, OP_DISABLESANDBOXFILESYSTEM},
 		{"disable-sandbox-syscalls", no_argument, 0, OP_DISABLESANDBOXSYSCALLS},
+		{"builddep", no_argument, 0, OP_BUILDDEP},
 		{0, 0, 0, 0}
 	};
 

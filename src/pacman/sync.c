@@ -740,6 +740,31 @@ static int sync_trans(alpm_list_t *targets)
 	return sync_prepare_execute();
 }
 
+static int sync_builddep(alpm_list_t *syncs, alpm_list_t *targets)
+{
+	alpm_list_t *i, *j, *k, *l, *builddepends = NULL;
+
+	for(i = targets; i; i = alpm_list_next(i)) {
+		const char *targ = i->data;
+		for(j = syncs; j; j = alpm_list_next(j)) {
+			alpm_db_t *db = j->data;
+
+			for(k = alpm_db_get_pkgcache(db); k; k = alpm_list_next(k)) {
+				alpm_pkg_t *pkg = k->data;
+
+				if(strcmp(alpm_pkg_get_name(pkg), targ) == 0) {
+					for (l = alpm_pkg_get_makedepends(pkg); l; l = alpm_list_next(l)) {
+						alpm_depend_t *depend = l->data;
+						builddepends = alpm_list_add(builddepends, depend->name);
+					}
+				}
+			}
+		}
+	}
+
+	return sync_trans(builddepends);
+}
+
 static void print_broken_dep(alpm_depmissing_t *miss)
 {
 	char *depstring = alpm_dep_compute_string(miss->depend);
@@ -959,6 +984,10 @@ int pacman_sync(alpm_list_t *targets)
 	/* get a listing of files in sync DBs */
 	if(config->op_q_list) {
 		return sync_list(sync_dbs, targets);
+	}
+
+	if(config->op_s_builddep) {
+		return sync_builddep(sync_dbs, targets);
 	}
 
 	if(targets == NULL) {
