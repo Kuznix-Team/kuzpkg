@@ -141,8 +141,8 @@ void _alpm_sandbox_cb_log(void *ctx, alpm_loglevel_t level, const char *fmt, va_
 	if(string_size <= 0) {
 		return;
 	}
-	MALLOC(string, string_size + 1, return);
-	string_size = vsnprintf(string, string_size + 1, fmt, args);
+	MALLOC(string, (size_t)string_size + 1, return);
+	string_size = vsnprintf(string, (size_t)string_size + 1, fmt, args);
 	if(string_size > 0) {
 		write_to_pipe(context->callback_pipe, &type, sizeof(type));
 		write_to_pipe(context->callback_pipe, &level, sizeof(level));
