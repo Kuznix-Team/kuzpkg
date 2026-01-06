@@ -137,8 +137,8 @@ void _alpm_sandbox_cb_log(void *ctx, alpm_loglevel_t level, const char *fmt, va_
 	va_list copy;
 	va_copy(copy, args);
 	string_size = vsnprintf(NULL, 0, fmt, copy);
+	va_end(copy);
 	if(string_size <= 0) {
-		va_end(copy);
 		return;
 	}
 	MALLOC(string, string_size + 1, return);
@@ -149,7 +149,6 @@ void _alpm_sandbox_cb_log(void *ctx, alpm_loglevel_t level, const char *fmt, va_
 		write_to_pipe(context->callback_pipe, &string_size, sizeof(string_size));
 		write_to_pipe(context->callback_pipe, string, string_size);
 	}
-	va_end(copy);
 	FREE(string);
 }
 
