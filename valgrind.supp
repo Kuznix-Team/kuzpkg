@@ -68,6 +68,13 @@
    fun:OPENSSL_init_crypto
 }
 {
+   openssl_fetch_leak
+   Memcheck:Leak
+   ...
+   fun:EVP_*_fetch
+   ...
+}
+{
    gpgme-static-get-engine-info
    Memcheck:Leak
    fun:malloc
