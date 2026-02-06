@@ -102,12 +102,12 @@ systems (see below).
 
 *source (array)*::
 	An array of source files required to build the package. Source files
-	must either reside in the same directory as the PKGBUILD, or be a
-	fully-qualified URL that makepkg can use to download the file.
-	To simplify the maintenance of PKGBUILDs, use the `$pkgname` and `$pkgver`
-	variables when specifying the download location, if possible.
-	Compressed files will be extracted automatically unless found in the
-	noextract array described below.
+	must either reside in `$SRCDEST` (if set, otherwise the same directory
+	as the PKGBUILD) or be a fully-qualified URL that makepkg can use to
+	download the file. To simplify the maintenance of PKGBUILDs, use the
+	`$pkgname` and `$pkgver` variables when specifying the download
+	location, if possible. Compressed files will be extracted automatically
+	unless found in the noextract array described below.
 +
 Additional architecture-specific sources can be added by appending an
 underscore and the architecture name e.g., 'source_x86_64=()'. There must be a
@@ -359,7 +359,8 @@ function.
 	An optional `verify()` function can be specified to implement arbitrary
 	source authentication. The function should return a non-zero exit code when
 	verification fails. This function is run before sources are extracted.
-	This function is run inside `$startdir`.
+	This function is run inside `$SRCDEST`, if set, otherwise the same
+	directory as the PKGBUILD.
 
 *prepare() Function*::
 	An optional `prepare()` function can be specified in which operations to

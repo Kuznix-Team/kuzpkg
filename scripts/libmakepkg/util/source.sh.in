@@ -90,28 +90,12 @@ get_filename() {
 
 # Return the absolute filename of a source entry
 get_filepath() {
-	local file="$(get_filename "$1")"
+	local file="$SRCDEST/$(get_filename "$1")"
 	local proto="$(get_protocol "$1")"
 
 	case $proto in
-		bzr|git|hg|svn)
-			if [[ -d "$startdir/$file" ]]; then
-				file="$startdir/$file"
-			elif [[ -d "$SRCDEST/$file" ]]; then
-				file="$SRCDEST/$file"
-			else
-				return 1
-			fi
-			;;
-		*)
-			if [[ -f "$startdir/$file" ]]; then
-				file="$startdir/$file"
-			elif [[ -f "$SRCDEST/$file" ]]; then
-				file="$SRCDEST/$file"
-			else
-				return 1
-			fi
-			;;
+		bzr|git|hg|svn) [[ -d $file ]] || return 1 ;;
+		*) [[ -f $file ]] || return 1 ;;
 	esac
 
 	printf "%s\n" "$file"
