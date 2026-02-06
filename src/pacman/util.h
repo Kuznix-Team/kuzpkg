@@ -47,6 +47,7 @@ typedef struct _pm_target_t {
 	int is_explicit;
 } pm_target_t;
 
+size_t string_length(const char *s);
 void trans_init_error(void);
 /* flags is a bitfield of alpm_transflag_t flags */
 int trans_init(int flags, int check_valid);

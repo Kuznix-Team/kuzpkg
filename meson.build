@@ -14,6 +14,8 @@ libalpm_version = '16.0.1'
 
 cc = meson.get_compiler('c')
 
+add_project_arguments(['-fsanitize=address', '-fno-omit-frame-pointer', '-ggdb', '-O0'], language : 'c')
+
 # commandline options
 PREFIX = get_option('prefix')
 DATAROOTDIR = join_paths(PREFIX, get_option('datarootdir'))
@@ -307,6 +309,8 @@ subdir('src/pacman')
 subdir('src/util')
 subdir('scripts')
 
+subdir('src/fuzzing')
+
 # Internationalization
 if get_option('i18n')
   i18n = import('i18n')
@@ -398,6 +402,45 @@ executable(
   include_directories : includes,
   link_with : [libalpm_a],
   install : true,
+)
+
+# Note: fuzz targets below must be built with Clang compiler
+executable(
+    'fuzz_wordsplit',
+    fuzz_wordsplit_sources,
+    include_directories : includes,
+    link_with : [libcommon],
+    dependencies : [],
+    c_args : ['-fsanitize=fuzzer,address', '-ggdb', '-O0', '-fno-omit-frame-pointer'],
+    link_args : ['-fsanitize=fuzzer,address', '-ggdb', '-O0', '-fno-omit-frame-pointer'],
+)
+
+executable(
+    'fuzz_string_length',
+    [fuzz_string_length_sources, pacman_sources],
+    include_directories : includes,
+    link_with : [libalpm_a, libcommon],
+    dependencies : [],
+    c_args : ['-fsanitize=fuzzer,address', '-ggdb', '-O0', '-fno-omit-frame-pointer', '-DFUZZING_PACMAN'],
+    link_args : ['-fsanitize=fuzzer,address', '-ggdb', '-O0', '-fno-omit-frame-pointer'],
+)
+executable(
+    'fuzz_alpm_extract_keyid',
+    [fuzz_alpm_extract_keyid_sources, pacman_sources],
+    include_directories : includes,
+    link_with : [libalpm_a, libcommon],
+    dependencies : [],
+    c_args : ['-fsanitize=fuzzer,address', '-ggdb', '-O0', '-fno-omit-frame-pointer', '-DFUZZING_PACMAN'],
+    link_args : ['-fsanitize=fuzzer,address', '-ggdb', '-O0', '-fno-omit-frame-pointer'],
+)
+executable(
+    'fuzz_parseconfigfile',
+    [fuzz_parseconfigfile_sources, pacman_sources],
+    include_directories : includes,
+    link_with : [libalpm_a],
+    dependencies : [],
+    c_args : ['-fsanitize=fuzzer,address', '-ggdb', '-O0', '-fno-omit-frame-pointer', '-DFUZZING_PACMAN'],
+    link_args : ['-fsanitize=fuzzer,address', '-ggdb', '-O0', '-fno-omit-frame-pointer'],
 )
 
 foreach wrapper : script_wrappers

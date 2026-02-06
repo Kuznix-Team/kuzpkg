@@ -451,7 +451,7 @@ static char *concat_list(alpm_list_t *lst, formatfn fn)
 	return output;
 }
 
-static size_t string_length(const char *s)
+size_t string_length(const char *s)
 {
 	size_t len;
 	wchar_t *wcstr;
