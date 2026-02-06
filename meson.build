@@ -448,9 +448,20 @@ install_data(
   'proto/proto.install',
   install_dir : join_paths(DATAROOTDIR, 'pacman'))
 
-foreach path : [
-	join_paths(LOCALSTATEDIR, 'lib/pacman/'),
-	join_paths(LOCALSTATEDIR, 'cache/pacman/pkg/'),
+systemd = dependency('systemd', required: false)
+if systemd.found()
+	install_data('tmpfiles.conf',
+				rename: 'pacman.conf',
+				install_dir: systemd.get_variable(pkgconfig: 'tmpfilesdir'))
+	var_paths = []
+else
+	var_paths = [
+		join_paths(LOCALSTATEDIR, 'lib/pacman/'),
+		join_paths(LOCALSTATEDIR, 'cache/pacman/pkg/'),
+		]
+endif
+
+foreach path : var_paths + [
 	join_paths(DATAROOTDIR, 'makepkg-template/'),
 	join_paths(DATAROOTDIR, 'libalpm/hooks/'),
 	]
