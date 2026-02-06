@@ -347,9 +347,7 @@ xfail_tests = {
   # expect failure on 32 bit machines
   'tests/query006.py': cc.sizeof('ssize_t') < 8,
   'tests/replace110.py': true,
-  'tests/sync-update-package-removing-required-provides.py': true,
   'tests/sync403.py': true,
-  'tests/sync406.py': true,
   'tests/upgrade078.py': true,
 }
 

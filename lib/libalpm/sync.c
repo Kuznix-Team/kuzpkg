@@ -364,21 +364,19 @@ finish:
 	return ret;
 }
 
-int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
+static int _alpm_sync_prepare_pkgs(alpm_handle_t *handle, alpm_list_t **data,
+		alpm_list_t *extrapkgs, alpm_list_t **resolved)
 {
 	alpm_list_t *i, *j;
 	alpm_list_t *deps = NULL;
 	alpm_list_t *unresolvable = NULL;
-	int from_sync = 0;
-	int ret = 0;
 	alpm_trans_t *trans = handle->trans;
 	alpm_event_t event;
+	alpm_list_t *pkglist = (extrapkgs ? extrapkgs : trans->add);
+	int from_sync = 0;
+	int ret = 0;
 
-	if(data) {
-		*data = NULL;
-	}
-
-	for(i = trans->add; i; i = i->next) {
+	for(i = pkglist; i; i = i->next) {
 		alpm_pkg_t *spkg = i->data;
 		if (spkg->origin == ALPM_PKG_FROM_SYNCDB){
 			from_sync = 1;
@@ -399,7 +397,6 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 	}
 
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {
-		alpm_list_t *resolved = NULL;
 		alpm_list_t *remove = alpm_list_copy(trans->remove);
 		alpm_list_t *localpkgs;
 
@@ -410,7 +407,7 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 		_alpm_log(handle, ALPM_LOG_DEBUG, "resolving target's dependencies\n");
 
 		/* build remove list for resolvedeps */
-		for(i = trans->add; i; i = i->next) {
+		for(i = pkglist; i; i = i->next) {
 			alpm_pkg_t *spkg = i->data;
 			for(j = spkg->removes; j; j = j->next) {
 				remove = alpm_list_add(remove, j->data);
@@ -420,14 +417,14 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 		/* Compute the fake local database for resolvedeps (partial fix for the
 		 * phonon/qt issue) */
 		localpkgs = alpm_list_diff(_alpm_db_get_pkgcache(handle->db_local),
-				trans->add, _alpm_pkg_cmp);
+				pkglist, _alpm_pkg_cmp);
 
 		/* Resolve packages in the transaction one at a time, in addition
 		   building up a list of packages which could not be resolved. */
-		for(i = trans->add; i; i = i->next) {
+		for(i = pkglist; i; i = i->next) {
 			alpm_pkg_t *pkg = i->data;
-			if(_alpm_resolvedeps(handle, localpkgs, pkg, trans->add,
-						&resolved, remove, data) == -1) {
+			if(_alpm_resolvedeps(handle, localpkgs, pkg, pkglist,
+						resolved, remove, data) == -1) {
 				unresolvable = alpm_list_add(unresolvable, pkg);
 			}
 			/* Else, [resolved] now additionally contains [pkg] and all of its
@@ -459,15 +456,15 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 				}
 			} else {
 				/* pm_errno was set by resolvedeps, callback may have overwrote it */
-				alpm_list_free(resolved);
+				alpm_list_free(*resolved);
 				alpm_list_free(unresolvable);
 				ret = -1;
-				GOTO_ERR(handle, ALPM_ERR_UNSATISFIED_DEPS, cleanup);
+				GOTO_ERR(handle, ALPM_ERR_UNSATISFIED_DEPS, _cleanup);
 			}
 		}
 
 		/* Ensure two packages don't have the same filename */
-		for(i = resolved; i; i = i->next) {
+		for(i = *resolved; i; i = i->next) {
 			alpm_pkg_t *pkg1 = i->data;
 			for(j = i->next; j; j = j->next) {
 				alpm_pkg_t *pkg2 = j->data;
@@ -481,12 +478,12 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 		}
 
 		if(ret != 0) {
-			alpm_list_free(resolved);
-			goto cleanup;
+			alpm_list_free(*resolved);
+			goto _cleanup;
 		}
 
 		/* Set DEPEND reason for pulled packages */
-		for(i = resolved; i; i = i->next) {
+		for(i = *resolved; i; i = i->next) {
 			alpm_pkg_t *pkg = i->data;
 			if(!alpm_pkg_find(trans->add, pkg->name)) {
 				pkg->reason = ALPM_PKG_REASON_DEPEND;
@@ -499,8 +496,9 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 		 * holds to package objects. */
 		trans->unresolvable = unresolvable;
 
-		alpm_list_free(trans->add);
-		trans->add = resolved;
+		// alpm_list_free(trans->add);
+		trans->add = *resolved;
+		pkglist = (extrapkgs ? pkglist : *resolved);
 
 		event.type = ALPM_EVENT_RESOLVEDEPS_DONE;
 		EVENT(handle, &event);
@@ -556,7 +554,7 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 				alpm_list_free(deps);
 				alpm_dep_free(dep1);
 				alpm_dep_free(dep2);
-				goto cleanup;
+				goto _cleanup;
 			}
 			alpm_dep_free(dep1);
 			alpm_dep_free(dep2);
@@ -626,7 +624,7 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 				}
 				alpm_list_free_inner(deps, (alpm_list_fn_free)alpm_conflict_free);
 				alpm_list_free(deps);
-				goto cleanup;
+				goto _cleanup;
 			}
 		}
 		event.type = ALPM_EVENT_INTERCONFLICTS_DONE;
@@ -636,7 +634,7 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 	}
 
 	/* Build trans->remove list */
-	for(i = trans->add; i; i = i->next) {
+	for(i = pkglist; i; i = i->next) {
 		alpm_pkg_t *spkg = i->data;
 		for(j = spkg->removes; j; j = j->next) {
 			alpm_pkg_t *rpkg = j->data;
@@ -651,21 +649,60 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 		}
 	}
 
+_cleanup:
+	return ret;
+}
+
+int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
+{
+	alpm_list_t *i;
+	alpm_list_t *deps = NULL;
+	alpm_list_t *resolved = NULL;
+	int ret = 0;
+	alpm_trans_t *trans = handle->trans;
+
+	if(data) {
+		*data = NULL;
+	}
+
+	if(_alpm_sync_prepare_pkgs(handle, data, NULL, &resolved) != 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {
 		_alpm_log(handle, ALPM_LOG_DEBUG, "checking dependencies\n");
 		deps = alpm_checkdeps(handle, _alpm_db_get_pkgcache(handle->db_local),
 				trans->remove, trans->add, 1);
 		if(deps) {
-			handle->pm_errno = ALPM_ERR_UNSATISFIED_DEPS;
-			ret = -1;
-			if(data) {
-				*data = deps;
-			} else {
-				alpm_list_free_inner(deps,
-						(alpm_list_fn_free)alpm_depmissing_free);
-				alpm_list_free(deps);
+			/* It might be solved by adding the missing deps back */
+			alpm_list_t *extrapkgs = NULL;
+			alpm_depmissing_t *miss;
+			alpm_pkg_t *pkg;
+			int found = 1;
+			for (i = deps; i; i = i->next) {
+				miss = i->data;
+				pkg = alpm_find_dbs_satisfier(handle, handle->dbs_sync, miss->depend->name);
+				if(pkg && !alpm_pkg_find(trans->add, pkg->name)) {
+					extrapkgs = alpm_list_add(extrapkgs, pkg);
+				} else {
+					found = 0;
+				}
 			}
-			goto cleanup;
+
+			/* trans->add will be updated by _alpm_sync_prepare_pkgs() */
+			if(!found || _alpm_sync_prepare_pkgs(handle, data, extrapkgs, &resolved) != 0) {
+				handle->pm_errno = ALPM_ERR_UNSATISFIED_DEPS;
+				ret = -1;
+				if(data) {
+					*data = deps;
+				} else {
+					alpm_list_free_inner(deps,
+							(alpm_list_fn_free)alpm_depmissing_free);
+					alpm_list_free(deps);
+				}
+				goto cleanup;
+			}
 		}
 	}
 	for(i = trans->add; i; i = i->next) {
