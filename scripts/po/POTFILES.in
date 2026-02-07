@@ -13,6 +13,7 @@ scripts/libmakepkg/buildenv/buildflags.sh.in
 scripts/libmakepkg/buildenv/compiler.sh.in
 scripts/libmakepkg/buildenv/debugflags.sh.in
 scripts/libmakepkg/buildenv/fortran.sh.in
+scripts/libmakepkg/buildenv/go.sh.in
 scripts/libmakepkg/buildenv/lto.sh.in
 scripts/libmakepkg/buildenv/makeflags.sh.in
 scripts/libmakepkg/buildenv/rust.sh.in

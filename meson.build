@@ -428,6 +428,12 @@ configure_file(
   install_dir : join_paths(SYSCONFDIR, 'makepkg.conf.d/'))
 
 configure_file(
+  input : 'etc/makepkg.conf.d/go.conf.in',
+  output : 'go.conf',
+  configuration : substs,
+  install_dir : join_paths(SYSCONFDIR, 'makepkg.conf.d/'))
+
+configure_file(
   input : 'etc/makepkg.conf.d/rust.conf.in',
   output : 'rust.conf',
   configuration : substs,
