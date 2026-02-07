@@ -22,6 +22,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
@@ -161,7 +162,7 @@ static void remove_prepare_keep_needed(alpm_handle_t *handle, alpm_list_t *lp)
  * @param handle the context handle
  * @param lp list of packages to be removed
  */
-static void remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp)
+static void remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *lp, int remove_optdepends)
 {
 	alpm_list_t *i;
 
@@ -169,21 +170,29 @@ static void remove_notify_needed_optdepends(alpm_handle_t *handle, alpm_list_t *
 		alpm_pkg_t *pkg = i->data;
 		alpm_list_t *optdeps = alpm_pkg_get_optdepends(pkg);
 
-		if(optdeps && !alpm_pkg_find(lp, pkg->name)) {
-			alpm_list_t *j;
-			for(j = optdeps; j; j = alpm_list_next(j)) {
-				alpm_depend_t *optdep = j->data;
-				char *optstring = alpm_dep_compute_string(optdep);
-				if(alpm_find_satisfier(lp, optstring)) {
+		if (!optdeps || alpm_pkg_find(lp, pkg->name))  {
+			continue;
+		}
+
+		alpm_list_t *j;
+		for(j = optdeps; j; j = alpm_list_next(j)) {
+			alpm_depend_t *optdep = j->data;
+			char *optstring = alpm_dep_compute_string(optdep);
+			if(alpm_find_satisfier(lp, optstring)) {
+				if (remove_optdepends) {
+					// -Rss, we delete optdepends
 					alpm_event_optdep_removal_t event = {
 						.type = ALPM_EVENT_OPTDEP_REMOVAL,
 						.pkg = pkg,
 						.optdep = optdep
 					};
 					EVENT(handle, &event);
+				} else {
+					// -Rs, we keep optdepends
+					alpm_list_remove(lp, optdep, _alpm_pkg_dep_cmp, NULL);
 				}
-				free(optstring);
 			}
+			free(optstring);
 		}
 	}
 }
@@ -257,7 +266,7 @@ int _alpm_remove_prepare(alpm_handle_t *handle, alpm_list_t **data)
 
 	/* Note packages being removed that are optdepends for installed packages */
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {
-		remove_notify_needed_optdepends(handle, trans->remove);
+		remove_notify_needed_optdepends(handle, trans->remove, (trans->flags & ALPM_TRANS_FLAG_RECURSEALL));
 	}
 
 	if(!(trans->flags & ALPM_TRANS_FLAG_NODEPS)) {
