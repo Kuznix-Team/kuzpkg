@@ -93,7 +93,7 @@ debian:
     - apt update
     - >
       apt -y install --no-install-recommends
-      git pkg-config meson gcc libtool
+      git pkg-config meson gcc libtool libarchive-tools
       libgpgme-dev libarchive-dev libcurl4-openssl-dev libssl-dev curl
       gettext python3 python3-setuptools dash gawk ca-certificates
       fakeroot fakechroot
