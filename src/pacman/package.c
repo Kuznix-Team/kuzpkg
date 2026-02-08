@@ -79,7 +79,11 @@ enum {
  */
 #define TITLE_MAXLEN 50
 
-static char titles[_T_MAX][TITLE_MAXLEN * sizeof(wchar_t)];
+/* Space for TITLE_MAXLEN wide chars + suffix (" :") + NUL, worst-case
+ * MB_LEN_MAX bytes per multibyte character. */
+#define TITLE_BUFSZ ((TITLE_MAXLEN + 4) * MB_LEN_MAX)
+
+static char titles[_T_MAX][TITLE_BUFSZ];
 
 /** Build the `titles` array of localized titles and pad them with spaces so
  * that they align with the longest title. Storage for strings is stack
@@ -88,13 +92,13 @@ static char titles[_T_MAX][TITLE_MAXLEN * sizeof(wchar_t)];
 static void make_aligned_titles(void)
 {
 	unsigned int i;
-	size_t maxlen = 0;
 	int maxcol = 0;
 	static const wchar_t title_suffix[] = L" :";
 	wchar_t wbuf[ARRAYSIZE(titles)][TITLE_MAXLEN + ARRAYSIZE(title_suffix)] = {{ 0 }};
-	size_t wlen[ARRAYSIZE(wbuf)];
-	int wcol[ARRAYSIZE(wbuf)];
-	char *buf[ARRAYSIZE(wbuf)];
+	size_t wlen[ARRAYSIZE(wbuf)] = { 0 };
+	int wcol[ARRAYSIZE(wbuf)] = { 0 };
+	const char *buf[ARRAYSIZE(wbuf)];
+
 	buf[T_ARCHITECTURE] = _("Architecture");
 	buf[T_BACKUP_FILES] = _("Backup Files");
 	buf[T_BUILD_DATE] = _("Build Date");
@@ -124,23 +128,52 @@ static void make_aligned_titles(void)
 	buf[T_VERSION] = _("Version");
 
 	for(i = 0; i < ARRAYSIZE(wbuf); i++) {
-		wlen[i] = mbstowcs(wbuf[i], buf[i], strlen(buf[i]) + 1);
+		size_t basecap = ARRAYSIZE(wbuf[i]) - ARRAYSIZE(title_suffix);
+		if(basecap > 0) {
+			/* Convert at most basecap-1 wide chars so we always NUL-terminate. */
+			wlen[i] = mbstowcs(wbuf[i], buf[i], basecap - 1);
+			if(wlen[i] == (size_t)-1) {
+				/* Conversion failure; fall back to empty title (will still get suffix). */
+				wlen[i] = 0;
+			}
+			wbuf[i][wlen[i]] = L'\0';
+		} else {
+			wlen[i] = 0;
+			wbuf[i][0] = L'\0';
+		}
+
 		wcol[i] = wcswidth(wbuf[i], wlen[i]);
+		if(wcol[i] < 0) {
+			/* Non-printable/invalid wide chars: approximate width by length. */
+			wcol[i] = (int)wlen[i];
+		}
 		if(wcol[i] > maxcol) {
 			maxcol = wcol[i];
-		}
-		if(wlen[i] > maxlen) {
-			maxlen = wlen[i];
 		}
 	}
 
 	for(i = 0; i < ARRAYSIZE(wbuf); i++) {
-		size_t padlen = maxcol - wcol[i];
+		size_t padlen = (maxcol > wcol[i]) ? (size_t)(maxcol - wcol[i]) : 0;
+		size_t avail = ARRAYSIZE(wbuf[i]) - wlen[i] - ARRAYSIZE(title_suffix);
+		size_t nbytes;
+
+		if(padlen > avail) {
+			padlen = avail;
+		}
+
 		wmemset(wbuf[i] + wlen[i], L' ', padlen);
 		wmemcpy(wbuf[i] + wlen[i] + padlen, title_suffix, ARRAYSIZE(title_suffix));
-		wcstombs(titles[i], wbuf[i], sizeof(titles[i]));
+
+		/* Ensure NUL termination even if truncated. */
+		nbytes = wcstombs(titles[i], wbuf[i], sizeof(titles[i]) - 1);
+		if(nbytes == (size_t)-1) {
+			titles[i][0] = '\0';
+		} else {
+			titles[i][nbytes] = '\0';
+		}
 	}
 }
+
 
 /** Turn a depends list into a text list.
  * @param deps a list with items of type alpm_depend_t
@@ -170,8 +203,12 @@ static void optdeplist_display(alpm_pkg_t *pkg, unsigned short cols)
 		if(alpm_pkg_get_origin(pkg) == ALPM_PKG_FROM_LOCALDB) {
 			if(alpm_find_satisfier(alpm_db_get_pkgcache(localdb), depstring)) {
 				const char *installed = _(" [installed]");
-				depstring = realloc(depstring, strlen(depstring) + strlen(installed) + 1);
-				strcpy(depstring + strlen(depstring), installed);
+				size_t len = strlen(depstring);
+				char *tmp = realloc(depstring, len + strlen(installed) + 1);
+				if(tmp) {
+					depstring = tmp;
+					memcpy(depstring + len, installed, strlen(installed) + 1);
+				}
 			}
 		}
 		text = alpm_list_add(text, depstring);
@@ -321,6 +358,8 @@ void dump_pkg_full(alpm_pkg_t *pkg, int extra)
 
 		if(base64_sig) {
 			FREELIST(keys);
+		} else {
+			alpm_list_free(keys);
 		}
 	} else {
 		list_display(titles[T_VALIDATED_BY], validation, cols);
