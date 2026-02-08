@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <syslog.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 #include <fcntl.h>
 #include <pwd.h>
 
@@ -119,6 +120,7 @@ void _alpm_handle_free(alpm_handle_t *handle)
 int _alpm_handle_lock(alpm_handle_t *handle)
 {
 	char *dir, *ptr;
+	int ret;
 
 	ASSERT(handle->lockfile != NULL, return -1);
 	ASSERT(handle->lockfd < 0, return 0);
@@ -136,22 +138,73 @@ int _alpm_handle_lock(alpm_handle_t *handle)
 	FREE(dir);
 
 	do {
-		handle->lockfd = open(handle->lockfile, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0000);
+		handle->lockfd = open(handle->lockfile, O_RDWR | O_CREAT | O_CLOEXEC, S_IRUSR | S_IWUSR);
 	} while(handle->lockfd == -1 && errno == EINTR);
 
-	return (handle->lockfd >= 0 ? 0 : -1);
+	if (handle->lockfd == -1) {
+		return -1;
+	}
+
+	do {
+	    ret = flock(handle->lockfd, LOCK_EX | LOCK_NB);
+	} while(ret != 0 && errno == EINTR);
+
+	if(ret != 0) {
+		/* Do not unlink here as someone else seems to hold the lock!
+		 * We do not check for the exact error, as many errors may occur
+		 * and we don't want to unlock the file by deleting it without
+		 * being absolutely sure no one else has locked it.
+		 */
+		close(handle->lockfd);
+		handle->lockfd = -1;
+	}
+
+	return ret == 0 ? 0 : -1;
 }
 
 int SYMEXPORT alpm_unlock(alpm_handle_t *handle)
 {
+	int ret_flock, ret_unlink;
+
 	ASSERT(handle != NULL, return -1);
 	ASSERT(handle->lockfile != NULL, return 0);
 	ASSERT(handle->lockfd >= 0, return 0);
 
+	/* We can't get rid of the unlink because of backwards compatibility.
+	 * And it would make the bash script very convoluted when implementing flocks.
+	 * But first unlink, then unlock, so that no race condition can occur.
+	 *
+	 * Unlock-then-Unlink:
+	 * 1. TX1: flock(fd1, LOCK_UN)
+	 * 2. TX2: fd1 = open(fn)
+	 * 3. TX1: unlink(fd1)
+	 * 4. TX2: flock(fd1, LOCK_EX)
+	 *         ^ Succeeds, TX2 should be the exclusive owner now
+	 * 5. TX3: fd2 = open(fn)/flock(fd2, LOCK_EX)
+	 *         ^ Would succeed too, as the file was first unlinked and is now
+	 *           opened as a new file. We have now two exclusive locks.
+	 *
+	 * Unlink-then-Unlock:
+	 * 1. TX1: unlink(fd1)
+	 * 2. TX2: fd2 = open(fn)
+	 *         ^ Creates a new file
+	 * 3. TX1: flock(fd1, LOCK_UN)
+	 * 4. TX2: flock(fd2, LOCK_EX)
+	 * 5. TX3: open(fn2)/flock(fd2, LOCK_EX)
+	 *         ^ Would fail, as the file is now shared between the two TX.
+	 *
+	 * Basically, the unlink() is the actual unlock here, as it was without flock()
+	 * But now, we can handle the case when the lock file already existed, too.
+	 * Check for both unlink and flock errors, because the flock-call unlocks
+	 * the file even without the unlink call.
+	 */
+	ret_unlink = unlink(handle->lockfile);
+	ret_flock = flock(handle->lockfd, LOCK_UN);
+
 	close(handle->lockfd);
 	handle->lockfd = -1;
 
-	if(unlink(handle->lockfile) != 0) {
+	if(ret_unlink != 0 || ret_flock != 0) {
 		RET_ERR_ASYNC_SAFE(handle, ALPM_ERR_SYSTEM, -1);
 	} else {
 		return 0;
