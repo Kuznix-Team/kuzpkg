@@ -186,3 +186,15 @@ def mkdir(path):
     elif os.path.isfile(path):
         raise OSError("'%s' already exists and is not a directory" % path)
     os.makedirs(path, 0o755)
+
+#
+# Locking
+#
+def ispacmanlocked():
+    if not os.path.exists(PM_LOCK):
+        return False
+
+    with open(PM_LOCK, 'r') as f:
+        pid = f.read().strip()
+
+    return pid.isdigit() and os.path.exists(f'/proc/{pid}')

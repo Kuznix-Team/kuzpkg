@@ -5,6 +5,7 @@ sources = [
   'config.sh.in',
   'dirsize.sh.in',
   'error.sh.in',
+  'lock.sh.in',
   'message.sh.in',
   'option.sh.in',
   'parseopts.sh.in',

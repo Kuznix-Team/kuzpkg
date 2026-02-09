@@ -21,6 +21,7 @@
  */
 
 #include <errno.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -136,10 +137,59 @@ int _alpm_handle_lock(alpm_handle_t *handle)
 	FREE(dir);
 
 	do {
-		handle->lockfd = open(handle->lockfile, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0000);
+		handle->lockfd = open(handle->lockfile, O_RDWR | O_CREAT | O_CLOEXEC, 0000);
 	} while(handle->lockfd == -1 && errno == EINTR);
 
-	return (handle->lockfd >= 0 ? 0 : -1);
+	if(handle->lockfd < 0) {
+		/* failed to open lock for writing */
+		return -1;
+	}
+
+	/* lock opened */
+	/* check the pid */
+	pid_t pid = getpid();
+	char buf[12];
+	ssize_t bytesread = read(handle->lockfd, buf, sizeof(buf) - 1);
+
+	buf[bytesread] = '\0';
+	pid_t lockedpid;
+
+	if(sscanf(buf, "%d", &lockedpid) == 1 && kill(lockedpid, 0) == 0 && errno != ESRCH) {
+		/* could not grab lock */
+		/* old pid is still active */
+		close(handle->lockfd);
+		handle->lockfd = -1;
+		return -1;
+	}
+
+	/* write pid to lock */
+	/* first allocate string for pid */
+	char *pidstr = NULL;
+	int len = asprintf(&pidstr, "%d\n", pid);
+
+	if(len == -1) {
+		_alpm_log(handle, ALPM_LOG_ERROR, "alloc failure: could not allocate pid");
+		close(handle->lockfd);
+		unlink(handle->lockfile);
+		handle->lockfd = -1;
+		return -1;
+	}
+
+	/* finally write pid to lock */
+	int writtenbytes = write(handle->lockfd, pidstr, len);
+
+	/* cleanup */
+	FREE(pidstr);
+
+	if(writtenbytes != len) {
+		_alpm_log(handle, ALPM_LOG_ERROR, "could not write pid to lockfile");
+		close(handle->lockfd);
+		unlink(handle->lockfile);
+		handle->lockfd = -1;
+		return -1;
+	}
+
+	return 0;
 }
 
 int SYMEXPORT alpm_unlock(alpm_handle_t *handle)

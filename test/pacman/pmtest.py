@@ -234,7 +234,7 @@ class pmtest(object):
         return files
 
     def run(self, pacman):
-        if os.path.isfile(util.PM_LOCK):
+        if util.ispacmanlocked():
             tap.bail("\tERROR: another pacman session is on-going -- skipping")
             return
 

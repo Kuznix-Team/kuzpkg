@@ -243,14 +243,11 @@ run_pacman() {
 		else
 			cmd=(su root -c "$cmdescape")
 		fi
-		local lockfile="$(pacman-conf DBPath)/db.lck"
-		while [[ -f $lockfile ]]; do
-			local timer=0
+		local timer=0
+		while is_pacman_locked && (( timer < 10 )); do
+			(( ++timer ))
 			msg "$(gettext "Pacman is currently in use, please wait...")"
-			while [[ -f $lockfile ]] && (( timer < 10 )); do
-				(( ++timer ))
-				sleep 3
-			done
+			sleep 3
 		done
 	fi
 	"${cmd[@]}"

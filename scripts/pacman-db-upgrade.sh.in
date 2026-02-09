@@ -30,6 +30,7 @@ declare -r myver='@PACKAGE_VERSION@'
 MAKEPKG_LIBRARY=${MAKEPKG_LIBRARY:-'@libmakepkgdir@'}
 
 # Import libmakepkg
+source "$MAKEPKG_LIBRARY"/util/lock.sh
 source "$MAKEPKG_LIBRARY"/util/message.sh
 source "$MAKEPKG_LIBRARY"/util/parseopts.sh
 
@@ -132,15 +133,18 @@ fi
 
 # strip any trailing slash from our dbroot
 dbroot="${dbroot%/}"
+
+# make sure pacman isn't running
+if is_pacman_locked; then
+	die "$(gettext "Pacman lock file was found. Cannot run while pacman is running.")"
+fi
+
 # form the path to our lockfile location
 lockfile="${dbroot}/db.lck"
 
-# make sure pacman isn't running
-if [[ -f $lockfile ]]; then
-	die "$(gettext "Pacman lock file was found. Cannot run while pacman is running.")"
-fi
 # do not let pacman run while we do this
-touch "$lockfile"
+# write our pid to the lockfile
+echo $$ > "$lockfile"
 
 if [[ -f "${dbroot}"/local/ALPM_DB_VERSION ]]; then
 	db_version=$(cat "${dbroot}"/local/ALPM_DB_VERSION)

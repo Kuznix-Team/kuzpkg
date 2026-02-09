@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+#   lock.sh - functions to handle pacman locking
+#
+#   Copyright (c) 2024 Pacman Development Team <pacman-dev@lists.archlinux.org>
+#
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+is_pacman_locked() {
+	local lockfile="$(pacman-conf DBPath)/db.lck"
+	if [[ -f $lockfile ]]; then
+		local pid=$(<"$lockfile")
+		# Check if the pid is valid and the process is still running
+		if [[ -n $pid && $pid =~ ^[0-9]+$ && -d /proc/$pid ]]; then
+			return 0
+		fi
+	fi
+	return 1
+}
