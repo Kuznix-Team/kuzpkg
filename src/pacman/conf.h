@@ -61,6 +61,7 @@ typedef struct __config_t {
 	unsigned short disable_sandbox_filesystem;
 	unsigned short disable_sandbox_syscalls;
 	char *print_format;
+	char *pformat;
 	/* unfortunately, we have to keep track of paths both here and in the library
 	 * because they can come from both the command line or config file, and we
 	 * need to ensure we get the order of preference right. */
@@ -176,6 +177,7 @@ enum {
 	OP_ASEXPLICIT,
 	OP_ARCH,
 	OP_PRINTFORMAT,
+	OP_PFORMAT,
 	OP_GPGDIR,
 	OP_DBONLY,
 	OP_FORCE,

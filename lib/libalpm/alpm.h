@@ -3003,6 +3003,9 @@ int alpm_sandbox_setup_child(alpm_handle_t *handle, const char *sandboxuser, con
 /* End of libalpm_api */
 /** @} */
 
+size_t alpm_info_print_pkg(const char *format, alpm_pkg_t *pkg);
+size_t alpm_info_print_pkgs(const char *format, alpm_list_t *pkgs);
+
 #ifdef __cplusplus
 }
 #endif

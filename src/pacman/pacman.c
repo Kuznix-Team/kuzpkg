@@ -737,6 +737,9 @@ static int parsearg_trans(int opt)
 			free(config->print_format);
 			config->print_format = strdup(optarg);
 			break;
+		case OP_PFORMAT:
+			config->pformat = strdup(optarg);
+			break;
 		case OP_ASSUMEINSTALLED:
 			parsearg_util_addlist(&(config->assumeinstalled));
 			break;
@@ -1030,6 +1033,7 @@ static int parseargs(int argc, char *argv[])
 		{"asexplicit",     no_argument,   0, OP_ASEXPLICIT},
 		{"arch",       required_argument, 0, OP_ARCH},
 		{"print-format", required_argument, 0, OP_PRINTFORMAT},
+		{"pformat"     , required_argument, 0, OP_PFORMAT},
 		{"gpgdir",     required_argument, 0, OP_GPGDIR},
 		{"dbonly",     no_argument,       0, OP_DBONLY},
 		{"color",      required_argument, 0, OP_COLOR},
