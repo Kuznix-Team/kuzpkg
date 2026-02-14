@@ -88,6 +88,7 @@ typedef struct __config_t {
 	unsigned short op_q_check;
 	unsigned short op_q_locality;
 
+	unsigned short op_s_builddep;
 	unsigned short op_s_clean;
 	unsigned short op_s_downloadonly;
 	unsigned short op_s_info;
@@ -217,7 +218,8 @@ enum {
 	OP_DISABLEDLTIMEOUT,
 	OP_DISABLESANDBOX,
 	OP_DISABLESANDBOXFILESYSTEM,
-	OP_DISABLESANDBOXSYSCALLS
+	OP_DISABLESANDBOXSYSCALLS,
+	OP_BUILDDEP
 };
 
 /* clean method */
