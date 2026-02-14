@@ -28,7 +28,12 @@ LIBMAKEPKGDIR = join_paths(PREFIX, DATAROOTDIR, 'makepkg')
 PKGDATADIR = join_paths(PREFIX, DATAROOTDIR, meson.project_name())
 KEYRINGDIR = join_paths(PREFIX, DATAROOTDIR, get_option('keyringdir'))
 
+os = host_machine.system()
+if os.contains('bsd')
+PYTHON = import('python').find_installation('python3.9')
+else
 PYTHON = import('python').find_installation('python3')
+endif
 LDCONFIG = get_option('ldconfig')
 MESON_MAKE_SYMLINK = join_paths(meson.project_source_root(), 'build-aux/meson-make-symlink.sh')
 
@@ -260,7 +265,6 @@ if file_seccomp.enabled() or ( file_seccomp.auto() and filever.version_compare('
   filecmd = 'file -S'
 endif
 
-os = host_machine.system()
 if os.startswith('darwin')
   inodecmd = '/usr/bin/stat -f \'%i %N\''
   strip_binaries = ''

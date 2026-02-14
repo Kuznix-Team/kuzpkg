@@ -174,7 +174,11 @@ static alpm_list_t *mount_point_list(alpm_handle_t *handle)
 		}
 
 		CALLOC(mp, 1, sizeof(alpm_mountpoint_t), RET_ERR(handle, ALPM_ERR_MEMORY, NULL));
+#if __APPLE__
 		STRDUP(mp->mount_dir, fsp->f_mntonname, free(mp); RET_ERR(handle, ALPM_ERR_MEMORY, NULL));
+#else
+		STRDUP(mp->mount_dir, mp->mount_dir, free(mp); RET_ERR(handle, ALPM_ERR_MEMORY, NULL));
+#endif
 		mp->mount_dir_len = strlen(mp->mount_dir);
 		memcpy(&(mp->fsp), fsp, sizeof(FSSTATSTYPE));
 #if defined(HAVE_GETMNTINFO_STATVFS) && defined(HAVE_STRUCT_STATVFS_F_FLAG)
