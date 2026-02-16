@@ -365,6 +365,10 @@ error_function() {
 		error "$(gettext "A failure occurred in %s().")" "$1"
 		plainerr "$(gettext "Aborting...")"
 	fi
+	# in case /pkg directory doesn't have rw permissions
+	if [[ -d "$pkgdirbase" ]]; then
+		chmod 755 "$pkgdirbase"
+	fi
 	exit $E_USER_FUNCTION_FAILED
 }
 
