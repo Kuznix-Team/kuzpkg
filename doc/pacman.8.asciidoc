@@ -365,10 +365,10 @@ Query Options (apply to '-Q')[[QO]]
 	pacman's output is processed in a script. Search will only show package
 	names and not version, group, and description information; owns will
 	only show package names instead of "file is owned by pkg" messages; group
-	will only show package names and omit group names; list will only show
-	files and omit package names; check will only show pairs of package names
-	and missing files; a bare query will only show package names
-	rather than names and versions.
+	will only show package names and omit group names and package versions;
+	list will only show files and omit package names; check will only show
+	pairs of package names and missing files; a bare query will only show
+	package names rather than names and versions.
 
 *-s, \--search* <regexp>::
 	Search each locally-installed package for names or descriptions that
@@ -448,7 +448,7 @@ linkman:pacman.conf[5].
 	pacman's output is processed in a script. Search will only show package
 	names and not repository, version, group, and description information; list
 	will only show package names and omit databases and versions; group will
-	only show package names and omit group names.
+	only show package names and omit group names and package versions.
 
 *-s, \--search* <regexp>::
 	This will search each package in the sync databases for names or

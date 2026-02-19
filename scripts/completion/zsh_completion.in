@@ -322,7 +322,7 @@ _pacman_completions_all_packages() {
 _pacman_completions_installed_groups() {
 	local -a cmd groups
 	_pacman_get_command
-	groups=(${(o)${(f)"$(_call_program groups $cmd[@] -Qg)"}% *})
+	groups=(${(o)${(f)"$(_call_program groups $cmd[@] -Qg)"}%% *})
 	typeset -U groups
 	compadd "$@" -a groups
 }

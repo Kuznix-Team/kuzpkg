@@ -352,9 +352,10 @@ static int display(alpm_pkg_t *pkg)
 static int query_group(alpm_list_t *targets)
 {
 	alpm_list_t *i, *j;
+	alpm_db_t *db_local = alpm_get_localdb(config->handle);
+	const colstr_t *colstr = &config->colstr;
 	const char *grpname = NULL;
 	int ret = 0;
-	alpm_db_t *db_local = alpm_get_localdb(config->handle);
 
 	if(targets == NULL) {
 		for(j = alpm_db_get_groupcache(db_local); j; j = alpm_list_next(j)) {
@@ -366,7 +367,14 @@ static int query_group(alpm_list_t *targets)
 				if(!filter(pkg)) {
 					continue;
 				}
-				printf("%s %s\n", grp->name, alpm_pkg_get_name(pkg));
+				if(!config->quiet) {
+					printf("%s%s %s%s %s%s%s\n", colstr->groups, grp->name,
+							colstr->title, alpm_pkg_get_name(pkg),
+							colstr->version, alpm_pkg_get_version(pkg),
+							colstr->nocolor);
+				} else {
+					printf("%s\n", alpm_pkg_get_name(pkg));
+				}
 			}
 		}
 	} else {
@@ -381,8 +389,10 @@ static int query_group(alpm_list_t *targets)
 						continue;
 					}
 					if(!config->quiet) {
-						printf("%s %s\n", grpname,
-								alpm_pkg_get_name(p->data));
+						printf("%s%s %s%s %s%s%s\n", colstr->groups, grpname,
+								colstr->title, alpm_pkg_get_name(p->data),
+								colstr->version, alpm_pkg_get_version(p->data),
+								colstr->nocolor);
 					} else {
 						printf("%s\n", alpm_pkg_get_name(p->data));
 					}

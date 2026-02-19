@@ -339,6 +339,8 @@ static int sync_search(alpm_list_t *syncs, alpm_list_t *targets)
 static int sync_group(int level, alpm_list_t *syncs, alpm_list_t *targets)
 {
 	alpm_list_t *i, *j, *k, *s = NULL;
+	alpm_db_t *db_local = alpm_get_localdb(config->handle);
+	const colstr_t *colstr = &config->colstr;
 	int ret = 0;
 
 	if(targets) {
@@ -355,8 +357,12 @@ static int sync_group(int level, alpm_list_t *syncs, alpm_list_t *targets)
 					/* get names of packages in group */
 					for(k = grp->packages; k; k = alpm_list_next(k)) {
 						if(!config->quiet) {
-							printf("%s %s\n", grpname,
-									alpm_pkg_get_name(k->data));
+							printf("%s%s %s%s %s%s%s", colstr->groups, grpname,
+									colstr->title, alpm_pkg_get_name(k->data),
+									colstr->version, alpm_pkg_get_version(k->data),
+									colstr->nocolor);
+							print_installed(db_local, k->data);
+							printf("\n");
 						} else {
 							printf("%s\n", alpm_pkg_get_name(k->data));
 						}
@@ -380,8 +386,16 @@ static int sync_group(int level, alpm_list_t *syncs, alpm_list_t *targets)
 
 				if(level > 1) {
 					for(k = grp->packages; k; k = alpm_list_next(k)) {
-						printf("%s %s\n", grp->name,
-								alpm_pkg_get_name(k->data));
+						if(!config->quiet) {
+							printf("%s%s %s%s %s%s%s", colstr->groups, grp->name,
+									colstr->title, alpm_pkg_get_name(k->data),
+									colstr->version, alpm_pkg_get_version(k->data),
+									colstr->nocolor);
+							print_installed(db_local, k->data);
+							printf("\n");
+						} else {
+							printf("%s\n", alpm_pkg_get_name(k->data));
+						}
 					}
 				} else {
 					/* print grp names only, no package names */
