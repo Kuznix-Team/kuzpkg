@@ -1330,6 +1330,7 @@ int SYMEXPORT alpm_fetch_pkgurl(alpm_handle_t *handle, const alpm_list_t *urls,
 	alpm_list_t *payloads = NULL;
 	const alpm_list_t *i;
 	alpm_event_t event;
+	bool alpm_download_called = false;
 
 	CHECK_HANDLE(handle, return -1);
 	ASSERT(*fetched == NULL, RET_ERR(handle, ALPM_ERR_WRONG_ARGS, -1));
@@ -1411,6 +1412,7 @@ int SYMEXPORT alpm_fetch_pkgurl(alpm_handle_t *handle, const alpm_list_t *urls,
 		event.pkg_retrieve.num = alpm_list_count(payloads);
 		event.pkg_retrieve.total_size = 0;
 		EVENT(handle, &event);
+		alpm_download_called = true;
 		if(_alpm_download(handle, payloads, cachedir, temporary_cachedir) == -1) {
 			_alpm_log(handle, ALPM_LOG_WARNING, _("failed to retrieve some files\n"));
 			event.type = ALPM_EVENT_PKG_RETRIEVE_FAILED;
@@ -1444,6 +1446,9 @@ int SYMEXPORT alpm_fetch_pkgurl(alpm_handle_t *handle, const alpm_list_t *urls,
 		FREELIST(payloads);
 	}
 
+	if(!alpm_download_called && _alpm_use_sandbox(handle)) {
+		_alpm_remove_temporary_download_dir(temporary_cachedir);
+	}
 	FREE(temporary_cachedir);
 	return 0;
 

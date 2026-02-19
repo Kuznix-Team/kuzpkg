@@ -40,6 +40,7 @@
 #include "deps.h"
 #include "dload.h"
 #include "filelist.h"
+#include "sandbox.h"
 
 static char *get_sync_dir(alpm_handle_t *handle)
 {
@@ -145,6 +146,7 @@ int SYMEXPORT alpm_db_update(alpm_handle_t *handle, alpm_list_t *dbs, int force)
 	mode_t oldmask;
 	alpm_list_t *payloads = NULL;
 	alpm_event_t event;
+	bool alpm_download_called = false;
 
 	/* Sanity checks */
 	CHECK_HANDLE(handle, return -1);
@@ -220,6 +222,7 @@ int SYMEXPORT alpm_db_update(alpm_handle_t *handle, alpm_list_t *dbs, int force)
 
 	event.type = ALPM_EVENT_DB_RETRIEVE_START;
 	EVENT(handle, &event);
+	alpm_download_called = true;
 	ret = _alpm_download(handle, payloads, syncpath, temporary_syncpath);
 	if(ret < 0) {
 		event.type = ALPM_EVENT_DB_RETRIEVE_FAILED;
@@ -267,6 +270,9 @@ cleanup:
 	if(payloads) {
 		alpm_list_free_inner(payloads, (alpm_list_fn_free)_alpm_dload_payload_reset);
 		FREELIST(payloads);
+	}
+	if(!alpm_download_called && _alpm_use_sandbox(handle)) {
+		_alpm_remove_temporary_download_dir(temporary_syncpath);
 	}
 	FREE(temporary_syncpath);
 	FREE(syncpath);
