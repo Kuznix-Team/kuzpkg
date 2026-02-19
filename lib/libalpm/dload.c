@@ -56,7 +56,7 @@
 
 static const char *get_filename(const char *url)
 {
-	char *filename = strrchr(url, '/');
+	const char *filename = strrchr(url, '/');
 	if(filename != NULL) {
 		return filename + 1;
 	}
@@ -307,7 +307,7 @@ static int dload_progress_cb(void *file, curl_off_t dltotal, curl_off_t dlnow,
 static int curl_gethost(const char *url, char *buffer, size_t buf_len)
 {
 	size_t hostlen;
-	char *p, *q;
+	const char *p, *q;
 
 	if(strncmp(url, "file://", 7) == 0) {
 		p = _("disk");

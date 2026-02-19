@@ -440,7 +440,7 @@ gpg_error:
  */
 static int email_from_uid(const char *uid, char **email)
 {
-       char *start, *end;
+       const char *start, *end;
 
        if (uid == NULL) {
                *email = NULL;

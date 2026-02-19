@@ -323,7 +323,7 @@ static alpm_pkg_t *load_pkg_for_entry(alpm_db_t *db, const char *entryname,
 
 	/* get package and db file names */
 	if(entry_filename) {
-		char *fname = strrchr(entryname, '/');
+		const char *fname = strrchr(entryname, '/');
 		if(fname) {
 			*entry_filename = fname + 1;
 		} else {
