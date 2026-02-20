@@ -40,6 +40,7 @@
 #include "deps.h"
 #include "dload.h"
 #include "filelist.h"
+#include "sandbox.h"
 
 static char *get_sync_dir(alpm_handle_t *handle)
 {
@@ -267,6 +268,9 @@ cleanup:
 	if(payloads) {
 		alpm_list_free_inner(payloads, (alpm_list_fn_free)_alpm_dload_payload_reset);
 		FREELIST(payloads);
+	}
+	if(_alpm_use_sandbox(handle)) {
+		_alpm_remove_temporary_download_dir(temporary_syncpath);
 	}
 	FREE(temporary_syncpath);
 	FREE(syncpath);

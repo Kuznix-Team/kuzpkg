@@ -1291,7 +1291,6 @@ download_signature:
 
 	if(_alpm_use_sandbox(handle)) {
 		finalize_ret = finalize_download_locations(payloads, localpath);
-		_alpm_remove_temporary_download_dir(temporary_localpath);
 	}
 
 	/* propagate after finalizing so .part files get copied over */
@@ -1444,11 +1443,17 @@ int SYMEXPORT alpm_fetch_pkgurl(alpm_handle_t *handle, const alpm_list_t *urls,
 		FREELIST(payloads);
 	}
 
+	if(_alpm_use_sandbox(handle)) {
+		_alpm_remove_temporary_download_dir(temporary_cachedir);
+	}
 	FREE(temporary_cachedir);
 	return 0;
 
 err:
 	alpm_list_free_inner(payloads, (alpm_list_fn_free)_alpm_dload_payload_reset);
+	if(_alpm_use_sandbox(handle)) {
+		_alpm_remove_temporary_download_dir(temporary_cachedir);
+	}
 	FREE(temporary_cachedir);
 	FREELIST(payloads);
 	FREELIST(*fetched);
