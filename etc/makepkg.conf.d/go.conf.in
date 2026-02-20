@@ -1,0 +1,12 @@
+#!/hint/bash
+#
+# @sysconfdir@/makepkg.conf.d/go.conf
+#
+
+#########################################################################
+# GO LANGUAGE SUPPORT
+#########################################################################
+
+# Flags used by the Go compiler, similar in spirit to CFLAGS. Read
+# `go help build` for more details on the available flags.
+#GOFLAGS="-trimpath -mod=readonly -buildmode=pie"

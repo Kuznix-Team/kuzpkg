@@ -5,6 +5,7 @@ sources = [
   'compiler.sh.in',
   'debugflags.sh.in',
   'fortran.sh.in',
+  'go.sh.in',
   'lto.sh.in',
   'makeflags.sh.in',
   'rust.sh.in',
