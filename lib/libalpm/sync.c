@@ -47,6 +47,7 @@
 #include "remove.h"
 #include "diskspace.h"
 #include "signing.h"
+#include "sandbox.h"
 
 struct keyinfo_t {
        char* uid;
@@ -881,6 +882,9 @@ finish:
 		alpm_pkg_t *pkg = i->data;
 		pkg->infolevel &= ~INFRQ_DSIZE;
 		pkg->download_size = 0;
+	}
+	if(_alpm_use_sandbox(handle)) {
+		_alpm_remove_temporary_download_dir(temporary_cachedir);
 	}
 	FREE(temporary_cachedir);
 
