@@ -466,6 +466,7 @@ TEST_ENV.set('PMTEST_SCRIPT_DIR', join_paths(meson.project_build_root(), 'script
 subdir('test/pacman')
 subdir('test/scripts')
 subdir('test/util')
+subdir('test/makepkg')
 
 summary({
   'prefix': PREFIX,
