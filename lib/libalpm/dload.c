@@ -1219,7 +1219,7 @@ int _alpm_download(alpm_handle_t *handle,
 			ret = curl_download_internal(handle, payloads);
 		}
 #else
-		RET_ERR(handle, ALPM_ERR_EXTERNAL_DOWNLOAD, -1);
+		GOTO_ERR(handle, ALPM_ERR_EXTERNAL_DOWNLOAD, cleanup);
 #endif
 	} else {
 		alpm_list_t *p;
@@ -1237,7 +1237,7 @@ int _alpm_download(alpm_handle_t *handle,
 					size_t sig_len = strlen(payload->fileurl) + 5;
 					int retsig = -1;
 
-					MALLOC(sig_fileurl, sig_len, RET_ERR(handle, ALPM_ERR_MEMORY, -1));
+					MALLOC(sig_fileurl, sig_len, GOTO_ERR(handle, ALPM_ERR_MEMORY, cleanup));
 					snprintf(sig_fileurl, sig_len, "%s.sig", payload->fileurl);
 
 					retsig = handle->fetchcb(handle->fetchcb_ctx, sig_fileurl, temporary_localpath,  payload->force);
@@ -1268,7 +1268,7 @@ download_signature:
 					size_t sig_len = strlen(s->data) + strlen(payload->filepath) + 6;
 					int retsig = -1;
 
-					MALLOC(sig_fileurl, sig_len, RET_ERR(handle, ALPM_ERR_MEMORY, -1));
+					MALLOC(sig_fileurl, sig_len, GOTO_ERR(handle, ALPM_ERR_MEMORY, cleanup));
 					snprintf(sig_fileurl, sig_len, "%s/%s.sig", (const char *)(s->data), payload->filepath);
 
 					retsig = handle->fetchcb(handle->fetchcb_ctx, sig_fileurl, temporary_localpath, payload->force);
@@ -1281,7 +1281,7 @@ download_signature:
 			}
 
 			if(ret == -1 && !payload->errors_ok) {
-				RET_ERR(handle, ALPM_ERR_EXTERNAL_DOWNLOAD, -1);
+				GOTO_ERR(handle, ALPM_ERR_EXTERNAL_DOWNLOAD, cleanup);
 			} else if(ret == 0) {
 				updated = 1;
 			}
@@ -1289,12 +1289,13 @@ download_signature:
 		ret = updated ? 0 : 1;
 	}
 
+cleanup:
 	if(_alpm_use_sandbox(handle)) {
 		finalize_ret = finalize_download_locations(payloads, localpath);
 		_alpm_remove_temporary_download_dir(temporary_localpath);
 	}
+	CHECK_HANDLE(handle, return -1);
 
-	/* propagate after finalizing so .part files get copied over */
 	if(childsig != 0) {
 		kill(getpid(), childsig);
 	}
