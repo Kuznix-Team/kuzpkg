@@ -107,7 +107,7 @@ int pacman_remove(alpm_list_t *targets)
 	}
 
 	/* Step 2: prepare the transaction based on its type, targets and flags */
-	if(alpm_trans_prepare(config->handle, &data) == -1) {
+	if(alpm_trans_prepare_ex(config->handle, ALPM_DEPSTRATEGY_DEFAULT, &data) == -1) {
 		alpm_errno_t err = alpm_errno(config->handle);
 		pm_printf(ALPM_LOG_ERROR, _("failed to prepare transaction (%s)\n"),
 		        alpm_strerror(err));

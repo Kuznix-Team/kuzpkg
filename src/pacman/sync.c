@@ -634,7 +634,8 @@ cleanup:
 static int process_targname(alpm_list_t *dblist, const char *targname,
 		int error)
 {
-	alpm_pkg_t *pkg = alpm_find_dbs_satisfier(config->handle, dblist, targname);
+	alpm_pkg_t *pkg = alpm_find_dbs_satisfier_ex(config->handle, dblist,
+			config->depstrategy, targname);
 
 	/* skip ignored packages when user says no */
 	if(alpm_errno(config->handle) == ALPM_ERR_PKG_IGNORED) {
@@ -767,7 +768,7 @@ int sync_prepare_execute(void)
 	int retval = 0;
 
 	/* Step 2: "compute" the transaction based on targets and flags */
-	if(alpm_trans_prepare(config->handle, &data) == -1) {
+	if(alpm_trans_prepare_ex(config->handle, config->depstrategy, &data) == -1) {
 		alpm_errno_t err = alpm_errno(config->handle);
 		pm_printf(ALPM_LOG_ERROR, _("failed to prepare transaction (%s)\n"),
 		        alpm_strerror(err));

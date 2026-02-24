@@ -114,6 +114,7 @@ config_t *config_new(void)
 		newconfig->remotefilesiglevel = ALPM_SIG_USE_DEFAULT;
 	}
 
+	newconfig->depstrategy    = ALPM_DEPSTRATEGY_DEFAULT;
 	/* by default use 1 download stream */
 	newconfig->parallel_downloads = 1;
 	newconfig->colstr.colon   = ":: ";
@@ -798,6 +799,17 @@ static int _parse_options(const char *key, char *value,
 			}
 
 			config->parallel_downloads = number;
+		} else if(strcmp(key, "DependencyStrategy") == 0) {
+			if(strcmp(value, "Default") == 0) {
+				config->depstrategy = ALPM_DEPSTRATEGY_DEFAULT;
+			} else if(strcmp(value, "Strict") == 0) {
+				config->depstrategy = ALPM_DEPSTRATEGY_STRICT;
+			} else {
+				pm_printf(ALPM_LOG_ERROR,
+						_("config file %s, line %d: invalid value for '%s': '%s'\n"),
+						file, linenum, "DependencyStrategy", value);
+				return 1;
+			}
 		} else {
 			pm_printf(ALPM_LOG_WARNING,
 					_("config file %s, line %d: directive '%s' in section '%s' not recognized.\n"),

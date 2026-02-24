@@ -622,7 +622,9 @@ int _alpm_recursedeps(alpm_db_t *db, alpm_list_t **targs, int include_explicit)
 }
 
 /**
- * helper function for resolvedeps: search for dep satisfier in dbs
+ * helper function for resolvedep: search for dep satisfier in dbs
+ * this version applies the "default" logic that puts name matching
+ * ahead of db ordering.
  *
  * @param handle the context handle
  * @param dep is the dependency to search for
@@ -633,7 +635,7 @@ int _alpm_recursedeps(alpm_db_t *db, alpm_list_t **targs, int include_explicit)
  *        packages.
  * @return the resolved package
  **/
-static alpm_pkg_t *resolvedep(alpm_handle_t *handle, alpm_depend_t *dep,
+static alpm_pkg_t *resolvedep_default(alpm_handle_t *handle, alpm_depend_t *dep,
 		alpm_list_t *dbs, alpm_list_t *excluding, int prompt)
 {
 	alpm_list_t *i, *j;
@@ -748,8 +750,169 @@ static alpm_pkg_t *resolvedep(alpm_handle_t *handle, alpm_depend_t *dep,
 	return NULL;
 }
 
+/**
+ * helper function for resolvedep: search for dep satisfier in dbs
+ * this version applies the "strict" logic that puts db order before
+ * exact matching.
+ *
+ * @param handle the context handle
+ * @param dep is the dependency to search for
+ * @param dbs are the databases to search
+ * @param excluding are the packages to exclude from the search
+ * @param prompt if true, ask an alpm_question_install_ignorepkg_t to decide
+ *        if ignored packages should be installed; if false, skip ignored
+ *        packages.
+ * @return the resolved package
+ **/
+static alpm_pkg_t *resolvedep_strict(alpm_handle_t *handle, alpm_depend_t *dep,
+		alpm_list_t *dbs, alpm_list_t *excluding, int prompt)
+{
+	alpm_list_t *i, *j;
+	int ignored = 0;
+
+	alpm_list_t *providers = NULL;
+	int count;
+
+	for(i = dbs; i; i = i->next) {
+		alpm_pkg_t *pkg;
+		alpm_db_t *db = i->data;
+
+		if(!(db->usage & (ALPM_DB_USAGE_INSTALL|ALPM_DB_USAGE_UPGRADE))) {
+			continue;
+		}
+
+		/* 1. literals */
+		pkg = _alpm_db_get_pkgfromcache(db, dep->name);
+		if(pkg && _alpm_depcmp_literal(pkg, dep)
+				&& !alpm_pkg_find(excluding, pkg->name)) {
+			if(alpm_pkg_should_ignore(handle, pkg)) {
+				alpm_question_install_ignorepkg_t question = {
+					.type = ALPM_QUESTION_INSTALL_IGNOREPKG,
+					.install = 0,
+					.pkg = pkg
+				};
+				if(prompt) {
+					QUESTION(handle, &question);
+				} else {
+					_alpm_log(handle, ALPM_LOG_WARNING, _("ignoring package %s-%s\n"),
+							pkg->name, pkg->version);
+				}
+				if(!question.install) {
+					ignored = 1;
+					continue;
+				}
+			}
+			if(_alpm_db_get_pkgfromcache(handle->db_local, pkg->name)) {
+				alpm_list_free(providers);
+				return pkg;
+			}
+			providers = alpm_list_add(providers, pkg);
+		}
+
+		/* 2. satisfiers (skip literals here) */
+		for(j = _alpm_db_get_pkgcache(db); j; j = j->next) {
+			pkg = j->data;
+			if((pkg->name_hash != dep->name_hash || strcmp(pkg->name, dep->name) != 0)
+					&& _alpm_depcmp_provides(dep, alpm_pkg_get_provides(pkg))
+					&& !alpm_pkg_find(excluding, pkg->name)) {
+				if(alpm_pkg_should_ignore(handle, pkg)) {
+					alpm_question_install_ignorepkg_t question = {
+						.type = ALPM_QUESTION_INSTALL_IGNOREPKG,
+						.install = 0,
+						.pkg = pkg
+					};
+					if(prompt) {
+						QUESTION(handle, &question);
+					} else {
+						_alpm_log(handle, ALPM_LOG_WARNING, _("ignoring package %s-%s\n"),
+								pkg->name, pkg->version);
+					}
+					if(!question.install) {
+						ignored = 1;
+						continue;
+					}
+				}
+				_alpm_log(handle, ALPM_LOG_DEBUG, "provider found (%s provides %s)\n",
+						pkg->name, dep->name);
+
+				/* provide is already installed so return early instead of prompting later */
+				if(_alpm_db_get_pkgfromcache(handle->db_local, pkg->name)) {
+					alpm_list_free(providers);
+					return pkg;
+				}
+
+				providers = alpm_list_add(providers, pkg);
+				/* keep looking for other providers in the all dbs */
+			}
+		}
+	}
+
+	count = alpm_list_count(providers);
+	if(count >= 1) {
+		alpm_question_select_provider_t question = {
+			.type = ALPM_QUESTION_SELECT_PROVIDER,
+			/* default to first provider if there is no QUESTION callback */
+			.use_index = 0,
+			.providers = providers,
+			.depend = dep
+		};
+		if(count > 1) {
+			/* if there is more than one provider, we ask the user */
+			QUESTION(handle, &question);
+		}
+		if(question.use_index >= 0 && question.use_index < count) {
+			alpm_list_t *nth = alpm_list_nth(providers, question.use_index);
+			alpm_pkg_t *pkg = nth->data;
+			alpm_list_free(providers);
+			return pkg;
+		}
+		alpm_list_free(providers);
+		providers = NULL;
+	}
+
+	if(ignored) { /* resolvedeps will override these */
+		handle->pm_errno = ALPM_ERR_PKG_IGNORED;
+	} else {
+		handle->pm_errno = ALPM_ERR_PKG_NOT_FOUND;
+	}
+	return NULL;
+}
+
+/**
+ * helper function for resolvedeps: search for dep satisfier in dbs
+ *
+ * @param handle the context handle
+ * @param dep is the dependency to search for
+ * @param depstrategy is the depstrategy to apply when searching
+ * @param dbs are the databases to search
+ * @param excluding are the packages to exclude from the search
+ * @param prompt if true, ask an alpm_question_install_ignorepkg_t to decide
+ *        if ignored packages should be installed; if false, skip ignored
+ *        packages.
+ * @return the resolved package
+ **/
+static alpm_pkg_t *resolvedep(alpm_handle_t *handle, alpm_depend_t *dep,
+		alpm_depstrategy_t depstrategy, alpm_list_t *dbs, alpm_list_t *excluding, int prompt)
+{
+	switch(depstrategy) {
+	case ALPM_DEPSTRATEGY_DEFAULT:
+		return resolvedep_default(handle, dep, dbs, excluding, prompt);
+	case ALPM_DEPSTRATEGY_STRICT:
+		return resolvedep_strict(handle, dep, dbs, excluding, prompt);
+	default:
+		/* We should never reach here */
+		return NULL;
+	}
+}
+
 alpm_pkg_t SYMEXPORT *alpm_find_dbs_satisfier(alpm_handle_t *handle,
 		alpm_list_t *dbs, const char *depstring)
+{
+	return alpm_find_dbs_satisfier_ex(handle, dbs, ALPM_DEPSTRATEGY_DEFAULT, depstring);
+}
+
+alpm_pkg_t SYMEXPORT *alpm_find_dbs_satisfier_ex(alpm_handle_t *handle,
+		alpm_list_t *dbs, alpm_depstrategy_t depstrategy, const char *depstring)
 {
 	alpm_depend_t *dep;
 	alpm_pkg_t *pkg;
@@ -759,7 +922,7 @@ alpm_pkg_t SYMEXPORT *alpm_find_dbs_satisfier(alpm_handle_t *handle,
 
 	dep = alpm_dep_from_string(depstring);
 	ASSERT(dep, return NULL);
-	pkg = resolvedep(handle, dep, dbs, NULL, 1);
+	pkg = resolvedep(handle, dep, depstrategy, dbs, NULL, 1);
 	alpm_dep_free(dep);
 	return pkg;
 }
@@ -771,6 +934,8 @@ alpm_pkg_t SYMEXPORT *alpm_find_dbs_satisfier(alpm_handle_t *handle,
  * @param handle the context handle
  * @param localpkgs is the list of local packages
  * @param pkg is the package to resolve
+ * @param depstrategy is the strategy to follow (one of
+          ALPM_DEPSTRATEGY_DEFAULT, ALPM_DEPSTRATEGY_STRICT)
  * @param preferred packages to prefer when resolving
  * @param packages is a pointer to a list of packages which will be
  *        searched first for any dependency packages needed to complete the
@@ -786,8 +951,8 @@ alpm_pkg_t SYMEXPORT *alpm_find_dbs_satisfier(alpm_handle_t *handle,
  *         unmodified by this function
  */
 int _alpm_resolvedeps(alpm_handle_t *handle, alpm_list_t *localpkgs,
-		alpm_pkg_t *pkg, alpm_list_t *preferred, alpm_list_t **packages,
-		alpm_list_t *rem, alpm_list_t **data)
+		alpm_pkg_t *pkg, alpm_depstrategy_t depstrategy, alpm_list_t *preferred,
+		alpm_list_t **packages, alpm_list_t *rem, alpm_list_t **data)
 {
 	int ret = 0;
 	alpm_list_t *j;
@@ -826,14 +991,14 @@ int _alpm_resolvedeps(alpm_handle_t *handle, alpm_list_t *localpkgs,
 		alpm_pkg_t *spkg = find_dep_satisfier(preferred, missdep);
 		if(!spkg) {
 			/* find a satisfier package in the given repositories */
-			spkg = resolvedep(handle, missdep, handle->dbs_sync, *packages, 0);
+			spkg = resolvedep(handle, missdep, depstrategy, handle->dbs_sync, *packages, 0);
 		}
-		if(spkg && _alpm_resolvedeps(handle, localpkgs, spkg, preferred, packages, rem, data) == 0) {
+		if(spkg && _alpm_resolvedeps(handle, localpkgs, spkg, depstrategy, preferred, packages, rem, data) == 0) {
 			_alpm_log(handle, ALPM_LOG_DEBUG,
 					"pulling dependency %s (needed by %s)\n",
 					spkg->name, pkg->name);
 			alpm_depmissing_free(miss);
-		} else if(resolvedep(handle, missdep, (targ = alpm_list_add(NULL, handle->db_local)), rem, 0)) {
+		} else if(resolvedep(handle, missdep, depstrategy, (targ = alpm_list_add(NULL, handle->db_local)), rem, 0)) {
 			alpm_depmissing_free(miss);
 		} else {
 			handle->pm_errno = ALPM_ERR_UNSATISFIED_DEPS;

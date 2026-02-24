@@ -364,7 +364,7 @@ finish:
 	return ret;
 }
 
-int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
+int _alpm_sync_prepare(alpm_handle_t *handle, alpm_depstrategy_t depstrategy, alpm_list_t **data)
 {
 	alpm_list_t *i, *j;
 	alpm_list_t *deps = NULL;
@@ -426,7 +426,7 @@ int _alpm_sync_prepare(alpm_handle_t *handle, alpm_list_t **data)
 		   building up a list of packages which could not be resolved. */
 		for(i = trans->add; i; i = i->next) {
 			alpm_pkg_t *pkg = i->data;
-			if(_alpm_resolvedeps(handle, localpkgs, pkg, trans->add,
+			if(_alpm_resolvedeps(handle, localpkgs, pkg, depstrategy, trans->add,
 						&resolved, remove, data) == -1) {
 				unresolvable = alpm_list_add(unresolvable, pkg);
 			}

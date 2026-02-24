@@ -565,6 +565,22 @@ typedef enum _alpm_fileconflicttype_t {
 	ALPM_FILECONFLICT_FILESYSTEM
 } alpm_fileconflicttype_t;
 
+/**
+ * Dependency strategy type.
+ * The strategy changes the details of how dependency names are
+ * matched up against existing packages when requested.
+ */
+typedef enum _alpm_depstrategy_t {
+	/** Prefer packages with a name matching a dependency over
+	    packages that provide that name, regardless of database
+	    order. */
+	ALPM_DEPSTRATEGY_DEFAULT = 1,
+	/** Prefer packages in higher priority databases over packages
+	    in lower priority databases, regardless of whether their
+	    names match the dependency or they just provide it. */
+	ALPM_DEPSTRATEGY_STRICT
+} alpm_depstrategy_t;
+
 /** The basic dependency type.
  *
  * This type is used throughout libalpm, not just for dependencies
@@ -639,7 +655,7 @@ alpm_list_t *alpm_checkdeps(alpm_handle_t *handle, alpm_list_t *pkglist,
  */
 alpm_pkg_t *alpm_find_satisfier(alpm_list_t *pkgs, const char *depstring);
 
-/** Find a package satisfying a specified dependency.
+/** Find a package satisfying a specified dependency with the default strategy.
  * First look for a literal, going through each db one by one. Then look for
  * providers. The first satisfyer that belongs to an installed package is
  * returned. If no providers belong to an installed package then an
@@ -653,6 +669,22 @@ alpm_pkg_t *alpm_find_satisfier(alpm_list_t *pkgs, const char *depstring);
  */
 alpm_pkg_t *alpm_find_dbs_satisfier(alpm_handle_t *handle,
 		alpm_list_t *dbs, const char *depstring);
+
+/** Find a package satisfying a specified dependency.
+ * First look for a literal, going through each db one by one. Then look for
+ * providers. The first satisfyer that belongs to an installed package is
+ * returned. If no providers belong to an installed package then an
+ * alpm_question_select_provider_t is created to select the provider.
+ * The dependency can include versions with depmod operators.
+ *
+ * @param handle the context handle
+ * @param dbs an alpm_list_t* of alpm_db_t where the satisfyer will be searched
+ * @param depstrategy the dependency strategy to use
+ * @param depstring package or provision name, versioned or not
+ * @return a alpm_pkg_t* satisfying depstring
+ */
+alpm_pkg_t *alpm_find_dbs_satisfier_ex(alpm_handle_t *handle,
+		alpm_list_t *dbs, alpm_depstrategy_t depstrategy, const char *depstring);
 
 /** Check the package conflicts in a database
  *
@@ -2870,13 +2902,22 @@ alpm_list_t *alpm_trans_get_remove(alpm_handle_t *handle);
  */
 int alpm_trans_init(alpm_handle_t *handle, int flags);
 
-/** Prepare a transaction.
+/** Prepare a transaction with the default dependency strategy.
  * @param handle the context handle
  * @param data the address of an alpm_list where a list
  * of alpm_depmissing_t objects is dumped (conflicting packages)
  * @return 0 on success, -1 on error (pm_errno is set accordingly)
  */
 int alpm_trans_prepare(alpm_handle_t *handle, alpm_list_t **data);
+
+/** Prepare a transaction specifying the dependency strategy.
+ * @param handle the context handle
+ * @param data the address of an alpm_list where a list
+ * of alpm_depmissing_t objects is dumped (conflicting packages)
+ * @param depstrategy the dependency resolution strategy to use.
+ * @return 0 on success, -1 on error (pm_errno is set accordingly)
+ */
+int alpm_trans_prepare_ex(alpm_handle_t *handle, alpm_depstrategy_t depstrategy, alpm_list_t **data);
 
 /** Commit a transaction.
  * @param handle the context handle

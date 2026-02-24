@@ -108,6 +108,10 @@ static alpm_list_t *check_arch(alpm_handle_t *handle, alpm_list_t *pkgs)
 
 int SYMEXPORT alpm_trans_prepare(alpm_handle_t *handle, alpm_list_t **data)
 {
+	return alpm_trans_prepare_ex(handle, ALPM_DEPSTRATEGY_DEFAULT, data);
+}
+
+int SYMEXPORT alpm_trans_prepare_ex(alpm_handle_t *handle, alpm_depstrategy_t depstrategy, alpm_list_t **data) {
 	alpm_trans_t *trans;
 
 	/* Sanity checks */
@@ -138,7 +142,7 @@ int SYMEXPORT alpm_trans_prepare(alpm_handle_t *handle, alpm_list_t **data)
 			return -1;
 		}
 	} else {
-		if(_alpm_sync_prepare(handle, data) == -1) {
+		if(_alpm_sync_prepare(handle, depstrategy, data) == -1) {
 			/* pm_errno is set by _alpm_sync_prepare() */
 			return -1;
 		}
