@@ -52,6 +52,22 @@ static int unlink_verbose(const char *pathname, int ignore_missing)
 	return ret;
 }
 
+/** This function only works with blank directory */
+static int rmdir_verbose(const char *pathname, int ignore_missing)
+{
+	int ret = rmdir(pathname);
+	if(ret) {
+		if(ignore_missing && errno == ENOENT) {
+			ret = 0;
+		} else {
+			pm_printf(ALPM_LOG_ERROR, _("could not remove directory %s: %s\n"),
+					pathname, strerror(errno));
+		}
+	}
+	return ret;
+}
+
+
 static int sync_cleandb(const char *dbpath)
 {
 	DIR *dir;
@@ -253,7 +269,22 @@ static int sync_cleancache(int level)
 
 			/* short circuit for removing all files from cache */
 			if(level > 1) {
-				ret += unlink_verbose(path, 0);
+
+				/**
+				 * dalmurii:
+				 * 	download-* could have been made on lib/libalpm/sync.c.
+				 * 	until we find a way to remove them right after downloading and using them,
+				 * 	I think we need a little filter.
+				 *
+				 * 	I will make very naive filter since I am not very confidene of
+				 * 	guessing if the end of the path is '/' or not.
+				 * */
+				if(strstr(path, "download-")) {
+					ret += rmdir_verbose(path, 0);
+				} else {
+					ret += unlink_verbose(path, 0);
+				}
+
 				continue;
 			}
 
