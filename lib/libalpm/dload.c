@@ -1219,6 +1219,7 @@ int _alpm_download(alpm_handle_t *handle,
 			ret = curl_download_internal(handle, payloads);
 		}
 #else
+		ret = -1;
 		GOTO_ERR(handle, ALPM_ERR_EXTERNAL_DOWNLOAD, cleanup);
 #endif
 	} else {
@@ -1227,16 +1228,16 @@ int _alpm_download(alpm_handle_t *handle,
 		for(p = payloads; p; p = p->next) {
 			struct dload_payload *payload = p->data;
 			alpm_list_t *s;
-			ret = -1;
+			int retfile = -1, retsig = -1;
 
 			if(payload->fileurl) {
-				ret = handle->fetchcb(handle->fetchcb_ctx, payload->fileurl, temporary_localpath, payload->force);
-				if (ret != -1 && payload->download_signature) {
+				retfile = handle->fetchcb(handle->fetchcb_ctx, payload->fileurl, temporary_localpath, payload->force);
+				if (retfile != -1 && payload->download_signature) {
 					/* Download signature if requested */
 					char *sig_fileurl;
 					size_t sig_len = strlen(payload->fileurl) + 5;
-					int retsig = -1;
 
+					ret = -1;
 					MALLOC(sig_fileurl, sig_len, GOTO_ERR(handle, ALPM_ERR_MEMORY, cleanup));
 					snprintf(sig_fileurl, sig_len, "%s.sig", payload->fileurl);
 
@@ -1245,29 +1246,31 @@ int _alpm_download(alpm_handle_t *handle,
 
 					if(!payload->signature_optional) {
 						ret = retsig;
+					} else {
+						ret = retfile;
 					}
 				}
 			} else {
 				for(s = payload->cache_servers; s; s = s->next) {
-					ret = payload_download_fetchcb(payload, s->data, temporary_localpath);
-					if (ret != -1) {
+					retfile = payload_download_fetchcb(payload, s->data, temporary_localpath);
+					if (retfile != -1) {
 						goto download_signature;
 					}
 				}
 				for(s = payload->servers; s; s = s->next) {
-					ret = payload_download_fetchcb(payload, s->data, temporary_localpath);
-					if (ret != -1) {
+					retfile = payload_download_fetchcb(payload, s->data, temporary_localpath);
+					if (retfile != -1) {
 						goto download_signature;
 					}
 				}
 
 download_signature:
-				if (ret != -1 && payload->download_signature) {
+				if (retfile != -1 && payload->download_signature) {
 					/* Download signature if requested */
 					char *sig_fileurl;
 					size_t sig_len = strlen(s->data) + strlen(payload->filepath) + 6;
-					int retsig = -1;
 
+					ret = -1;
 					MALLOC(sig_fileurl, sig_len, GOTO_ERR(handle, ALPM_ERR_MEMORY, cleanup));
 					snprintf(sig_fileurl, sig_len, "%s/%s.sig", (const char *)(s->data), payload->filepath);
 
@@ -1276,6 +1279,8 @@ download_signature:
 
 					if(!payload->signature_optional) {
 						ret = retsig;
+					} else {
+						ret = retfile;
 					}
 				}
 			}
@@ -1294,7 +1299,6 @@ cleanup:
 		finalize_ret = finalize_download_locations(payloads, localpath);
 		_alpm_remove_temporary_download_dir(temporary_localpath);
 	}
-	CHECK_HANDLE(handle, return -1);
 
 	if(childsig != 0) {
 		kill(getpid(), childsig);
