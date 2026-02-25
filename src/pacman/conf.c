@@ -179,9 +179,9 @@ void config_repo_free(config_repo_t *repo)
 }
 
 /** Helper function for download_with_xfercommand() */
-static char *get_filename(const char *url)
+static const char *get_filename(const char *url)
 {
-	char *filename = strrchr(url, '/');
+	const char *filename = strrchr(url, '/');
 	if(filename != NULL) {
 		filename++;
 	}
@@ -295,7 +295,8 @@ static int download_with_xfercommand(void *ctx, const char *url,
 	int usepart = 0;
 	int cwdfd = -1;
 	struct stat st;
-	char *destfile, *tempfile, *filename;
+	const char *filename;
+	char *destfile, *tempfile;
 	const char **argv;
 	size_t i;
 
