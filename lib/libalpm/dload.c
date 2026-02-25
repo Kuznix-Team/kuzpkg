@@ -614,15 +614,15 @@ static int curl_check_finished_download(alpm_handle_t *handle, CURLM *curlm, CUR
 	if(!payload->signature && payload->download_signature && curlerr == CURLE_OK && payload->respcode < 400) {
 		struct dload_payload *sig = NULL;
 		char *url = payload->fileurl;
-		char *_effective_filename;
-		const char *effective_filename;
+		const char *_effective_filename;
+		char *effective_filename;
 		char *query;
 		const char *dbext = alpm_option_get_dbext(handle);
 		const char* realname = payload->destfile_name ? payload->destfile_name : payload->tempfile_name;
 		int len;
 
-		STRDUP(_effective_filename, effective_url, GOTO_ERR(handle, ALPM_ERR_MEMORY, cleanup));
-		effective_filename = get_filename(_effective_filename);
+		_effective_filename = get_filename(effective_url);
+		STRDUP(effective_filename, _effective_filename, GOTO_ERR(handle, ALPM_ERR_MEMORY, cleanup));
 		query = strrchr(effective_filename, '?');
 
 		if(query) {
@@ -634,7 +634,7 @@ static int curl_check_finished_download(alpm_handle_t *handle, CURLM *curlm, CUR
 			url = effective_url;
 		}
 
-		free(_effective_filename);
+		free(effective_filename);
 
 		len = strlen(url) + 5;
 		CALLOC(sig, 1, sizeof(*sig), GOTO_ERR(handle, ALPM_ERR_MEMORY, cleanup));
