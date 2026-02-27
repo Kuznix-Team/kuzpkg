@@ -47,6 +47,7 @@
 #include "remove.h"
 #include "diskspace.h"
 #include "signing.h"
+#include "sandbox.h"
 
 struct keyinfo_t {
        char* uid;
@@ -778,6 +779,7 @@ static int download_files(alpm_handle_t *handle)
 	int ret = 0;
 	alpm_event_t event;
 	alpm_list_t *payloads = NULL;
+	bool alpm_download_called = false;
 
 	cachedir = _alpm_filecache_setup(handle);
 	temporary_cachedir = _alpm_download_dir_setup(handle, cachedir);
@@ -856,6 +858,7 @@ static int download_files(alpm_handle_t *handle)
 			payloads = alpm_list_add(payloads, payload);
 		}
 
+		alpm_download_called = true;
 		ret = _alpm_download(handle, payloads, cachedir, temporary_cachedir);
 		if(ret == -1) {
 			event.type = ALPM_EVENT_PKG_RETRIEVE_FAILED;
@@ -881,6 +884,9 @@ finish:
 		alpm_pkg_t *pkg = i->data;
 		pkg->infolevel &= ~INFRQ_DSIZE;
 		pkg->download_size = 0;
+	}
+	if(!alpm_download_called && _alpm_use_sandbox(handle)) {
+		_alpm_remove_temporary_download_dir(temporary_cachedir);
 	}
 	FREE(temporary_cachedir);
 
