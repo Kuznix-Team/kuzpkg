@@ -55,7 +55,7 @@ Common Options
 *-v, \--verify*::
 	Verify the PGP signature of the database before updating the database.
 	If the signature is invalid, an error is produced and the update does not
-	proceed.
+	proceed. This implies `--sign` for a valid signature after update.
 
 *\--nocolor*::
 	Remove color from 'repo-add' and 'repo-remove' output.

@@ -86,7 +86,7 @@ packages to remove can be specified on the command line.\n")"
 	printf -- "$(gettext "  -q, --quiet       minimize output\n")"
 	printf -- "$(gettext "  -s, --sign        sign database with GnuPG after update\n")"
 	printf -- "$(gettext "  -k, --key <key>   use the specified key to sign the database\n")"
-	printf -- "$(gettext "  -v, --verify      verify database's signature before update\n")"
+	printf -- "$(gettext "  -v, --verify      verify database's signature before update, implies --sign\n")"
 	printf -- "$(gettext "  -R, --remove      remove old package file from disk after updating database\n")"
 	printf -- "$(gettext "  -w, --wait-for-lock  retry to acquire lock file until success\n")"
 	printf -- "$(gettext "\n\
@@ -657,6 +657,7 @@ while true; do
 			GPGKEY=$1
 			;;
 		-v|--verify)
+			SIGN=1
 			VERIFY=1
 			;;
 		-p|--prevent-downgrade)
