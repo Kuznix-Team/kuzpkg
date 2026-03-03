@@ -105,7 +105,7 @@ config_t *config_new(void)
 		return NULL;
 	}
 	/* defaults which may get overridden later */
-	newconfig->op = PM_OP_MAIN;
+	newconfig->op = PM_OP_NONE;
 	newconfig->logmask = ALPM_LOG_ERROR | ALPM_LOG_WARNING;
 	newconfig->configfile = strdup(CONFFILE);
 	if(alpm_capabilities() & ALPM_CAPABILITY_SIGNATURES) {
@@ -128,6 +128,13 @@ config_t *config_new(void)
 	newconfig->colstr.nocolor = "";
 
 	return newconfig;
+}
+
+void targets_free(targets_t *targets) {
+	FREELIST(targets->targets);
+	FREELIST(targets->sync);
+	FREELIST(targets->upgrade);
+	FREELIST(targets->remove);
 }
 
 int config_free(config_t *oldconfig)
