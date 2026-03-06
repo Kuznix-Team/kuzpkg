@@ -270,7 +270,6 @@ int SYMEXPORT alpm_trans_release(alpm_handle_t *handle)
 
 	trans = handle->trans;
 	ASSERT(trans != NULL, RET_ERR(handle, ALPM_ERR_TRANS_NULL, -1));
-	ASSERT(trans->state != STATE_IDLE, RET_ERR(handle, ALPM_ERR_TRANS_NULL, -1));
 
 	int nolock_flag = trans->flags & ALPM_TRANS_FLAG_NOLOCK;
 

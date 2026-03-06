@@ -26,8 +26,7 @@
 #include "alpm.h"
 
 typedef enum _alpm_transstate_t {
-	STATE_IDLE = 0,
-	STATE_INITIALIZED,
+	STATE_INITIALIZED = 0,
 	STATE_PREPARED,
 	STATE_DOWNLOADING,
 	STATE_COMMITTING,
