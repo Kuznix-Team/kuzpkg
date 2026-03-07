@@ -131,18 +131,15 @@ int pacman_remove(alpm_list_t *targets)
 	}
 
 	/* Search for holdpkg in target list */
-	int holdpkg = 0;
 	for(i = alpm_trans_get_remove(config->handle); i; i = alpm_list_next(i)) {
 		alpm_pkg_t *pkg = i->data;
 		if(alpm_list_find(config->holdpkg, alpm_pkg_get_name(pkg), fnmatch_cmp)) {
-			pm_printf(ALPM_LOG_WARNING, _("%s is designated as a HoldPkg.\n"),
+			pm_printf(ALPM_LOG_ERROR, _("%s is designated as a HoldPkg, cannot complete transaction\n"),
 							alpm_pkg_get_name(pkg));
-			holdpkg = 1;
+			colon_printf(_("remove %s from HoldPkg to allow removal of the held package\n"),
+					alpm_pkg_get_name(pkg));
+			return 1;
 		}
-	}
-	if(holdpkg && (noyes(_("HoldPkg was found in target list. Do you want to continue?")) == 0)) {
-		retval = 1;
-		goto cleanup;
 	}
 
 	/* Step 3: actually perform the removal */
