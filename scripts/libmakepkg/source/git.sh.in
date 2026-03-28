@@ -31,6 +31,68 @@ source "$MAKEPKG_LIBRARY/util/pkgbuild.sh"
 export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_SYSTEM=${MAKEPKG_GIT_CONFIG:-'@sysconfdir@/makepkg.d/gitconfig'}
 
+_parse_git_line() {
+	# prints fetch ref; if partial: filter on line 2, include refs on line 3+
+	local fragment=$1
+
+	local fetch_ref=HEAD
+	local -a include_refs=()
+	local filter=
+
+	if [[ -n $fragment ]]; then
+		local -a parts
+		IFS='&' read -ra parts <<< "$fragment"
+
+		local part
+		for part in "${parts[@]}"; do
+			case ${part%%=*} in
+				commit)
+					fetch_ref="${part##*=}"
+					;;
+				tag)
+					fetch_ref="refs/tags/${part##*=}"
+					;;
+				branch)
+					fetch_ref="refs/heads/${part##*=}"
+					;;
+				partial)
+					case "${part##*=}" in
+						treeless) filter=tree:0 ;;
+						blobless) filter=blob:none ;;
+						*)
+							error "$(gettext "Unrecognized partial value: %s")" "${part##*=}"
+							plainerr "$(gettext "Aborting...")"
+							exit 1
+							;;
+					esac
+					;;
+				include)
+					include_refs+=( "${part##*=}" )
+					;;
+				*)
+					error "$(gettext "Unrecognized reference: %s")" "${part}"
+					plainerr "$(gettext "Aborting...")"
+					exit 1
+					;;
+			esac
+		done
+	fi
+
+	if [[ -n $filter ]]; then
+		printf '%s\n' "$fetch_ref" "$filter" "${include_refs[@]}"
+	else
+		printf '%s' "$fetch_ref"
+	fi
+}
+
+_get_git_ref() {
+	local fragment=$1
+
+	local -a refs
+	mapfile -t refs < <(_parse_git_line "$fragment")
+	printf '%s' "${refs[0]}"
+}
+
 download_git() {
 	# abort early if parent says not to fetch
 	if declare -p get_vcs > /dev/null 2>&1; then
@@ -42,6 +104,8 @@ download_git() {
 	local dir=$(get_filepath "$netfile")
 	[[ -z "$dir" ]] && dir="$SRCDEST/$(get_filename "$netfile")"
 
+	local url=$(get_url "$netfile")
+	local fragment=$(get_uri_fragment "$url")
 	local repo=$(get_filename "$netfile")
 
 	local url=$(get_url "$netfile")
@@ -49,12 +113,45 @@ download_git() {
 	url=${url%%#*}
 	url=${url%%\?*}
 
+	local -a parsed_line
+	mapfile -t parsed_line < <(_parse_git_line "$fragment")
+	local git_ref="${parsed_line[0]}"
+	local filter="${parsed_line[1]}"
+	local include_refs=("${parsed_line[@]:2}")
+
+	local -a filter_args=()
+	if [[ -n "$filter" ]]; then
+		filter_args=("--filter=$filter")
+	fi
+
 	if [[ ! -d "$dir" ]] || dir_is_empty "$dir" ; then
 		msg2 "$(gettext "Cloning %s %s repo...")" "${repo}" "git"
-		if ! git clone --origin=origin --mirror "$url" "$dir"; then
+		if ! git clone --origin=origin --mirror "${filter_args[@]}" "$url" "$dir"; then
 			error "$(gettext "Failure while downloading %s %s repo")" "${repo}" "git"
 			plainerr "$(gettext "Aborting...")"
 			exit 1
+		fi
+		if [[ -n "$filter" ]]; then
+			# prefetch all required blobs the clone needs
+			for fetch_ref in "$git_ref" "${include_refs[@]}"; do
+				if ! git -c safe.bareRepository=all -C "$dir" fetch --prune -- origin "$fetch_ref" ||
+						! git -c safe.bareRepository=all -C "$dir" archive --format=tar --output /dev/null FETCH_HEAD; then
+					error "$(gettext "Failure while updating %s %s repo")" "${repo}" "git"
+					plainerr "$(gettext "Aborting...")"
+					exit 1
+				fi
+				# parent ref is needed for tree:0 to make cherry-picking work
+				if [[ "$fetch_ref" != "$git_ref" && $filter == "tree:0" ]] &&
+						git -c safe.bareRepository=all -C "$dir" rev-parse --verify "$fetch_ref^" &>/dev/null; then
+					local parent_ref="$(git -c safe.bareRepository=all -C "$dir" rev-parse "$fetch_ref^")"
+					if ! git -c safe.bareRepository=all -C "$dir" fetch --prune -- origin "$parent_ref" ||
+							! git -c safe.bareRepository=all -C "$dir" archive --format=tar --output /dev/null FETCH_HEAD; then
+						error "$(gettext "Failure while updating %s %s repo")" "${repo}" "git"
+						plainerr "$(gettext "Aborting...")"
+						exit 1
+					fi
+				fi
+			done
 		fi
 	elif (( ! HOLDVER )); then
 		cd_safe "$dir"
@@ -69,9 +166,30 @@ download_git() {
 			exit $E_NOT_A_CLONE_OF
 		fi
 		msg2 "$(gettext "Updating %s %s repo...")" "${repo}" "git"
-		if ! git -c safe.bareRepository=all fetch --all -p; then
-			# only warn on failure to allow offline builds
-			warning "$(gettext "Failure while updating %s %s repo")" "${repo}" "git"
+		if [[ -n "$filter" ]]; then
+			# prefetch all required blobs the clone needs
+			for fetch_ref in "$git_ref" "${include_refs[@]}"; do
+				if ! git -c safe.bareRepository=all -C "$dir" fetch --prune -- origin "$fetch_ref" ||
+						! git -c safe.bareRepository=all -C "$dir" archive --format=tar --output /dev/null FETCH_HEAD; then
+					# only warn on failure to allow offline builds
+					warning "$(gettext "Failure while updating %s %s repo")" "${repo}" "git"
+				fi
+				# parent ref is needed for tree:0 to make cherry-picking work
+				if [[ "$fetch_ref" != "$git_ref" && $filter == "tree:0" ]] &&
+						git -c safe.bareRepository=all -C "$dir" rev-parse --verify "$fetch_ref^" &>/dev/null; then
+					local parent_ref="$(git -c safe.bareRepository=all -C "$dir" rev-parse "$fetch_ref^")"
+					if ! git -c safe.bareRepository=all -C "$dir" fetch --prune -- origin "$parent_ref" ||
+							! git -c safe.bareRepository=all -C "$dir" archive --format=tar --output /dev/null FETCH_HEAD; then
+						# only warn on failure to allow offline builds
+						warning "$(gettext "Failure while updating %s %s repo")" "${repo}" "git"
+					fi
+				fi
+			done
+		else
+			if ! git -c safe.bareRepository=all fetch --all --prune; then
+				# only warn on failure to allow offline builds
+				warning "$(gettext "Failure while updating %s %s repo")" "${repo}" "git"
+			fi
 		fi
 	fi
 
@@ -86,8 +204,10 @@ download_git() {
 extract_git() {
 	local netfile=$1 tagname
 
-	local fragment=$(get_uri_fragment "$netfile")
+	local url=$(get_url "$netfile")
+	local fragment=$(get_uri_fragment "$url")
 	local repo=$(get_filename "$netfile")
+	local git_ref=$(_get_git_ref "$fragment")
 
 	local dir=$(get_filepath "$netfile")
 	[[ -z "$dir" ]] && dir="$SRCDEST/$(get_filename "$netfile")"
@@ -99,13 +219,15 @@ extract_git() {
 	if [[ -d "${dir##*/}" ]]; then
 		updating=1
 		cd_safe "${dir##*/}"
-		if ! git fetch; then
+		if ! git fetch -- origin "$git_ref"; then
 			error "$(gettext "Failure while updating working copy of %s %s repo")" "${repo}" "git"
 			plainerr "$(gettext "Aborting...")"
 			exit 1
 		fi
 		cd_safe "$srcdir"
-	elif ! git clone --origin=origin -s "$dir" "${dir##*/}"; then
+	# With --revision no tags are fetched, but the forged check below needs them
+	elif ! git -c advice.detachedHead=false clone --origin=origin --revision "$git_ref" -s "$dir" "${dir##*/}" ||
+			! git -C "${dir##*/}" fetch origin --tags; then
 		error "$(gettext "Failure while creating working copy of %s %s repo")" "${repo}" "git"
 		plainerr "$(gettext "Aborting...")"
 		exit 1
@@ -113,23 +235,8 @@ extract_git() {
 
 	cd_safe "${dir##*/}"
 
-	local ref=origin/HEAD
-	if [[ -n $fragment ]]; then
-		case ${fragment%%=*} in
-			commit|tag)
-				ref=${fragment##*=}
-				;;
-			branch)
-				ref=origin/${fragment##*=}
-				;;
-			*)
-				error "$(gettext "Unrecognized reference: %s")" "${fragment}"
-				plainerr "$(gettext "Aborting...")"
-				exit 1
-		esac
-	fi
-
-	if [[ ${fragment%%=*} = tag ]]; then
+	if [[ $git_ref = refs/tags/* ]]; then
+		local ref="${git_ref##*/}"
 		tagname="$(git tag -l --format='%(tag)' "$ref")"
 		if [[ -n $tagname && $tagname != "$ref" ]]; then
 			error "$(gettext "Failure while checking out version %s, the git tag has been forged")" "$ref"
@@ -138,8 +245,9 @@ extract_git() {
 		fi
 	fi
 
-	if [[ $ref != "origin/HEAD" ]] || (( updating )) ; then
-		if ! git checkout --force --no-track -B makepkg "$ref" --; then
+	if [[ $git_ref != "HEAD" ]] || (( updating )) ; then
+		if ! git fetch -- origin "$git_ref" ||
+				! git checkout --force --no-track -B makepkg FETCH_HEAD; then
 			error "$(gettext "Failure while creating working copy of %s %s repo")" "${repo}" "git"
 			plainerr "$(gettext "Aborting...")"
 			exit 1
@@ -150,7 +258,7 @@ extract_git() {
 }
 
 calc_checksum_git() {
-	local netfile=$1 integ=$2 ret=0 shellopts dir url fragment sum
+	local netfile=$1 integ=$2 ret=0 shellopts dir url fragment sum git_ref
 
 	# this function requires pipefail - save current status to restore later
 	shellopts=$(shopt -p -o pipefail)
@@ -159,15 +267,15 @@ calc_checksum_git() {
 	dir=$(get_filepath "$netfile")
 	url=$(get_url "$netfile")
 	fragment=$(get_uri_fragment "$url")
+	git_ref=$(_get_git_ref "$fragment")
 
-	case ${fragment%%=*} in
-		tag|commit)
-			fragval=${fragment##*=}
-			sum=$(git -c core.abbrev=no -C "$dir" archive --format tar "$fragval" | "${integ}sum" 2>&1) || ret=1
-			sum="${sum%% *}"
+	case "$git_ref" in
+		HEAD|refs/heads/*)
+			sum="SKIP"
 			;;
 		*)
-			sum="SKIP"
+			sum=$(git -c core.abbrev=no -C "$dir" archive --format tar "$git_ref" | "${integ}sum" 2>&1) || ret=1
+			sum="${sum%% *}"
 			;;
 	esac
 
