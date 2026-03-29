@@ -28,12 +28,14 @@ source "$MAKEPKG_LIBRARY/util/pkgbuild.sh"
 source "$MAKEPKG_LIBRARY/util/schema.sh"
 
 generate_one_checksum() {
-	local integ=$1 arch=$2 sources numsrc indentsz idx
+	local integ=$1 arch=$2 sources numsrc indentsz idx integrity_sums
 
 	if [[ $arch ]]; then
 		array_build sources "source_$arch"
+		array_build integrity_sums "${integ}sums_$arch"
 	else
 		array_build sources 'source'
+		array_build integrity_sums "${integ}sums"
 	fi
 
 	numsrc=${#sources[*]}
@@ -50,33 +52,38 @@ generate_one_checksum() {
 	for (( idx = 0; idx < numsrc; ++idx )); do
 		local netfile=${sources[idx]}
 		local proto sum
-		proto="$(get_protocol "$netfile")"
 
-		case $proto in
-			bzr|git|hg|svn)
-				if declare -f "calc_checksum_$proto" > /dev/null; then
-					if ! sum=$("calc_checksum_$proto" "$netfile" "$integ"); then
-						local name
-						name=$(get_filename "$netfile")
-						error "$(gettext "Failure while calculating %s %s checksum")" "${name}" "${proto}"
-						plainerr "$(gettext "Aborting...")"
-						exit 1
+		if [[ ${integrity_sums[idx]} == 'SKIP' ]]; then
+			sum='SKIP'
+		else
+			proto="$(get_protocol "$netfile")"
+
+			case $proto in
+				bzr|git|hg|svn)
+					if declare -f "calc_checksum_$proto" > /dev/null; then
+						if ! sum=$("calc_checksum_$proto" "$netfile" "$integ"); then
+							local name
+							name=$(get_filename "$netfile")
+							error "$(gettext "Failure while calculating %s %s checksum")" "${name}" "${proto}"
+							plainerr "$(gettext "Aborting...")"
+							exit 1
+						fi
+					else
+						sum="SKIP"
 					fi
-				else
-					sum="SKIP"
-				fi
-				;;
-			*)
-				if [[ ${netfile%%::*} != *.@(sig?(n)|asc) ]]; then
-					local file
-					file="$(get_filepath "$netfile")" || missing_source_file "$netfile"
-					sum="$("${integ}sum" "$file")"
-					sum=${sum%% *}
-				else
-					sum="SKIP"
-				fi
-				;;
-		esac
+					;;
+				*)
+					if [[ ${netfile%%::*} != *.@(sig?(n)|asc) ]]; then
+						local file
+						file="$(get_filepath "$netfile")" || missing_source_file "$netfile"
+						sum="$("${integ}sum" "$file")"
+						sum=${sum%% *}
+					else
+						sum="SKIP"
+					fi
+					;;
+			esac
+		fi
 
 		# indent checksum on lines after the first
 		printf "%*s%s" $(( idx ? indentsz : 0 )) '' "'$sum'"
