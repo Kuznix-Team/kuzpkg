@@ -132,9 +132,14 @@ extract_git() {
 	if [[ ${fragment%%=*} = tag ]]; then
 		tagname="$(git tag -l --format='%(tag)' "$ref")"
 		if [[ -n $tagname && $tagname != "$ref" ]]; then
-			error "$(gettext "Failure while checking out version %s, the git tag has been forged")" "$ref"
-			plainerr "$(gettext "Aborting...")"
-			exit 1
+			# check if the returned tag and the used tag point at the same commit
+			read -ra commit1 <<< $(git show-ref --tags -- refs/tags/$tagname)
+			read -ra commit2 <<< $(git show-ref --tags -- refs/tags/$ref)
+			if [[ ${commit1[0]} != ${commit2[0]} ]]; then
+				error "$(gettext "Failure while checking out version %s, the git tag has been forged")" "$ref"
+				plainerr "$(gettext "Aborting...")"
+				exit 1
+			fi
 		fi
 	fi
 
