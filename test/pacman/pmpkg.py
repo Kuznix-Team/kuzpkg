@@ -199,6 +199,8 @@ class pmpkg(object):
         file_names = self.filelist()
         for name in list(file_names):
             if os.path.isabs(name):
+                if getattr(self, "allow_unsafe_paths", False):
+                    continue
                 raise ValueError("Absolute path in filelist '%s'." % name)
 
             name = os.path.dirname(name.rstrip("/"))
