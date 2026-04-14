@@ -110,6 +110,47 @@ int SYMEXPORT alpm_add_pkg(alpm_handle_t *handle, alpm_pkg_t *pkg)
 	return 0;
 }
 
+/* Lexical check on a raw archive entry pathname (or hardlink target).
+ *
+ * Can't rely on libarchive's ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS here:
+ * perform_extraction() rewrites the entry pathname to "handle->root +
+ * entryname" before calling archive_read_extract2(), which is itself
+ * absolute and would be rejected unconditionally.
+ *
+ * ARCHIVE_EXTRACT_SECURE_NODOTDOT would catch ".." in the rewritten path,
+ * but the snprintf() in extract_single_file() is not normalizing, so a
+ * leading '/' in entryname (e.g. "/etc/foo") yields "//etc/foo" -- no
+ * ".." for NODOTDOT to see. A raw-entry lexical check is therefore the
+ * only thing that covers both cases.
+ *
+ * alpm_filelist_contains() is not an independent gate: newpkg->files is
+ * built from the archive's own .MTREE (be_package.c:build_filelist_from_mtree)
+ * with a fallback to the tar entries; both are attacker-controlled for an
+ * unsigned/-U install.
+ *
+ * Returns 0 if the name is safe to extract, 1 if it must be refused.
+ */
+static int entryname_is_unsafe(const char *entryname)
+{
+	const char *p = entryname;
+
+	if(entryname == NULL || *entryname == '\0') {
+		return 1;
+	}
+	if(*entryname == '/') {
+		return 1;
+	}
+	while(*p) {
+		if(p[0] == '.' && p[1] == '.' && (p[2] == '/' || p[2] == '\0')) {
+			if(p == entryname || p[-1] == '/') {
+				return 1;
+			}
+		}
+		p++;
+	}
+	return 0;
+}
+
 static int perform_extraction(alpm_handle_t *handle, struct archive *archive,
 		struct archive_entry *entry, const char *filename)
 {
@@ -192,6 +233,7 @@ static int extract_single_file(alpm_handle_t *handle, struct archive *archive,
 		struct archive_entry *entry, alpm_pkg_t *newpkg, alpm_pkg_t *oldpkg)
 {
 	const char *entryname = archive_entry_pathname(entry);
+	const char *hardlink = archive_entry_hardlink(entry);
 	mode_t entrymode = archive_entry_mode(entry);
 	alpm_backup_t *backup = _alpm_needbackup(entryname, newpkg);
 	char filename[PATH_MAX]; /* the actual file we're extracting */
@@ -203,6 +245,17 @@ static int extract_single_file(alpm_handle_t *handle, struct archive *archive,
 
 	if(*entryname == '.') {
 		return extract_db_file(handle, archive, entry, newpkg, entryname);
+	}
+
+	if(entryname_is_unsafe(entryname) ||
+			(hardlink != NULL && entryname_is_unsafe(hardlink))) {
+		_alpm_log(handle, ALPM_LOG_ERROR,
+				_("refusing to extract unsafe path '%s' from package %s\n"),
+				entryname, newpkg->name);
+		alpm_logaction(handle, ALPM_CALLER_PREFIX,
+				"error: refusing to extract unsafe path '%s' from package %s\n",
+				entryname, newpkg->name);
+		return 1;
 	}
 
 	if (!alpm_filelist_contains(&newpkg->files, entryname)) {
