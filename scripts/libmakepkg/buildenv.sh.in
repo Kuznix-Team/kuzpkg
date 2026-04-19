@@ -31,7 +31,7 @@ for lib in "$MAKEPKG_LIBRARY/buildenv/"*.sh; do
 	source "$lib"
 done
 
-readonly -a buildenv_functions buildenv_vars build_options
+readonly -a buildenv_functions buildenv_vars build_options buildenv_refs
 
 prepare_buildenv() {
 	local ret=0
@@ -41,6 +41,10 @@ prepare_buildenv() {
 	for func in ${buildenv_functions[@]}; do
 		$func || ret=1
 	done
+
+	while IFS=: read -r var ref; do
+		declare -gn "$var=$ref"
+	done < <(printf '%s\n' "${buildenv_refs[@]}")
 
 	# ensure all necessary build variables are exported
 	export ${buildenv_vars[@]} CHOST MAKEFLAGS
