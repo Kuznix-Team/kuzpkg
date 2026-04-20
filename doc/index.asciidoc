@@ -52,6 +52,7 @@ configuration files dealing with pacman.
 * linkman:alpm-hooks[5]
 * linkman:BUILDINFO[5]
 * linkman:PKGBUILD[5]
+* linkman:PKGINFO[5]
 * linkman:libalpm[3]
 * linkman:makepkg[8]
 * linkman:makepkg-template[1]

@@ -12,6 +12,7 @@ manpages = [
   { 'name': 'makepkg.conf.5' },
   { 'name': 'pacman.conf.5' },
   { 'name': 'BUILDINFO.5' },
+  { 'name': 'PKGINFO.5' },
   { 'name': 'pacman-conf.8' },
 ]
 
