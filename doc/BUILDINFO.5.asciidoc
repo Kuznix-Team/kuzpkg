@@ -28,7 +28,6 @@ BUILDINFO file format.
 	The name of the package.
 
 *pkgbase*::
-
 	The base name of a package, usually the same as the pkgname except for
 	split packages.
 

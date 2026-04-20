@@ -1,0 +1,89 @@
+PKGINFO(5)
+==========
+
+Name
+----
+PKGINFO - Makepkg package information file
+
+
+Synopsis
+--------
+This manual page describes the format of a PKGINFO file found in the root of
+a package created by makepkg. The file contains a description of the package's
+build environment. The information is formatted in key-value pairs separated by
+a '=', one value per line. Arrays are represented as multiple key-value pairs
+having the same key.
+
+Description
+-----------
+
+*pkgname*::
+	The name of the package.
+
+*pkgbase*::
+	The base name of a package, usually the same as the pkgname except for
+	split packages.
+
+*xdata (array)*::
+	Additional metadata of a package. Formatted as "key=value". The
+	'pkgtype' xdata key is always present and denotes the type of the
+	package (e.g. 'pkg', 'debug', 'src').
+
+*pkgver*::
+	The version of the package including pkgrel and epoch.
+
+*pkgdesc*::
+	A brief description of the package.
+
+*url*::
+	The website URL associated with the package.
+
+*builddate*::
+	The build date of the package in epoch.
+
+*packager*::
+	The details of the packager that built the package.
+
+*size*::
+	The installed size of the package in bytes.
+
+*arch*::
+	The architecture of the package.
+
+*license (array)*::
+	The license(s) that apply to the package.
+
+*replaces (array)*::
+	The packages that this package replaces.
+
+*group (array)*::
+	The group(s) this package belongs to.
+
+*conflict (array)*::
+	The packages that conflict with this package.
+
+*provides (array)*::
+	The ``virtual provisions'' that this package provides.
+
+*backup (array)*::
+	An array of file names without preceding slashes, that
+	should be backed up if the package is removed or upgraded
+
+*depend (array)*::
+	The dependencies of the package.
+
+*optdepend (array)*::
+	The optional dependencies of the package. Formatted as
+	"package: description".
+
+*makedepend (array)*::
+	The build dependencies of the package.
+
+*checkdepend (array)*::
+	The check dependencies of the package.
+
+See Also
+--------
+linkman:makepkg[8], linkman:pacman[8], linkman:PKGBUILD[5]
+
+include::footer.asciidoc[]
