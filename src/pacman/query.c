@@ -325,20 +325,54 @@ static int display(alpm_pkg_t *pkg)
 			&& !config->op_q_changelog && !config->op_q_check) {
 		if(!config->quiet) {
 			const colstr_t *colstr = &config->colstr;
-			printf("%s%s %s%s%s", colstr->title, alpm_pkg_get_name(pkg),
-					colstr->version, alpm_pkg_get_version(pkg), colstr->nocolor);
 
 			if(config->op_q_upgrade) {
 				int usage;
 				alpm_pkg_t *newpkg = alpm_sync_get_new_version(pkg, alpm_get_syncdbs(config->handle));
 				alpm_db_t *db = alpm_pkg_get_db(newpkg);
 				alpm_db_get_usage(db, &usage);
-				
-				printf(" -> %s%s%s", colstr->version, alpm_pkg_get_version(newpkg), colstr->nocolor);
+				const char *oldpkgver = alpm_pkg_get_version(pkg);
+				const char *newpkgver = alpm_pkg_get_version(newpkg);
+
+				int dots = 0, n = 0;
+				bool pkgver_match = false;
+				while(oldpkgver[n] && oldpkgver[n] == newpkgver[n]) {
+					if(oldpkgver[n] == '.') {
+						dots++;
+					}
+					if(oldpkgver[n] == '-') {
+						pkgver_match = true;
+						break;
+					}
+					n++;
+				}
+
+				const char *matchver = strndup(oldpkgver, n);
+
+				const char *diffcol = colstr->vermajor;
+				if(pkgver_match) {
+					diffcol = colstr->nocolor;
+				} else if(dots > 1) {
+					diffcol = colstr->verpatch;
+				} else if(dots == 1) {
+					diffcol = colstr->verminor;
+				}
+
+				printf("%s%s%s %s%s%s%s%s -> %s%s%s%s%s", colstr->title,
+						alpm_pkg_get_name(pkg), colstr->nocolor, colstr->faint,
+						matchver, diffcol, oldpkgver + n, colstr->nocolor,
+						colstr->faint, matchver, diffcol, newpkgver + n,
+						colstr->nocolor);
+
+				free(matchver);
 
 				if(alpm_pkg_should_ignore(config->handle, pkg) || !(usage & ALPM_DB_USAGE_UPGRADE)) {
 					printf(" %s", _("[ignored]"));
 				}
+			} else {
+				printf("%s%s %s%s%s", colstr->title, alpm_pkg_get_name(pkg),
+						colstr->version, alpm_pkg_get_version(pkg),
+						colstr->nocolor);
 			}
 
 			printf("\n");
