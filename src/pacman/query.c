@@ -347,7 +347,7 @@ static int display(alpm_pkg_t *pkg)
 					n++;
 				}
 
-				const char *matchver = strndup(oldpkgver, n);
+				char *matchver = strndup(oldpkgver, n);
 
 				const char *diffcol = colstr->vermajor;
 				if(pkgver_match) {
