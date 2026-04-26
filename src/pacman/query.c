@@ -331,25 +331,27 @@ static int display(alpm_pkg_t *pkg)
 				alpm_pkg_t *newpkg = alpm_sync_get_new_version(pkg, alpm_get_syncdbs(config->handle));
 				alpm_db_t *db = alpm_pkg_get_db(newpkg);
 				alpm_db_get_usage(db, &usage);
-				
+
 				const char *oldpkgver = alpm_pkg_get_version(pkg);
 				const char *newpkgver = alpm_pkg_get_version(newpkg);
 
-				int dots = 0, n = 0;
+				int dots = 0, n = 0, br = 0;
 				bool pkgver_match = false;
 				while(oldpkgver[n] && oldpkgver[n] == newpkgver[n]) {
 					if(oldpkgver[n] == '.') {
 						dots++;
-					}
-					if(oldpkgver[n] == '-') {
+						br = n + 1;
+					} else if(oldpkgver[n] == ':') {
+						br = n + 1;
+					} else if(oldpkgver[n] == '-') {
 						pkgver_match = true;
-						n++;
+						br = n + 1;
 						break;
 					}
 					n++;
 				}
 
-				char *matchver = strndup(oldpkgver, n);
+				char *matchver = strndup(oldpkgver, br);
 
 				const char *diffcol = colstr->vermajor;
 				if(pkgver_match) {
@@ -362,8 +364,8 @@ static int display(alpm_pkg_t *pkg)
 
 				printf("%s%s %s%s%s%s%s -> %s%s%s%s", colstr->title,
 						alpm_pkg_get_name(pkg), colstr->nocolor,
-						matchver, diffcol, oldpkgver + n, colstr->nocolor,
-						 matchver, diffcol, newpkgver + n, colstr->nocolor);
+						matchver, diffcol, oldpkgver + br, colstr->nocolor,
+						 matchver, diffcol, newpkgver + br, colstr->nocolor);
 
 				free(matchver);
 
