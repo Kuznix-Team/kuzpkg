@@ -359,11 +359,10 @@ static int display(alpm_pkg_t *pkg)
 					diffcol = colstr->verminor;
 				}
 
-				printf("%s%s%s %s%s%s%s%s -> %s%s%s%s%s", colstr->title,
-						alpm_pkg_get_name(pkg), colstr->nocolor, colstr->faint,
+				printf("%s%s %s%s%s%s%s -> %s%s%s%s", colstr->title,
+						alpm_pkg_get_name(pkg), colstr->nocolor,
 						matchver, diffcol, oldpkgver + n, colstr->nocolor,
-						colstr->faint, matchver, diffcol, newpkgver + n,
-						colstr->nocolor);
+						 matchver, diffcol, newpkgver + n, colstr->nocolor);
 
 				free(matchver);
 
