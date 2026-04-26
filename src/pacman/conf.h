@@ -30,7 +30,6 @@ typedef struct __colstr_t {
 	const char *vermajor;
 	const char *verminor;
 	const char *verpatch;
-	const char *verregr;
 	const char *groups;
 	const char *meta;
 	const char *warn;

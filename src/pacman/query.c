@@ -331,6 +331,7 @@ static int display(alpm_pkg_t *pkg)
 				alpm_pkg_t *newpkg = alpm_sync_get_new_version(pkg, alpm_get_syncdbs(config->handle));
 				alpm_db_t *db = alpm_pkg_get_db(newpkg);
 				alpm_db_get_usage(db, &usage);
+				
 				const char *oldpkgver = alpm_pkg_get_version(pkg);
 				const char *newpkgver = alpm_pkg_get_version(newpkg);
 

@@ -77,7 +77,6 @@ void enable_colors(int colors)
 		colstr->vermajor = BOLDMAGENTA;
 		colstr->verminor = BOLDGREEN;
 		colstr->verpatch = BOLDCYAN;
-		colstr->verregr  = BOLDRED;
 		colstr->groups   = BOLDBLUE;
 		colstr->meta     = BOLDCYAN;
 		colstr->warn     = BOLDYELLOW;
@@ -92,7 +91,6 @@ void enable_colors(int colors)
 		colstr->vermajor = "";
 		colstr->verminor = "";
 		colstr->verpatch = "";
-		colstr->verregr  = "";
 		colstr->groups   = "";
 		colstr->meta     = "";
 		colstr->warn     = "";
@@ -131,7 +129,6 @@ config_t *config_new(void)
 	newconfig->colstr.vermajor = "";
 	newconfig->colstr.verminor = "";
 	newconfig->colstr.verpatch = "";
-	newconfig->colstr.verregr  = "";
 	newconfig->colstr.groups   = "";
 	newconfig->colstr.meta     = "";
 	newconfig->colstr.warn     = "";
