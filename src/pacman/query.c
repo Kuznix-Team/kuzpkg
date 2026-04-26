@@ -342,6 +342,7 @@ static int display(alpm_pkg_t *pkg)
 					}
 					if(oldpkgver[n] == '-') {
 						pkgver_match = true;
+						n++;
 						break;
 					}
 					n++;
@@ -351,7 +352,7 @@ static int display(alpm_pkg_t *pkg)
 
 				const char *diffcol = colstr->vermajor;
 				if(pkgver_match) {
-					diffcol = colstr->nocolor;
+					diffcol = colstr->title;
 				} else if(dots > 1) {
 					diffcol = colstr->verpatch;
 				} else if(dots == 1) {
