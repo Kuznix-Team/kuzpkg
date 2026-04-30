@@ -673,6 +673,11 @@ int _alpm_run_chroot(alpm_handle_t *handle, const char *cmd, char *const argv[],
 			close(cwdfd);
 		}
 
+#ifdef HAVE_LIBCURL
+		/* invalidate the curl data - we must not touch it in child */
+		handle->curlm = NULL;
+#endif
+
 		/* use fprintf instead of _alpm_log to send output through the parent */
 		/* don't chroot() to "/": this allows running with less caps when the
 		 * caller puts us in the right root */
