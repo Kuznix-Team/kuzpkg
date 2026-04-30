@@ -21,6 +21,7 @@
  */
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -50,7 +51,7 @@ alpm_handle_t *_alpm_handle_new(void)
 }
 
 /* free all in-memory resources */
-void _alpm_handle_free(alpm_handle_t *handle)
+void _alpm_handle_free(alpm_handle_t *handle, bool is_child)
 {
 	alpm_list_t *i;
 	alpm_db_t *db;
@@ -86,9 +87,11 @@ void _alpm_handle_free(alpm_handle_t *handle)
 #endif
 
 #ifdef HAVE_LIBCURL
-	curl_multi_cleanup(handle->curlm);
-	curl_global_cleanup();
-	FREELIST(handle->server_errors);
+	if (!is_child) {
+		curl_multi_cleanup(handle->curlm);
+		curl_global_cleanup();
+		FREELIST(handle->server_errors);
+	}
 #endif
 
 	/* free memory */
