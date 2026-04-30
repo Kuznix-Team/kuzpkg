@@ -92,7 +92,7 @@ alpm_handle_t SYMEXPORT *alpm_initialize(const char *root, const char *dbpath,
 nomem:
 	myerr = ALPM_ERR_MEMORY;
 cleanup:
-	_alpm_handle_free(myhandle);
+	_alpm_handle_free(myhandle, false);
 	if(err) {
 		*err = myerr;
 	}
@@ -106,7 +106,7 @@ int SYMEXPORT alpm_release(alpm_handle_t *myhandle)
 	ASSERT(myhandle->trans == NULL, RET_ERR(myhandle, ALPM_ERR_TRANS_NOT_NULL, -1));
 
 	_alpm_handle_unlock(myhandle);
-	_alpm_handle_free(myhandle);
+	_alpm_handle_free(myhandle, false);
 
 	return 0;
 }

@@ -20,6 +20,7 @@
 #ifndef ALPM_HANDLE_H
 #define ALPM_HANDLE_H
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <regex.h>
@@ -126,7 +127,7 @@ struct _alpm_handle_t {
 };
 
 alpm_handle_t *_alpm_handle_new(void);
-void _alpm_handle_free(alpm_handle_t *handle);
+void _alpm_handle_free(alpm_handle_t *handle, bool is_child);
 
 int _alpm_handle_lock(alpm_handle_t *handle);
 int _alpm_handle_unlock(alpm_handle_t *handle);
