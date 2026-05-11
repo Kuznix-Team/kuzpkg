@@ -365,7 +365,7 @@ static int display(alpm_pkg_t *pkg)
 				printf("%s%s %s%s%s%s%s -> %s%s%s%s", colstr->title,
 						alpm_pkg_get_name(pkg), colstr->nocolor,
 						matchver, diffcol, oldpkgver + br, colstr->nocolor,
-						 matchver, diffcol, newpkgver + br, colstr->nocolor);
+						matchver, diffcol, newpkgver + br, colstr->nocolor);
 
 				free(matchver);
 
