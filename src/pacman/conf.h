@@ -27,6 +27,9 @@ typedef struct __colstr_t {
 	const char *title;
 	const char *repo;
 	const char *version;
+	const char *vermajor;
+	const char *verminor;
+	const char *verpatch;
 	const char *groups;
 	const char *meta;
 	const char *warn;

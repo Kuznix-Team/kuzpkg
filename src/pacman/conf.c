@@ -70,27 +70,33 @@ void enable_colors(int colors)
 	colstr_t *colstr = &config->colstr;
 
 	if(colors == PM_COLOR_ON) {
-		colstr->colon   = BOLDBLUE "::" BOLD " ";
-		colstr->title   = BOLD;
-		colstr->repo    = BOLDMAGENTA;
-		colstr->version = BOLDGREEN;
-		colstr->groups  = BOLDBLUE;
-		colstr->meta    = BOLDCYAN;
-		colstr->warn    = BOLDYELLOW;
-		colstr->err     = BOLDRED;
-		colstr->faint   = GREY46;
-		colstr->nocolor = NOCOLOR;
+		colstr->colon    = BOLDBLUE "::" BOLD " ";
+		colstr->title    = BOLD;
+		colstr->repo     = BOLDMAGENTA;
+		colstr->version  = BOLDGREEN;
+		colstr->vermajor = BOLDMAGENTA;
+		colstr->verminor = BOLDGREEN;
+		colstr->verpatch = BOLDCYAN;
+		colstr->groups   = BOLDBLUE;
+		colstr->meta     = BOLDCYAN;
+		colstr->warn     = BOLDYELLOW;
+		colstr->err      = BOLDRED;
+		colstr->faint    = GREY46;
+		colstr->nocolor  = NOCOLOR;
 	} else {
-		colstr->colon   = ":: ";
-		colstr->title   = "";
-		colstr->repo    = "";
-		colstr->version = "";
-		colstr->groups  = "";
-		colstr->meta    = "";
-		colstr->warn    = "";
-		colstr->err     = "";
-		colstr->faint   = "";
-		colstr->nocolor = "";
+		colstr->colon    = ":: ";
+		colstr->title    = "";
+		colstr->repo     = "";
+		colstr->version  = "";
+		colstr->vermajor = "";
+		colstr->verminor = "";
+		colstr->verpatch = "";
+		colstr->groups   = "";
+		colstr->meta     = "";
+		colstr->warn     = "";
+		colstr->err      = "";
+		colstr->faint    = "";
+		colstr->nocolor  = "";
 	}
 }
 
@@ -116,16 +122,19 @@ config_t *config_new(void)
 
 	/* by default use 1 download stream */
 	newconfig->parallel_downloads = 1;
-	newconfig->colstr.colon   = ":: ";
-	newconfig->colstr.title   = "";
-	newconfig->colstr.repo    = "";
-	newconfig->colstr.version = "";
-	newconfig->colstr.groups  = "";
-	newconfig->colstr.meta    = "";
-	newconfig->colstr.warn    = "";
-	newconfig->colstr.err     = "";
-	newconfig->colstr.faint   = "";
-	newconfig->colstr.nocolor = "";
+	newconfig->colstr.colon    = ":: ";
+	newconfig->colstr.title    = "";
+	newconfig->colstr.repo     = "";
+	newconfig->colstr.version  = "";
+	newconfig->colstr.vermajor = "";
+	newconfig->colstr.verminor = "";
+	newconfig->colstr.verpatch = "";
+	newconfig->colstr.groups   = "";
+	newconfig->colstr.meta     = "";
+	newconfig->colstr.warn     = "";
+	newconfig->colstr.err      = "";
+	newconfig->colstr.faint    = "";
+	newconfig->colstr.nocolor  = "";
 
 	return newconfig;
 }
