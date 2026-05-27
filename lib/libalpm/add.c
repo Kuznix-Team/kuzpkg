@@ -115,12 +115,16 @@ static int perform_extraction(alpm_handle_t *handle, struct archive *archive,
 {
 	int ret;
 	struct archive *archive_writer;
-	const int archive_flags = ARCHIVE_EXTRACT_OWNER |
-	                          ARCHIVE_EXTRACT_PERM |
+	int archive_flags = ARCHIVE_EXTRACT_PERM |
 	                          ARCHIVE_EXTRACT_TIME |
 	                          ARCHIVE_EXTRACT_UNLINK |
 	                          ARCHIVE_EXTRACT_XATTR |
 	                          ARCHIVE_EXTRACT_SECURE_SYMLINKS;
+
+	if (getuid() == 0) {
+		/* When running as root, preserve ownership of files in the package */
+		archive_flags |= ARCHIVE_EXTRACT_OWNER;
+	}
 
 	archive_entry_set_pathname(entry, filename);
 

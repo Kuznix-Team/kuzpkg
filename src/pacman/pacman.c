@@ -1222,12 +1222,6 @@ int main(int argc, char *argv[])
 		cleanup(ret);
 	}
 
-	/* check if we have sufficient permission for the requested operation */
-	if(myuid > 0 && needs_root()) {
-		pm_printf(ALPM_LOG_ERROR, _("you cannot perform this operation unless you are root.\n"));
-		cleanup(EXIT_FAILURE);
-	}
-
 	/* we support reading targets from stdin if a cmdline parameter is '-' */
 	if(alpm_list_find_str(pm_targets, "-")) {
 		if(!isatty(fileno(stdin))) {
@@ -1286,6 +1280,12 @@ int main(int argc, char *argv[])
 		cleanup(ret);
 	}
 
+	/* check if we have sufficient permission for the requested operation */
+	if(myuid > 0 && requires_privilege_escalation()) {
+		pm_printf(ALPM_LOG_ERROR, _("you cannot perform this operation unless you are root.\n"));
+		cleanup(EXIT_FAILURE);
+	}
+
 	/* noask is meant to be non-interactive */
 	if(config->noask) {
 		config->noconfirm = 1;
@@ -1322,7 +1322,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Log command line */
-	if(needs_root()) {
+	if(requires_privilege_escalation()) {
 		cl_to_log(argc, argv);
 	}
 
