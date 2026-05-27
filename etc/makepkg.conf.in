@@ -160,3 +160,5 @@ SRCEXT='@SRCEXT@'
 #
 #-- Command used to run pacman as root, instead of trying sudo and su
 PACMAN_AUTH=()
+#-- Do not run pacman as root, only useful for user installs of pacman
+#NO_PACMAN_AUTH=1
