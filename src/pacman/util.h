@@ -51,7 +51,7 @@ void trans_init_error(void);
 /* flags is a bitfield of alpm_transflag_t flags */
 int trans_init(int flags, int check_valid);
 int trans_release(void);
-int needs_root(void);
+int requires_privilege_escalation(void);
 int check_syncdbs(size_t need_repos, int check_valid);
 int sync_syncdbs(int level, alpm_list_t *syncs);
 unsigned short getcols(void);

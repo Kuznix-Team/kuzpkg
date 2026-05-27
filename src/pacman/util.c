@@ -120,8 +120,12 @@ int trans_release(void)
 	return 0;
 }
 
-int needs_root(void)
+int requires_privilege_escalation(void)
 {
+	if (access(config->rootdir, W_OK) == 0) {
+		/* If we have write access, do not require privilege escalation */
+		return 0;
+	}
 	switch(config->op) {
 		case PM_OP_DATABASE:
 			return !config->op_q_check;

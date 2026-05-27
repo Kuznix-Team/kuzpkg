@@ -231,17 +231,19 @@ run_pacman() {
 		cmd=("$PACMAN_PATH" "$@")
 	else
 		cmd=("$PACMAN_PATH" "${PACMAN_OPTS[@]}" "$@")
-		cmdescape="$(printf '%q ' "${cmd[@]}")"
-		if (( ${#PACMAN_AUTH[@]} )); then
-			if in_array '%c' "${PACMAN_AUTH[@]}"; then
-				cmd=("${PACMAN_AUTH[@]/\%c/$cmdescape}")
+		if (( ! NO_PACMAN_AUTH )); then
+			cmdescape="$(printf '%q ' "${cmd[@]}")"
+			if (( ${#PACMAN_AUTH[@]} )); then
+				if in_array '%c' "${PACMAN_AUTH[@]}"; then
+					cmd=("${PACMAN_AUTH[@]/\%c/$cmdescape}")
+				else
+					cmd=("${PACMAN_AUTH[@]}" "${cmd[@]}")
+				fi
+			elif type -p sudo >/dev/null; then
+				cmd=(sudo -k "${cmd[@]}")
 			else
-				cmd=("${PACMAN_AUTH[@]}" "${cmd[@]}")
+				cmd=(su root -c "$cmdescape")
 			fi
-		elif type -p sudo >/dev/null; then
-			cmd=(sudo -k "${cmd[@]}")
-		else
-			cmd=(su root -c "$cmdescape")
 		fi
 		local lockfile="$(pacman-conf DBPath)/db.lck"
 		while [[ -f $lockfile ]]; do
