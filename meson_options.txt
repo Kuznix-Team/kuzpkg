@@ -35,6 +35,9 @@ option('makepkg-template-dir', type : 'string', value : '/usr/share/makepkg-temp
 option('debug-suffix', type : 'string', value : 'debug',
        description : 'suffix for split debugging symbol packages used by makepkg')
 
+option('bash-completions-dir', type : 'string',
+       description : 'set the bash-completion scripts directory manually')
+
 # dependencies, features
 option('doc', type : 'feature', value : 'auto',
        description : 'generate docs and manpages')
