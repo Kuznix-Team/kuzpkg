@@ -108,6 +108,10 @@ Options
 	group when performing a '\--sysupgrade'. Shell-style glob patterns are
 	allowed.
 
+*AssumeInstalled =* package[=version] ...::
+	If set, pacman will add virtual packages with the specified versions to
+	transactions in order to satisfy dependencies of other packages.
+
 *Include =* /path/to/config/file::
 	Include another configuration file. This file can include repositories or
 	general configuration options. Wildcards in the specified paths will get

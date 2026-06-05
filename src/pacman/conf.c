@@ -652,6 +652,8 @@ static int _parse_options(const char *key, char *value,
 			setrepeatingoption(value, "IgnoreGroup", &(config->ignoregrp));
 		} else if(strcmp(key, "HoldPkg") == 0) {
 			setrepeatingoption(value, "HoldPkg", &(config->holdpkg));
+		} else if(strcmp(key, "AssumeInstalled") == 0) {
+			setrepeatingoption(value, "AssumeInstalled", &(config->assumeinstalled));
 		} else if(strcmp(key, "CacheDir") == 0) {
 			/* FIXME - fails when multiple paths are specified on one line (#289)
 			   FIXME - fails when directory does not exist (#292)
