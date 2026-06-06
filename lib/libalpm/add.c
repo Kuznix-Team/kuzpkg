@@ -110,6 +110,70 @@ int SYMEXPORT alpm_add_pkg(alpm_handle_t *handle, alpm_pkg_t *pkg)
 	return 0;
 }
 
+/* On an SELinux system, file labels come from the loaded policy (and
+ * restorecon), never from package payloads. ARCHIVE_EXTRACT_XATTR is required to
+ * restore security.capability (setcap'd binaries such as newuidmap), but it also
+ * restores any security.selinux baked into a package - which transiently
+ * mislabels freshly extracted files until a post-transaction restorecon fixes
+ * them. That window trips the confined package-manager domain (rpm_t) and leaves
+ * stragglers the relabel hook misses. Strip ONLY security.selinux from the entry
+ * before extraction; every other xattr (notably security.capability) is kept. */
+static void strip_selinux_xattr(struct archive_entry *entry)
+{
+	struct { char *name; void *value; size_t size; } *keep;
+	const char *name;
+	const void *value;
+	size_t size;
+	int count, kept = 0, have_selinux = 0;
+
+	count = archive_entry_xattr_reset(entry);
+	if(count <= 0) {
+		return;
+	}
+	while(archive_entry_xattr_next(entry, &name, &value, &size) == ARCHIVE_OK) {
+		if(name && strcmp(name, "security.selinux") == 0) {
+			have_selinux = 1;
+		}
+	}
+	if(!have_selinux) {
+		return;
+	}
+
+	/* Copy the keepers before clearing - xattr_next pointers are owned by the
+	 * entry and become invalid after archive_entry_xattr_clear(). */
+	keep = calloc(count, sizeof(*keep));
+	if(keep == NULL) {
+		return;
+	}
+	archive_entry_xattr_reset(entry);
+	while(archive_entry_xattr_next(entry, &name, &value, &size) == ARCHIVE_OK) {
+		if(name == NULL || strcmp(name, "security.selinux") == 0) {
+			continue;
+		}
+		keep[kept].value = size ? malloc(size) : NULL;
+		keep[kept].name = strdup(name);
+		if(keep[kept].name == NULL || (size && keep[kept].value == NULL)) {
+			free(keep[kept].name);
+			free(keep[kept].value);
+			continue;
+		}
+		if(size) {
+			memcpy(keep[kept].value, value, size);
+		}
+		keep[kept].size = size;
+		kept++;
+	}
+
+	archive_entry_xattr_clear(entry);
+	while(kept-- > 0) {
+		archive_entry_xattr_add_entry(entry, keep[kept].name,
+				keep[kept].value, keep[kept].size);
+		free(keep[kept].name);
+		free(keep[kept].value);
+	}
+	free(keep);
+}
+
 static int perform_extraction(alpm_handle_t *handle, struct archive *archive,
 		struct archive_entry *entry, const char *filename)
 {
@@ -123,6 +187,7 @@ static int perform_extraction(alpm_handle_t *handle, struct archive *archive,
 	                          ARCHIVE_EXTRACT_SECURE_SYMLINKS;
 
 	archive_entry_set_pathname(entry, filename);
+	strip_selinux_xattr(entry);
 
 	archive_writer = archive_write_disk_new();
 	if (archive_writer == NULL) {
