@@ -156,6 +156,21 @@ Options
 	files being whitelisted again. Subsequent matches will override previous
 	ones. A leading literal exclamation mark or backslash needs to be escaped.
 
+*ExtractXattr =* name ...::
+	An allowlist of extended-attribute names to restore when extracting
+	packages. When this directive is present, only extended attributes whose
+	name matches one of the listed shell-style patterns are applied to the
+	filesystem; all other attributes carried in the package payload are
+	dropped. When absent (the default), every attribute is restored, matching
+	historical behavior. The name is matched as a whole string, so
+	`security.capability` matches exactly that attribute and `security.\*`
+	matches the namespace. This is primarily useful on systems where file
+	security contexts come from local policy rather than the package, for
+	example to keep `security.capability` (needed by setcap'd binaries) while
+	discarding host-policy labels such as `security.selinux` that must instead
+	be assigned by the system (e.g. by a `restorecon` hook). Requires a
+	libarchive build that supports per-attribute xattr filtering.
+
 *CleanMethod =* KeepInstalled &| KeepCurrent::
 	If set to `KeepInstalled` (the default), the '-Sc' operation will clean
 	packages that are no longer installed (not present in the local database).

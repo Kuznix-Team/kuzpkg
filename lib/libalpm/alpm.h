@@ -1997,6 +1997,38 @@ int alpm_option_remove_noextract(alpm_handle_t *handle, const char *path);
  */
 int alpm_option_match_noextract(alpm_handle_t *handle, const char *path);
 /* End of noextract accessors */
+
+/** Get the extended-attribute allowlist.
+ * @param handle the context handle
+ * @return the char* list of xattr name patterns to extract (empty = all)
+ */
+alpm_list_t *alpm_option_get_extract_xattrs(alpm_handle_t *handle);
+
+/** Add an extended-attribute name pattern to the extract allowlist.
+ * When the list is non-empty, only matching xattr names are restored on
+ * extraction; an empty list restores all (the default).  Patterns are
+ * shell-style and matched against the whole xattr name (e.g.
+ * "security.capability", or "user.\*").
+ * @param handle the context handle
+ * @param name the xattr name pattern to add
+ * @return 0 on success, -1 on error (pm_errno is set accordingly)
+ */
+int alpm_option_add_extract_xattr(alpm_handle_t *handle, const char *name);
+
+/** Set the extended-attribute extract allowlist.
+ * @param handle the context handle
+ * @param names a char* list of xattr name patterns; duped, caller still frees.
+ * @return 0 on success, -1 on error (pm_errno is set accordingly)
+ */
+int alpm_option_set_extract_xattrs(alpm_handle_t *handle, alpm_list_t *names);
+
+/** Remove an entry from the extended-attribute extract allowlist.
+ * @param handle the context handle
+ * @param name the xattr name pattern to remove
+ * @return 0 on success, -1 on error (pm_errno is set accordingly)
+ */
+int alpm_option_remove_extract_xattr(alpm_handle_t *handle, const char *name);
+/* End of extract_xattr accessors */
 /** @} */
 
 

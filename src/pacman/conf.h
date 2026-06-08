@@ -127,6 +127,7 @@ typedef struct __config_t {
 	alpm_list_t *assumeinstalled;
 	alpm_list_t *noupgrade;
 	alpm_list_t *noextract;
+	alpm_list_t *extract_xattr;
 	alpm_list_t *overwrite_files;
 	char *xfercommand;
 	char **xfercommand_argv;

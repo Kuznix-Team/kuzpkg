@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <fnmatch.h>
 #include <limits.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -110,6 +111,82 @@ int SYMEXPORT alpm_add_pkg(alpm_handle_t *handle, alpm_pkg_t *pkg)
 	return 0;
 }
 
+/* Apply the ExtractXattr allowlist to an entry, dropping every extended
+ * attribute whose name does not match one of the configured shell-style
+ * patterns.  archive_entry has no per-name remove, so the surviving
+ * attributes are copied out, the list is cleared, and the survivors are
+ * re-added; archive_entry_xattr_add_entry() prepends, so they are re-added
+ * in reverse to preserve the original order.  Returns 0 on success (an empty
+ * allowlist is a no-op), -1 on allocation failure with the entry unchanged. */
+static int filter_extract_xattrs(alpm_handle_t *handle, struct archive_entry *entry)
+{
+	struct kept_xattr {
+		char *name;
+		void *value;
+		size_t size;
+	} *kept;
+	const char *name;
+	const void *value;
+	size_t size;
+	int count, n = 0, i;
+
+	if(handle->extract_xattr == NULL) {
+		return 0;
+	}
+
+	count = archive_entry_xattr_reset(entry);
+	if(count <= 0) {
+		return 0;
+	}
+
+	CALLOC(kept, (size_t)count, sizeof(*kept), return -1);
+
+	while(archive_entry_xattr_next(entry, &name, &value, &size) == ARCHIVE_OK) {
+		alpm_list_t *p;
+		int keep = 0;
+
+		if(name == NULL) {
+			continue;
+		}
+		for(p = handle->extract_xattr; p; p = p->next) {
+			if(fnmatch(p->data, name, 0) == 0) {
+				keep = 1;
+				break;
+			}
+		}
+		if(!keep) {
+			continue;
+		}
+
+		STRDUP(kept[n].name, name, goto error);
+		if(size > 0) {
+			MALLOC(kept[n].value, size, goto error);
+			memcpy(kept[n].value, value, size);
+		}
+		kept[n].size = size;
+		n++;
+	}
+
+	archive_entry_xattr_clear(entry);
+	for(i = n - 1; i >= 0; i--) {
+		archive_entry_xattr_add_entry(entry, kept[i].name,
+				kept[i].value, kept[i].size);
+		free(kept[i].name);
+		free(kept[i].value);
+	}
+	free(kept);
+	return 0;
+
+error:
+	/* free the fully-built survivors plus the partial one at index n */
+	for(i = 0; i <= n; i++) {
+		free(kept[i].name);
+		free(kept[i].value);
+	}
+	free(kept);
+	return -1;
+}
+
 static int perform_extraction(alpm_handle_t *handle, struct archive *archive,
 		struct archive_entry *entry, const char *filename)
 {
@@ -133,6 +210,20 @@ static int perform_extraction(alpm_handle_t *handle, struct archive *archive,
 	}
 
 	archive_write_disk_set_options(archive_writer, archive_flags);
+
+	/* Restrict which extended attributes are restored.  A non-empty
+	 * ExtractXattr allowlist drops every xattr in the package payload whose
+	 * name does not match before extraction applies them, keeping host-policy
+	 * labels (security.selinux, security.ima, ...) baked into a package from
+	 * being applied to the system -- where file contexts must come from local
+	 * policy -- while still allowing wanted attributes such as
+	 * security.capability.  An empty list restores every attribute. */
+	if(filter_extract_xattrs(handle, entry) != 0) {
+		_alpm_log(handle, ALPM_LOG_ERROR,
+				_("could not filter extended attributes for %s\n"), filename);
+		archive_write_free(archive_writer);
+		return 1;
+	}
 
 	ret = archive_read_extract2(archive, entry, archive_writer);
 
