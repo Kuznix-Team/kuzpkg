@@ -2346,6 +2346,19 @@ int alpm_option_get_disable_sandbox_syscalls(alpm_handle_t *handle);
  */
 int alpm_option_set_disable_sandbox_syscalls(alpm_handle_t *handle, unsigned short disable_sandbox_syscalls);
 
+/** Get the state of the network isolation for install scriptlets
+ * @param handle the context handle
+ * @return 0 for enabled, 1 for disabled
+ */
+int alpm_option_get_disable_sandbox_network(alpm_handle_t *handle);
+
+/** Enables/disables network namespace isolation for install scriptlets.
+ * @param handle the context handle
+ * @param disable_sandbox_network 0 for enabled, 1 for disabled
+ * @return 0 on success, -1 on error (pm_errno is set accordingly)
+ */
+int alpm_option_set_disable_sandbox_network(alpm_handle_t *handle, unsigned short disable_sandbox_network);
+
 /* End of disable_sandbox accessors */
 /** @} */
 

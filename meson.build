@@ -151,6 +151,7 @@ foreach sym : [
     'strsep',
     'swprintf',
     'tcflush',
+    'unshare',
   ]
   have = cc.has_function(sym, args : '-D_GNU_SOURCE')
   if have

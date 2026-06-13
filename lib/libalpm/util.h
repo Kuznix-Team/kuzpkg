@@ -132,7 +132,7 @@ typedef ssize_t (*_alpm_cb_io)(void *buf, ssize_t len, void *ctx);
 
 void _alpm_reset_signals(void);
 int _alpm_run_chroot(alpm_handle_t *handle, const char *cmd, char *const argv[],
-		_alpm_cb_io in_cb, void *in_ctx);
+		_alpm_cb_io in_cb, void *in_ctx, bool unshare_net);
 int _alpm_ldconfig(alpm_handle_t *handle);
 int _alpm_str_cmp(const void *s1, const void *s2);
 char *_alpm_filecache_find(alpm_handle_t *handle, const char *filename);
