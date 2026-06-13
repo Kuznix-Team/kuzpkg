@@ -608,7 +608,7 @@ void _alpm_reset_signals(void)
  * @return 0 on success, 1 on error
  */
 int _alpm_run_chroot(alpm_handle_t *handle, const char *cmd, char *const argv[],
-		_alpm_cb_io stdin_cb, void *stdin_ctx)
+		_alpm_cb_io stdin_cb, void *stdin_ctx, bool unshare_net)
 {
 	pid_t pid;
 	int child2parent_pipefd[2], parent2child_pipefd[2];
@@ -685,6 +685,12 @@ int _alpm_run_chroot(alpm_handle_t *handle, const char *cmd, char *const argv[],
 					"/", strerror(errno));
 			exit(1);
 		}
+#ifdef HAVE_UNSHARE
+		if(unshare_net && !handle->disable_sandbox_network && unshare(CLONE_NEWNET) != 0) {
+			fprintf(stderr, "could not create network namespace (%s)\n", strerror(errno));
+			exit(1);
+		}
+#endif /* HAVE_UNSHARE */
 		/* bash assumes it's being run under rsh/ssh if stdin is a socket and
 		 * sources ~/.bashrc if it thinks it's the top-level shell.
 		 * set SHLVL before running to indicate that it's a child shell and
@@ -830,7 +836,7 @@ int _alpm_ldconfig(alpm_handle_t *handle)
 			char arg0[32];
 			char *argv[] = { arg0, NULL };
 			strcpy(arg0, "ldconfig");
-			return _alpm_run_chroot(handle, LDCONFIG, argv, NULL, NULL);
+			return _alpm_run_chroot(handle, LDCONFIG, argv, NULL, NULL, false);
 		}
 	}
 

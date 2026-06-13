@@ -519,9 +519,9 @@ static int _alpm_hook_run_hook(alpm_handle_t *handle, struct _alpm_hook_t *hook)
 		/* hooks with multiple triggers could have duplicate matches */
 		ctx = hook->matches = _alpm_strlist_dedup(hook->matches);
 		return _alpm_run_chroot(handle, hook->cmd[0], hook->cmd,
-				(_alpm_cb_io) _alpm_hook_feed_targets, &ctx);
+				(_alpm_cb_io) _alpm_hook_feed_targets, &ctx, false);
 	} else {
-		return _alpm_run_chroot(handle, hook->cmd[0], hook->cmd, NULL, NULL);
+		return _alpm_run_chroot(handle, hook->cmd[0], hook->cmd, NULL, NULL, false);
 	}
 }
 
