@@ -103,6 +103,8 @@ struct _alpm_handle_t {
 	/* package lists */
 	alpm_list_t *noupgrade;   /* List of packages NOT to be upgraded */
 	alpm_list_t *noextract;   /* List of files NOT to extract */
+	alpm_list_t *extract_xattr; /* Allowlist of xattr name patterns to
+	                               extract; empty means extract all */
 	alpm_list_t *ignorepkg;   /* List of packages to ignore */
 	alpm_list_t *ignoregroup; /* List of groups to ignore */
 	alpm_list_t *assumeinstalled;   /* List of virtual packages used to satisfy dependencies */

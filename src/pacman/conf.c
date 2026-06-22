@@ -148,6 +148,7 @@ int config_free(config_t *oldconfig)
 	FREELIST(oldconfig->assumeinstalled);
 	FREELIST(oldconfig->noupgrade);
 	FREELIST(oldconfig->noextract);
+	FREELIST(oldconfig->extract_xattr);
 	FREELIST(oldconfig->overwrite_files);
 	free(oldconfig->configfile);
 	free(oldconfig->sysroot);
@@ -646,6 +647,8 @@ static int _parse_options(const char *key, char *value,
 			setrepeatingoption(value, "NoUpgrade", &(config->noupgrade));
 		} else if(strcmp(key, "NoExtract") == 0) {
 			setrepeatingoption(value, "NoExtract", &(config->noextract));
+		} else if(strcmp(key, "ExtractXattr") == 0) {
+			setrepeatingoption(value, "ExtractXattr", &(config->extract_xattr));
 		} else if(strcmp(key, "IgnorePkg") == 0) {
 			setrepeatingoption(value, "IgnorePkg", &(config->ignorepkg));
 		} else if(strcmp(key, "IgnoreGroup") == 0) {
@@ -987,6 +990,7 @@ static int setup_libalpm(void)
 	alpm_option_set_ignoregroups(handle, config->ignoregrp);
 	alpm_option_set_noupgrades(handle, config->noupgrade);
 	alpm_option_set_noextracts(handle, config->noextract);
+	alpm_option_set_extract_xattrs(handle, config->extract_xattr);
 
 	alpm_option_set_disable_dl_timeout(handle, config->disable_dl_timeout);
 	alpm_option_set_parallel_downloads(handle, config->parallel_downloads);

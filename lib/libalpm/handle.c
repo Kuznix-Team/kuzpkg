@@ -105,6 +105,7 @@ void _alpm_handle_free(alpm_handle_t *handle)
 	FREE(handle->sandboxuser);
 	FREELIST(handle->noupgrade);
 	FREELIST(handle->noextract);
+	FREELIST(handle->extract_xattr);
 	FREELIST(handle->ignorepkg);
 	FREELIST(handle->ignoregroup);
 	FREELIST(handle->overwrite_files);
@@ -316,6 +317,12 @@ alpm_list_t SYMEXPORT *alpm_option_get_noextracts(alpm_handle_t *handle)
 {
 	CHECK_HANDLE(handle, return NULL);
 	return handle->noextract;
+}
+
+alpm_list_t SYMEXPORT *alpm_option_get_extract_xattrs(alpm_handle_t *handle)
+{
+	CHECK_HANDLE(handle, return NULL);
+	return handle->extract_xattr;
 }
 
 alpm_list_t SYMEXPORT *alpm_option_get_ignorepkgs(alpm_handle_t *handle)
@@ -699,6 +706,21 @@ int SYMEXPORT alpm_option_remove_noextract(alpm_handle_t *handle, const char *pa
 int SYMEXPORT alpm_option_match_noextract(alpm_handle_t *handle, const char *path)
 {
 	return _alpm_fnmatch_patterns(handle->noextract, path);
+}
+
+int SYMEXPORT alpm_option_add_extract_xattr(alpm_handle_t *handle, const char *name)
+{
+	return _alpm_option_strlist_add(handle, &(handle->extract_xattr), name);
+}
+
+int SYMEXPORT alpm_option_set_extract_xattrs(alpm_handle_t *handle, alpm_list_t *names)
+{
+	return _alpm_option_strlist_set(handle, &(handle->extract_xattr), names);
+}
+
+int SYMEXPORT alpm_option_remove_extract_xattr(alpm_handle_t *handle, const char *name)
+{
+	return _alpm_option_strlist_rem(handle, &(handle->extract_xattr), name);
 }
 
 int SYMEXPORT alpm_option_add_ignorepkg(alpm_handle_t *handle, const char *pkg)

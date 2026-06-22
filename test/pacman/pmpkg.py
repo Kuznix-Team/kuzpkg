@@ -53,6 +53,8 @@ class pmpkg(object):
         # files
         self.files = []
         self.backup = []
+        # optional per-file extended attributes: {filename: {xattr_name: value}}
+        self.xattrs = {}
         # install
         self.install = {
             "pre_install": "",
@@ -147,8 +149,11 @@ class pmpkg(object):
             self.path = os.path.join(path, self.filename())
             util.mkdir(os.path.dirname(self.path))
 
-        # Generate package metadata
-        tar = tarfile.open(name=self.path, fileobj=fileobj, mode="w:gz", format=tarfile.GNU_FORMAT)
+        # Generate package metadata.  Extended attributes are emitted as PAX
+        # SCHILY.xattr.* records, which only the PAX format can carry, so use
+        # it when (and only when) a file in this package declares xattrs.
+        fmt = tarfile.PAX_FORMAT if self.xattrs else tarfile.GNU_FORMAT
+        tar = tarfile.open(name=self.path, fileobj=fileobj, mode="w:gz", format=fmt)
         for name, data in archive_files:
             info = tarfile.TarInfo(name)
             info.size = len(data)
@@ -158,6 +163,10 @@ class pmpkg(object):
         for name in self.files:
             fileinfo = util.getfileinfo(name)
             info = tarfile.TarInfo(fileinfo["filename"])
+            xattrs = self.xattrs.get(fileinfo["filename"])
+            if xattrs:
+                info.pax_headers = {"SCHILY.xattr." + k: v
+                        for k, v in xattrs.items()}
             if fileinfo["hasperms"]:
                 info.mode = fileinfo["perms"]
             elif fileinfo["isdir"]:

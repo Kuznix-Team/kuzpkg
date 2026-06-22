@@ -269,6 +269,7 @@ static void dump_config(void)
 	show_list_str("IgnoreGroup", config->ignoregrp);
 	show_list_str("NoUpgrade", config->noupgrade);
 	show_list_str("NoExtract", config->noextract);
+	show_list_str("ExtractXattr", config->extract_xattr);
 
 	show_list_str("Architecture", config->architectures);
 	show_str("XferCommand", config->xfercommand);
@@ -378,6 +379,8 @@ static int list_directives(void)
 			show_list_str("NoUpgrade", config->noupgrade);
 		} else if(strcasecmp(i->data, "NoExtract") == 0) {
 			show_list_str("NoExtract", config->noextract);
+		} else if(strcasecmp(i->data, "ExtractXattr") == 0) {
+			show_list_str("ExtractXattr", config->extract_xattr);
 
 
 		} else if(strcasecmp(i->data, "Architecture") == 0) {

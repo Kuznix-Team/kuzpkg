@@ -28,6 +28,11 @@ Architecture = auto
 #NoUpgrade   =
 #NoExtract   =
 
+# Allowlist of extended attributes to restore from packages (empty = all).
+# On SELinux/IMA systems, keep only file capabilities and let local policy
+# assign security labels (e.g. via a restorecon hook):
+#ExtractXattr = security.capability
+
 # Misc options
 #UseSyslog
 #Color

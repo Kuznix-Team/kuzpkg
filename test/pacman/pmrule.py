@@ -33,7 +33,7 @@ class pmrule(object):
         return self.rule
 
     def snapshots_needed(self):
-        (testname, args) = self.rule.split("=")
+        (testname, args) = self.rule.split("=", 1)
         if testname == "FILE_MODIFIED" or testname == "!FILE_MODIFIED":
             return [args]
         return []
@@ -43,7 +43,7 @@ class pmrule(object):
         """
         success = 1
 
-        [testname, args] = self.rule.split("=")
+        [testname, args] = self.rule.split("=", 1)
         if testname[0] == "!":
             self.false = 1
             testname = testname[1:]
@@ -157,6 +157,18 @@ class pmrule(object):
                     success = 0
             elif case == "PACSAVE":
                 if not os.path.isfile("%s.pacsave" % filename):
+                    success = 0
+            elif case == "XATTR":
+                # value is "name=expected" (assert equal) or "name" (assert
+                # present; combine with the rule's '!' prefix to assert absent)
+                if value is not None and "=" in value:
+                    xname, xval = value.split("=", 1)
+                else:
+                    xname, xval = value, None
+                try:
+                    actual = os.getxattr(filename, xname)
+                    success = 1 if xval is None else (actual == xval.encode())
+                except OSError:
                     success = 0
             else:
                 tap.diag("FILE rule '%s' not found" % case)
