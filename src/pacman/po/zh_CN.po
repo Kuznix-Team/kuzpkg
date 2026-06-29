@@ -662,7 +662,7 @@ msgstr "软件许可"
 #: src/pacman/package.c:113 src/pacman/package.c:239
 #, c-format
 msgid "MD5 Sum"
-msgstr "MD5校验值"
+msgstr "MD5校验和"
 
 #: src/pacman/package.c:114
 #, c-format
@@ -707,7 +707,7 @@ msgstr "依赖它"
 #: src/pacman/package.c:122 src/pacman/package.c:242
 #, c-format
 msgid "SHA-256 Sum"
-msgstr "SHA-256 校验值"
+msgstr "SHA-256校验和"
 
 #: src/pacman/package.c:123
 #, c-format
@@ -774,7 +774,7 @@ msgstr "否"
 #: src/pacman/package.c:389
 #, c-format
 msgid "could not calculate checksums for %s\n"
-msgstr "无法计算 %s 的完整性校验值\n"
+msgstr "无法计算 %s 的完整性校验和\n"
 
 #: src/pacman/package.c:479
 #, c-format

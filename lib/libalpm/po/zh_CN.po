@@ -629,7 +629,7 @@ msgstr "无效或已损坏的软件包"
 #: lib/libalpm/error.c:115
 #, c-format
 msgid "invalid or corrupted package (checksum)"
-msgstr "无效或已损坏的软件包 (检验值)"
+msgstr "无效或已损坏的软件包 (校验和)"
 
 #: lib/libalpm/error.c:117
 #, c-format
