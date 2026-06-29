@@ -402,7 +402,7 @@ msgstr "  --sign           使用 %s 签名生成的软件包"
 
 #: scripts/makepkg.sh.in:919
 msgid "  --skipchecksums  Do not verify checksums of the source files"
-msgstr "  --skipchecksums  不验证源文件的检验值"
+msgstr "  --skipchecksums  不验证源文件的校验和"
 
 #: scripts/makepkg.sh.in:920
 msgid ""
@@ -1128,7 +1128,7 @@ msgstr "正在添加软件包签名..."
 
 #: scripts/repo-add.sh.in:286
 msgid "Computing checksums..."
-msgstr "正在计算校验值..."
+msgstr "正在计算校验和..."
 
 #: scripts/repo-add.sh.in:299 scripts/repo-add.sh.in:338
 #, sh-printf-format
@@ -1339,11 +1339,11 @@ msgstr "正在跳过所有源文件完整性检查。"
 
 #: scripts/libmakepkg/integrity.sh.in:36
 msgid "Skipping verification of source file checksums."
-msgstr "正在跳过校验源文件校验值。"
+msgstr "正在跳过检查源文件校验和。"
 
 #: scripts/libmakepkg/integrity.sh.in:39
 msgid "Skipping verification of source file PGP signatures."
-msgstr "正在跳过源文件 PGP 签名校验。"
+msgstr "正在跳过源文件 PGP 签名验证。"
 
 #: scripts/libmakepkg/integrity/verify_checksum.sh.in:66
 #, sh-printf-format
@@ -1428,11 +1428,11 @@ msgstr "该密钥已过期。"
 
 #: scripts/libmakepkg/integrity/verify_signature.sh.in:116
 msgid "One or more PGP signatures could not be verified!"
-msgstr "一个或多个 PGP 签名无法校验！"
+msgstr "一个或多个 PGP 签名无法验证！"
 
 #: scripts/libmakepkg/integrity/verify_signature.sh.in:121
 msgid "Warnings have occurred while verifying the signatures."
-msgstr "校验签名时发生警告。"
+msgstr "验证签名时发生警告。"
 
 #: scripts/libmakepkg/integrity/verify_signature.sh.in:122
 msgid "Please make sure you really trust them."
