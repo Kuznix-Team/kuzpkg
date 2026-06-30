@@ -79,10 +79,11 @@ _makepkg() {
     compopt -o default
   elif [[ ! $prev =~ ^-(-(config|help|key|version)$|[[:alnum:]_]*[Vh]) ]]; then
     opts=('allsource asdeps check clean cleanbuild config force geninteg help
-           holdver ignorearch install key log needed noarchive nobuild nocheck
-           nocolor noconfirm nodeps noextract noprepare noprogressbar nosign
-           packagelist printsrcinfo repackage rmdeps sign skipchecksums
-           skipinteg skippgpcheck source syncdeps verifysource version'
+           freshsource holdver ignorearch install key log needed noarchive
+           nobuild nocheck nocolor noconfirm nodeps noextract noprepare
+           noprogressbar nosign packagelist printsrcinfo repackage rmdeps
+           sign skipchecksums skipinteg skippgpcheck source syncdeps
+           verifysource version'
           'A C L R S c d e f g h i m o p r s')
     _arch_ptr2comp opts
   fi

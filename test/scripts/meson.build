@@ -1,5 +1,6 @@
 tests = [
   'parseopts_test.sh',
+  'source-file_test.sh',
   'makepkg-template_test.sh',
 ]
 

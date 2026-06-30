@@ -267,6 +267,12 @@ Options
 	in the current directory. Many people like to keep all source files in
 	a central location for easy cleanup, so this path can be set here.
 
+**FRESHSOURCE=**"n"::
+	If this value is set to "y", makepkg will download source files even if
+	they already exist. This does not alter the normal update behavior for
+	version control system sources. This can be overridden with makepkg's
+	`\--freshsource` option.
+
 **SRCPKGDEST=**"/path/to/directory"::
 	If this value is not set, source package files will be stored in
 	in the current directory. Many people like to keep all source package files

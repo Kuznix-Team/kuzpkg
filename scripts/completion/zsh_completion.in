@@ -718,6 +718,7 @@ _makepkg_longopts=(
 	'--nodeps[Skip all dependency checks]'
 	'--noextract[Do not extract source files (use existing $srcdir/ dir)]'
 	'--force[Overwrite existing package]'
+	'--freshsource[Download source files even if they already exist]'
 	'--geninteg[Generate integrity checks for source files]'
 	'--help[Show help message and exit]'
 	'--install[Install package after successful build]'

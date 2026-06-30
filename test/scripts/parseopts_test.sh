@@ -18,7 +18,7 @@ fi
 # borrow opts from makepkg
 OPT_SHORT="AcdefFghiLmop:rRsVb?"
 OPT_LONG=('allsource' 'asroot' 'ignorearch' 'check' 'clean:' 'cleanall' 'nodeps'
-          'noextract' 'force' 'forcever:' 'geninteg' 'help' 'holdver'
+          'noextract' 'force' 'forcever:' 'freshsource' 'geninteg' 'help' 'holdver'
           'install' 'key:' 'log' 'nocolor' 'nobuild' 'nocheck' 'noprepare' 'nosign' 'pkg:' 'rmdeps'
           'repackage' 'skipinteg' 'sign' 'source' 'syncdeps' 'version' 'config:'
           'noconfirm' 'noprogressbar' 'opt?')

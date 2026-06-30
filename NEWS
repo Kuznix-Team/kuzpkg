@@ -18,6 +18,8 @@ VERSION         DESCRIPTION
               - makepkg:
                 - Add NPROC configuration option to control parallel
                   operations (in makepkg, not building)
+                - Add --freshsource to download source files even if they
+                  already exist
                 - Parallelize stripping of files
                 - Fixes and improvements for generation of debuginfo files
                 - Add "xdata" field to PKGBUILDs for tracking generic data
