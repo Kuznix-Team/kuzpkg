@@ -54,6 +54,7 @@ CHDIR=''
 CHECKFUNC=0
 CLEANBUILD=0
 CLEANUP=0
+CLI_FRESHSOURCE=0
 DEP_BIN=0
 FORCE=0
 GENINTEG=0
@@ -896,6 +897,7 @@ usage() {
 	printf -- "$(gettext "  -D, --dir <dir>  Change to directory <dir> before processing PKGBUILD")\n"
 	printf -- "$(gettext "  -e, --noextract  Do not extract source files (use existing %s dir)")\n" "\$srcdir/"
 	printf -- "$(gettext "  -f, --force      Overwrite existing package")\n"
+	printf -- "$(gettext "  --freshsource    Download source files even if they already exist")\n"
 	printf -- "$(gettext "  -g, --geninteg   Generate integrity checks for source files")\n"
 	printf -- "$(gettext "  -h, --help       Show this help message and exit")\n"
 	printf -- "$(gettext "  -i, --install    Install package after successful build")\n"
@@ -963,10 +965,11 @@ ARGLIST=("$@")
 # Parse Command Line Options.
 OPT_SHORT="AcCdD:efFghiLmop:rRsSV"
 OPT_LONG=('allsource' 'check' 'clean' 'cleanbuild' 'config:' 'dir:' 'force' 'geninteg'
-          'help' 'holdver' 'ignorearch' 'install' 'key:' 'log' 'noarchive' 'nobuild'
-          'nocolor' 'nocheck' 'nodeps' 'noextract' 'noprepare' 'nosign' 'packagelist'
-          'printsrcinfo' 'repackage' 'rmdeps' 'sign' 'skipchecksums' 'skipinteg'
-          'skippgpcheck' 'source' 'syncdeps' 'verifysource' 'version')
+          'freshsource' 'help' 'holdver' 'ignorearch' 'install' 'key:' 'log'
+          'noarchive' 'nobuild' 'nocolor' 'nocheck' 'nodeps' 'noextract'
+          'noprepare' 'nosign' 'packagelist' 'printsrcinfo' 'repackage'
+          'rmdeps' 'sign' 'skipchecksums' 'skipinteg' 'skippgpcheck' 'source'
+          'syncdeps' 'verifysource' 'version')
 
 # Pacman Options
 OPT_LONG+=('asdeps' 'noconfirm' 'needed' 'noprogressbar')
@@ -997,6 +1000,7 @@ while true; do
 		-e|--noextract)   NOEXTRACT=1 ;;
 		-f|--force)       FORCE=1 ;;
 		-F)               INFAKEROOT=1 ;;
+		--freshsource)    CLI_FRESHSOURCE=1 ;;
 		# generating integrity checks does not depend on architecture
 		-g|--geninteg)    BUILDPKG=0 GENINTEG=1 IGNOREARCH=1;;
 		--holdver)        HOLDVER=1 ;;
@@ -1061,6 +1065,18 @@ load_makepkg_config
 if (( ${#extra_environment[*]} )); then
 	export "${extra_environment[@]}"
 fi
+
+case ${FRESHSOURCE,,} in
+	y|yes|1|true) FRESHSOURCE=y ;;
+	n|no|0|false|'') FRESHSOURCE=n ;;
+	*)
+		error "$(gettext "%s must be one of %s")" "FRESHSOURCE" "y, n"
+		plainerr "$(gettext "Aborting...")"
+		exit $E_CONFIG_ERROR
+		;;
+esac
+(( CLI_FRESHSOURCE )) && FRESHSOURCE=y
+MAKEPKG_FRESHSOURCE=$FRESHSOURCE
 
 # canonicalize paths and provide defaults if anything is still undefined
 for var in PKGDEST SRCDEST SRCPKGDEST LOGDEST BUILDDIR; do

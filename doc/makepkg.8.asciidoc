@@ -71,6 +71,10 @@ Options
 	default to the current directory. This allows the built package to be
 	overwritten.
 
+*\--freshsource*::
+	Download source files even if they already exist. This does not alter
+	the normal update behavior for version control system sources.
+
 *-g, \--geninteg*::
 	For each source file in the source array of PKGBUILD, download the file
 	if required and generate integrity checks. The integrity checks generated

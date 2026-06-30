@@ -31,18 +31,7 @@ source "$MAKEPKG_LIBRARY/util/pkgbuild.sh"
 download_file() {
 	local netfile=$1
 
-	local filepath=$(get_filepath "$netfile")
-	if [[ -n "$filepath" ]]; then
-		msg2 "$(gettext "Found %s")" "${filepath##*/}"
-		return
-	fi
-
 	local proto=$(get_protocol "$netfile")
-
-	# find the client we should use for this URL
-	local -a cmdline
-	IFS=' ' read -a cmdline < <(get_downloadclient "$proto")
-	wait $! || exit
 
 	local filename=$(get_filename "$netfile")
 	local url=$(get_url "$netfile")
@@ -52,7 +41,16 @@ download_file() {
 		url="${url##*://}"
 	fi
 
-	msg2 "$(gettext "Downloading %s...")" "$filename"
+	local filepath=$(get_filepath "$netfile")
+	if [[ -n "$filepath" && ${MAKEPKG_FRESHSOURCE:-n} != y ]]; then
+		msg2 "$(gettext "Found %s")" "${filepath##*/}"
+		return
+	fi
+
+	# find the client we should use for this URL
+	local -a cmdline
+	IFS=' ' read -a cmdline < <(get_downloadclient "$proto")
+	wait $! || exit
 
 	# temporary download file, default to last component of the URL
 	local dlfile="${url##*/}"
@@ -62,6 +60,15 @@ download_file() {
 		dlfile=$filename.part
 		cmdline=("${cmdline[@]//%o/"$dlfile"}")
 	fi
+
+	if [[ -n "$filepath" ]]; then
+		msg2 "$(gettext "Removing %s")" "${filepath##*/}"
+		rm -f -- "$filepath"
+		rm -f -- "$SRCDEST/$dlfile"
+	fi
+
+	msg2 "$(gettext "Downloading %s...")" "$filename"
+
 	# add the URL, either in place of %u or at the end
 	if [[ ${cmdline[*]} = *%u* ]]; then
 		cmdline=("${cmdline[@]//%u/"$url"}")

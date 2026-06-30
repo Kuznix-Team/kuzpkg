@@ -124,6 +124,8 @@ LIB_DIRS=('lib:usr/lib' 'lib32:usr/lib32')
 #PKGDEST=/home/packages
 #-- Source cache: specify a fixed directory where source files will be cached
 #SRCDEST=/home/sources
+#-- Download source files even if they already exist
+#FRESHSOURCE=n
 #-- Source packages: specify a fixed directory where all src packages will be placed
 #SRCPKGDEST=/home/srcpackages
 #-- Log files: specify a fixed directory where all log files will be placed
