@@ -917,6 +917,7 @@ usage() {
 	printf -- "$(gettext "  --nocheck        Do not run the %s function in the %s")\n" "check()" "$BUILDSCRIPT"
 	printf -- "$(gettext "  --noprepare      Do not run the %s function in the %s")\n" "prepare()" "$BUILDSCRIPT"
 	printf -- "$(gettext "  --nosign         Do not create a signature for the package")\n"
+	printf -- "$(gettext "  --noverify       Do not run the %s function in the %s")\n" "verify()" "$BUILDSCRIPT"
 	printf -- "$(gettext "  --packagelist    Only list package filepaths that would be produced")\n"
 	printf -- "$(gettext "  --printsrcinfo   Print the generated SRCINFO and exit")\n"
 	printf -- "$(gettext "  --sign           Sign the resulting package with %s")\n" "gpg"
@@ -964,7 +965,7 @@ ARGLIST=("$@")
 OPT_SHORT="AcCdD:efFghiLmop:rRsSV"
 OPT_LONG=('allsource' 'check' 'clean' 'cleanbuild' 'config:' 'dir:' 'force' 'geninteg'
           'help' 'holdver' 'ignorearch' 'install' 'key:' 'log' 'noarchive' 'nobuild'
-          'nocolor' 'nocheck' 'nodeps' 'noextract' 'noprepare' 'nosign' 'packagelist'
+          'nocolor' 'nocheck' 'nodeps' 'noextract' 'noprepare' 'nosign' 'noverify' 'packagelist'
           'printsrcinfo' 'repackage' 'rmdeps' 'sign' 'skipchecksums' 'skipinteg'
           'skippgpcheck' 'source' 'syncdeps' 'verifysource' 'version')
 
@@ -1006,9 +1007,9 @@ while true; do
 		-m|--nocolor)     USE_COLOR='n'; PACMAN_OPTS+=("--color" "never") ;;
 		--noarchive)      NOARCHIVE=1 ;;
 		--nocheck)        RUN_CHECK='n' ;;
-		--noverify)       RUN_VERIFY='n' ;;
 		--noprepare)      RUN_PREPARE='n' ;;
 		--nosign)         SIGNPKG='n' ;;
+		--noverify)       RUN_VERIFY='n' ;;
 		-o|--nobuild)     BUILDPKG=0 NOBUILD=1 ;;
 		-p)               shift; BUILDFILE=$1 ;;
 		--packagelist)    BUILDPKG=0 PACKAGELIST=1;;
