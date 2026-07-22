@@ -484,7 +484,7 @@ Using VCS Sources[[VCS]]
 Building a developmental version of a package using sources from a version
 control system (VCS) is enabled by specifying the source in the form:
 
-	source=('directory::url#fragment?query')
+	source=('directory::url?query#fragment')
 
 Currently makepkg supports the Bazaar, Git, Subversion, Fossil and Mercurial
 version control systems. For other version control systems, manual cloning of
@@ -507,6 +507,12 @@ The source URL is divided into four components:
 	form:
 	`git+https://...`.
 
+*query*::
+	(optional) Allows specifying whether a VCS checkout should be checked for
+	PGP-signed revisions. The source line should have the format
+	`source=(url#fragment?signed)` or `source=(url?signed#fragment)`. Currently
+	only supported by Git.
+
 *fragment*::
 	(optional) Allows specifying a revision number or branch for makepkg to checkout
 	from the VCS. A fragment has the form `type=value`, for example to checkout a
@@ -527,12 +533,6 @@ The source URL is divided into four components:
 
 	*svn*;;
 		revision
-
-*query*::
-	(optional) Allows specifying whether a VCS checkout should be checked for
-	PGP-signed revisions. The source line should have the format
-	`source=(url#fragment?signed)` or `source=(url?signed#fragment)`. Currently
-	only supported by Git.
 
 Example
 -------
