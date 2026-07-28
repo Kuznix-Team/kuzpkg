@@ -239,6 +239,8 @@ static int systemvp(const char *file, char *const argv[], int *exec_errno)
 
 	/* child */
 	if(pid == 0) {
+		int child_errno;
+
 		close(err_fd[0]);
 		fcntl(err_fd[1], F_SETFD, FD_CLOEXEC);
 
@@ -258,7 +260,9 @@ static int systemvp(const char *file, char *const argv[], int *exec_errno)
 		execvp(file, argv);
 
 		/* execvp failed, pass the error back to the parent */
-		while(write(err_fd[1], &errno, sizeof(errno)) == -1 && errno == EINTR);
+		child_errno = errno;
+		while(write(err_fd[1], &child_errno, sizeof(child_errno)) == -1
+				&& errno == EINTR);
 		_Exit(127);
 	}
 
