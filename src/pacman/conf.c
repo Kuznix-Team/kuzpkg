@@ -215,13 +215,16 @@ static char *get_tempfile(const char *path, const char *filename)
 /* system()/exec() hybrid function allowing exec()-style direct execution
  * of a command with the simplicity of system()
  * - not thread-safe
- * - errno may be set by fork(), pipe(), or execvp()
+ * - errno may be set by fork() or pipe()
+ * - exec_errno is set to errno from execvp() on execution failure
  */
-static int systemvp(const char *file, char *const argv[])
+static int systemvp(const char *file, char *const argv[], int *exec_errno)
 {
 	int pid, err = 0, ret = -1, err_fd[2];
 	sigset_t oldblock;
 	struct sigaction sa_ign = { .sa_handler = SIG_IGN }, oldint, oldquit;
+
+	*exec_errno = 0;
 
 	if(pipe(err_fd) != 0) {
 		return -1;
@@ -236,6 +239,8 @@ static int systemvp(const char *file, char *const argv[])
 
 	/* child */
 	if(pid == 0) {
+		int child_errno;
+
 		close(err_fd[0]);
 		fcntl(err_fd[1], F_SETFD, FD_CLOEXEC);
 
@@ -255,7 +260,9 @@ static int systemvp(const char *file, char *const argv[])
 		execvp(file, argv);
 
 		/* execvp failed, pass the error back to the parent */
-		while(write(err_fd[1], &errno, sizeof(errno)) == -1 && errno == EINTR);
+		child_errno = errno;
+		while(write(err_fd[1], &child_errno, sizeof(child_errno)) == -1
+				&& errno == EINTR);
 		_Exit(127);
 	}
 
@@ -266,7 +273,8 @@ static int systemvp(const char *file, char *const argv[])
 		int wret;
 		while((wret = waitpid(pid, &ret, 0)) == -1 && errno == EINTR);
 		if(wret > 0) {
-			while(read(err_fd[0], &err, sizeof(err)) == -1 && errno == EINTR);
+			while(read(err_fd[0], exec_errno, sizeof(*exec_errno)) == -1
+					&& errno == EINTR);
 		}
 	} else {
 		/* fork failed, make sure errno is preserved after cleanup */
@@ -281,7 +289,6 @@ static int systemvp(const char *file, char *const argv[])
 
 	if(err) {
 		errno = err;
-		ret = -1;
 	}
 
 	return ret;
@@ -291,7 +298,7 @@ static int systemvp(const char *file, char *const argv[])
 static int download_with_xfercommand(void *ctx, const char *url,
 		const char *localpath, int force)
 {
-	int ret = 0, retval;
+	int exec_errno, ret = 0, retval;
 	int usepart = 0;
 	int cwdfd = -1;
 	struct stat st;
@@ -362,15 +369,21 @@ static int download_with_xfercommand(void *ctx, const char *url,
 			free(cmd);
 		}
 	}
-	retval = systemvp(argv[0], (char**)argv);
+	retval = systemvp(argv[0], (char**)argv, &exec_errno);
 
 	if(retval == -1) {
-		pm_printf(ALPM_LOG_WARNING, _("running XferCommand: fork failed!\n"));
+		pm_printf(ALPM_LOG_WARNING,
+				_("running XferCommand: %s\n"), strerror(errno));
+		ret = -1;
+	} else if(exec_errno != 0) {
+		pm_printf(ALPM_LOG_WARNING,
+				_("running XferCommand: failed to execute '%s' (%s)\n"),
+				argv[0], strerror(exec_errno));
 		ret = -1;
 	} else if(retval != 0) {
-		/* download failed */
 		pm_printf(ALPM_LOG_DEBUG, "XferCommand command returned non-zero status "
-				"code (%d)\n", retval);
+				"code (%d)\n",
+				WIFEXITED(retval) ? WEXITSTATUS(retval) : retval);
 		ret = -1;
 	} else {
 		/* download was successful */

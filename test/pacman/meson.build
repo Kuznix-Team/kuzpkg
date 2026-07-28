@@ -336,6 +336,8 @@ pacman_tests = [
   'tests/upgrade084.py',
   'tests/upgrade090.py',
   'tests/upgrade100.py',
+  'tests/xfercommand-exec-failure.py',
+  'tests/xfercommand-exit-127.py',
   'tests/xfercommand001.py',
   'tests/upgrade-download-404.py',
   'tests/upgrade-download-pkg-and-sig-with-filename.py',
