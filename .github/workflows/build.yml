@@ -17,23 +17,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-24.04
-            arch: x86_64
-            deb_arch: amd64
-            rpm_arch: x86_64
-            pkg_arch: x86_64
-
           - runner: ubuntu-26.04
             arch: x86_64
             deb_arch: amd64
             rpm_arch: x86_64
             pkg_arch: x86_64
-
-          - runner: ubuntu-24.04-arm
-            arch: aarch64
-            deb_arch: arm64
-            rpm_arch: aarch64
-            pkg_arch: aarch64
 
           - runner: ubuntu-26.04-arm
             arch: aarch64
@@ -76,19 +64,15 @@ jobs:
             LATEST_TAG="0.0.0"
           fi
 
-          # Filename-safe version/tag.
           SAFE_TAG="$(printf '%s' "$LATEST_TAG" \
             | sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g')"
 
-          # Debian-compatible version.
           DEB_VERSION="$(printf '%s' "$LATEST_TAG" \
             | sed 's/^v//; s/[^A-Za-z0-9.+~-]/./g')"
 
-          # RPM-compatible version.
           RPM_VERSION="$(printf '%s' "$LATEST_TAG" \
             | sed 's/^v//; s/[^A-Za-z0-9._+]/./g')"
 
-          # Arch-compatible pkgver.
           ARCH_PKGVER="$(printf '%s' "$LATEST_TAG" \
             | sed 's/^v//; s/[^A-Za-z0-9._+]/./g')"
 
@@ -143,9 +127,6 @@ jobs:
             --no-rebuild \
             --strip
 
-      # ------------------------------------------------------------
-      # Debian package
-      # ------------------------------------------------------------
       - name: Build .deb package
         shell: bash
         run: |
@@ -159,6 +140,11 @@ jobs:
             "$PKGROOT/usr"
 
           cp -a staging/usr/. "$PKGROOT/usr/"
+
+          if [ -d staging/etc ]; then
+            mkdir -p "$PKGROOT/etc"
+            cp -a staging/etc/. "$PKGROOT/etc/"
+          fi
 
           cat > "$PKGROOT/DEBIAN/control" <<EOF
           Package: kuzpkg
@@ -178,13 +164,11 @@ jobs:
             "kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.deb"
 
           mkdir -p dist
+
           mv \
             "kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.deb" \
             dist/
 
-      # ------------------------------------------------------------
-      # Fedora Rawhide RPM
-      # ------------------------------------------------------------
       - name: Build .rpm package with Fedora Rawhide
         shell: bash
         run: |
@@ -214,9 +198,13 @@ jobs:
 
           %files
           /usr/*
+          %config(noreplace) /etc/kuzpkg.conf
+          %config(noreplace) /etc/makepkg.conf
+          %config(noreplace) /etc/makepkg.conf.d/fortran.conf
+          %config(noreplace) /etc/makepkg.conf.d/rust.conf
 
           %changelog
-          * Thu Aug 14 2026 Kuznix Team - ${{ steps.info.outputs.rpm_version }}-1
+          * Fri Aug 14 2026 Kuznix Team - ${{ steps.info.outputs.rpm_version }}-1
           - Daily kuzpkg snapshot
           EOF
 
@@ -241,9 +229,6 @@ jobs:
             "$RPM_FILE" \
             "dist/kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.rpm"
 
-      # ------------------------------------------------------------
-      # Arch Linux .pkg.tar.zst
-      # ------------------------------------------------------------
       - name: Build .pkg.tar.zst and .kuzpkg.tar.zst with Arch Linux
         shell: bash
         run: |
@@ -276,7 +261,6 @@ jobs:
             bash -euxo pipefail -c '
               pacman -Sy --noconfirm --needed \
                 base-devel \
-                sudo \
                 zstd
 
               useradd -m builder
@@ -293,13 +277,8 @@ jobs:
 
           BASE_NAME="kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}"
 
-          cp \
-            "$PKG_FILE" \
-            "dist/${BASE_NAME}.pkg.tar.zst"
-
-          cp \
-            "$PKG_FILE" \
-            "dist/${BASE_NAME}.kuzpkg.tar.zst"
+          cp "$PKG_FILE" "dist/${BASE_NAME}.pkg.tar.zst"
+          cp "$PKG_FILE" "dist/${BASE_NAME}.kuzpkg.tar.zst"
 
       - name: Create source/install snapshot tar.zst
         shell: bash
