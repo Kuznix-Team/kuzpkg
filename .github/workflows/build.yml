@@ -456,7 +456,7 @@ jobs:
               zstd \
               curl \
               gnutls \
-              gnupg2
+              gnupg
 
           run: |
             set -euo pipefail
