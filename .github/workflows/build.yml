@@ -2,7 +2,6 @@ name: Build kuzpkg daily snapshots
 
 on:
   schedule:
-    # Every day at 00:00 UTC
     - cron: "0 0 * * *"
   workflow_dispatch:
 
@@ -18,15 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-22.04
-            arch: x86_64
           - runner: ubuntu-24.04
             arch: x86_64
           - runner: ubuntu-26.04
             arch: x86_64
-
-          - runner: ubuntu-22.04-arm
-            arch: aarch64
           - runner: ubuntu-24.04-arm
             arch: aarch64
           - runner: ubuntu-26.04-arm
@@ -59,20 +53,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Get the newest reachable Git tag.
           LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
 
           if [ -z "$LATEST_TAG" ]; then
             LATEST_TAG="0.0.0"
           fi
 
-          # Make the tag safe for use in a filename.
           SAFE_TAG="$(printf '%s' "$LATEST_TAG" | sed 's#[/[:space:]]#-#g')"
-
-          # Use UTC so every runner produces the same snapshot date.
           DATE="$(date -u +%Y%m%d)"
 
-          # Verify the architecture expected by the matrix.
           MACHINE="$(uname -m)"
 
           case "$MACHINE" in
@@ -101,14 +90,6 @@ jobs:
           echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
           echo "date=$DATE" >> "$GITHUB_OUTPUT"
           echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
-
-          {
-            echo "Latest tag: $LATEST_TAG"
-            echo "Date:       $DATE"
-            echo "Runner:     ${{ matrix.runner }}"
-            echo "Arch:       ${{ matrix.arch }}"
-            echo "Filename:   $FILENAME"
-          }
 
       - name: Configure Meson
         run: |
@@ -146,9 +127,6 @@ jobs:
       - name: Show snapshot information
         run: |
           ls -lh "dist/${{ steps.info.outputs.filename }}"
-          echo
-          echo "Archive:"
-          echo "dist/${{ steps.info.outputs.filename }}"
 
       - name: Upload daily snapshot
         uses: actions/upload-artifact@v4
