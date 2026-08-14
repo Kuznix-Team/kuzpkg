@@ -1,0 +1,26 @@
+# List of source files with translatable strings
+# If a file is commented out, it is because it shouldn't have any
+# translatable strings
+
+# kuzpkg frontend source files
+src/kuzpkg/callback.c
+src/kuzpkg/check.c
+src/kuzpkg/conf.c
+src/kuzpkg/database.c
+src/kuzpkg/deptest.c
+src/kuzpkg/files.c
+#src/kuzpkg/ini.c
+src/kuzpkg/package.c
+src/kuzpkg/kuzpkg.c
+src/kuzpkg/query.c
+src/kuzpkg/remove.c
+src/kuzpkg/sighandler.c
+src/kuzpkg/sync.c
+src/kuzpkg/upgrade.c
+src/kuzpkg/util.c
+#src/kuzpkg/util-common.c
+
+# utility files
+src/kuzpkg/kuzpkg-conf.c
+src/util/testpkg.c
+src/util/vercmp.c

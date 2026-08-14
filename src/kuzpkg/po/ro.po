@@ -1,0 +1,2049 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2026 Kuznix"
+# This file is distributed under the same license as the kuzpkg package.
+#
+# Translators:
+# 202609b54ed34ff097613de9ccdb5e5a_959331d <9d860af7345e5089300e50121cee92df_6113>, 2011
+# Arthur Țițeică <arthur.titeica@gmail.com>, 2013
+# Arthur Titeica <arthur@psw.ro>, 2013
+# Arthur Țițeică <arthur.titeica@gmail.com>, 2013,2015
+# 202609b54ed34ff097613de9ccdb5e5a_959331d <9d860af7345e5089300e50121cee92df_6113>, 2011
+# 202609b54ed34ff097613de9ccdb5e5a_959331d <9d860af7345e5089300e50121cee92df_6113>, 2011
+# C S, 2023
+# C S, 2023
+# Ionut Biru <ibiru@archlinux.org>, 2011-2013
+# Mihai Coman <mihai@m1x.ro>, 2011,2013
+# mihaicris <Mihai.cristescu@gmail.com>, 2015
+# mihaicris <Mihai.cristescu@gmail.com>, 2015-2016
+# Mihai Cristescu <mihai.cristescu@archlinux.info>, 2015
+# Arthur Țițeică <arthur.titeica@gmail.com>, 2013
+msgid ""
+msgstr ""
+"Project-Id-Version: Arch Linux Kuzpkg package manager\n"
+"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/kuzpkg/kuzpkg/-/issues\n"
+"POT-Creation-Date: 2025-11-01 17:34+1000\n"
+"PO-Revision-Date: 2010-11-29 23:17+0000\n"
+"Last-Translator: Arthur Țițeică <arthur.titeica@gmail.com>, 2013,2015\n"
+"Language-Team: Romanian (http://app.transifex.com/toofishes/archlinux-kuzpkg/"
+"language/ro/)\n"
+"Language: ro\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1?0:(((n%100>19)||((n%100==0)&&(n!=0)))?"
+"2:1));\n"
+
+#: src/kuzpkg/callback.c:228
+#, c-format
+msgid "Running pre-transaction hooks...\n"
+msgstr "Se execută hook-urile ante-tranzacție...\n"
+
+#: src/kuzpkg/callback.c:230
+#, c-format
+msgid "Running post-transaction hooks...\n"
+msgstr "Se execută hook-urile post-tranzacție...\n"
+
+#: src/kuzpkg/callback.c:243
+#, c-format
+msgid "checking dependencies...\n"
+msgstr "se verifică dependențele...\n"
+
+#: src/kuzpkg/callback.c:247
+#, c-format
+msgid "checking for file conflicts...\n"
+msgstr "se verifică dacă sunt conflicte între fișiere...\n"
+
+#: src/kuzpkg/callback.c:251
+#, c-format
+msgid "resolving dependencies...\n"
+msgstr "se rezolvă dependențele...\n"
+
+#: src/kuzpkg/callback.c:254
+#, c-format
+msgid "looking for conflicting packages...\n"
+msgstr "se caută pachete în conflict...\n"
+
+#: src/kuzpkg/callback.c:257
+#, c-format
+msgid "Processing package changes...\n"
+msgstr "Se procesează schimbările pachetului...\n"
+
+#: src/kuzpkg/callback.c:264
+#, c-format
+msgid "installing %s...\n"
+msgstr "se instalează %s...\n"
+
+#: src/kuzpkg/callback.c:267
+#, c-format
+msgid "upgrading %s...\n"
+msgstr "se actualizează %s...\n"
+
+#: src/kuzpkg/callback.c:270
+#, c-format
+msgid "reinstalling %s...\n"
+msgstr "se reinstalează %s...\n"
+
+#: src/kuzpkg/callback.c:273
+#, c-format
+msgid "downgrading %s...\n"
+msgstr "se retrogradează %s...\n"
+
+#: src/kuzpkg/callback.c:276
+#, c-format
+msgid "removing %s...\n"
+msgstr "se elimină %s...\n"
+
+#: src/kuzpkg/callback.c:300
+#, c-format
+msgid "checking package integrity...\n"
+msgstr "se verifică integritatea pachetului...\n"
+
+#: src/kuzpkg/callback.c:305
+#, c-format
+msgid "checking keyring...\n"
+msgstr "se verifică inelul de chei...\n"
+
+#: src/kuzpkg/callback.c:309
+#, c-format
+msgid "downloading required keys...\n"
+msgstr "se descarcă cheile necesare...\n"
+
+#: src/kuzpkg/callback.c:313
+#, c-format
+msgid "loading package files...\n"
+msgstr "se încarcă fișierele pachetului...\n"
+
+#: src/kuzpkg/callback.c:323
+#, c-format
+msgid "Retrieving packages...\n"
+msgstr "Se preiau pachetele...\n"
+
+#: src/kuzpkg/callback.c:335
+#, c-format
+msgid "checking available disk space...\n"
+msgstr "se verifică spațiul disponibil pe disc...\n"
+
+#: src/kuzpkg/callback.c:342
+#, c-format
+msgid "%s optionally requires %s\n"
+msgstr "%s necesită opțional %s\n"
+
+#: src/kuzpkg/callback.c:361 src/kuzpkg/callback.c:367
+#, c-format
+msgid "%s installed as %s.pacnew\n"
+msgstr "%s a fost instalat ca %s.pacnew\n"
+
+#: src/kuzpkg/callback.c:377 src/kuzpkg/callback.c:383
+#, c-format
+msgid "%s saved as %s.pacsave\n"
+msgstr "%s a fost salvat ca %s.pacsave\n"
+
+#: src/kuzpkg/callback.c:446
+#, c-format
+msgid "%s is in IgnorePkg/IgnoreGroup. Install anyway?"
+msgstr "%s este în IgnorePkg/IgnoreGroup. Se instalează oricum?"
+
+#: src/kuzpkg/callback.c:456
+#, c-format
+msgid "Replace %s with %s/%s?"
+msgstr "Se înlocuiește %s cu %s/%s?"
+
+#: src/kuzpkg/callback.c:468
+#, c-format
+msgid "%s-%s%s%s and %s-%s%s%s are in conflict. Remove %s?"
+msgstr ""
+
+#: src/kuzpkg/callback.c:479
+#, c-format
+msgid "%s-%s%s%s and %s-%s%s%s are in conflict (%s). Remove %s?"
+msgstr ""
+
+#: src/kuzpkg/callback.c:504
+#, c-format
+msgid ""
+"The following package cannot be upgraded due to unresolvable dependencies:\n"
+msgid_plural ""
+"The following packages cannot be upgraded due to unresolvable dependencies:\n"
+msgstr[0] ""
+"Următorul pachet nu poate fi actualizat datorită unor dependențe "
+"nerezolvabile:\n"
+msgstr[1] ""
+"Următoarele pachete nu pot fi actualizate datorită unor dependențe "
+"nerezolvabile:\n"
+msgstr[2] ""
+"Următoarele pachete nu pot fi actualizate datorită unor dependențe "
+"nerezolvabile:\n"
+
+#: src/kuzpkg/callback.c:510
+#, c-format
+msgid "Do you want to skip the above package for this upgrade?"
+msgid_plural "Do you want to skip the above packages for this upgrade?"
+msgstr[0] "Dorești omiterea pachetului de mai sus pentru această actualizare?"
+msgstr[1] "Dorești omiterea pachetelor de mai sus pentru această actualizare?"
+msgstr[2] "Dorești omiterea pachetelor de mai sus pentru această actualizare?"
+
+#: src/kuzpkg/callback.c:521
+#, c-format
+msgid "There is %zu provider available for %s\n"
+msgid_plural "There are %zu providers available for %s:\n"
+msgstr[0] "Există %zu furnizor disponibil pentru %s\n"
+msgstr[1] "Există %zu furnizori disponibili pentru %s\n"
+msgstr[2] "Există %zu de furnizori disponibili pentru %s\n"
+
+#: src/kuzpkg/callback.c:532
+#, c-format
+msgid ""
+"File %s is corrupted (%s).\n"
+"Do you want to delete it?"
+msgstr ""
+"Fișierul %s este corupt (%s).\n"
+"Doriți să îl ștergeți?"
+
+#: src/kuzpkg/callback.c:543
+#, c-format
+msgid "Import PGP key %s?"
+msgstr "Importă cheia PGP %s?"
+
+#: src/kuzpkg/callback.c:546
+#, c-format
+msgid "Import PGP key %s, \"%s\"?"
+msgstr "Importă cheia PGP %s, ”%s”?"
+
+#: src/kuzpkg/callback.c:608
+#, c-format
+msgid "installing"
+msgstr "se instalează"
+
+#: src/kuzpkg/callback.c:611
+#, c-format
+msgid "upgrading"
+msgstr "se actualizează"
+
+#: src/kuzpkg/callback.c:614
+#, c-format
+msgid "downgrading"
+msgstr "se retrogradează"
+
+#: src/kuzpkg/callback.c:617
+#, c-format
+msgid "reinstalling"
+msgstr "se reinstalează"
+
+#: src/kuzpkg/callback.c:620
+#, c-format
+msgid "removing"
+msgstr "se elimină"
+
+#: src/kuzpkg/callback.c:623
+#, c-format
+msgid "checking for file conflicts"
+msgstr "se caută conflicte între fișiere"
+
+#: src/kuzpkg/callback.c:626
+#, c-format
+msgid "checking available disk space"
+msgstr "se verifică spațiul disponibil pe disc"
+
+#: src/kuzpkg/callback.c:629
+#, c-format
+msgid "checking package integrity"
+msgstr "se verifică integritatea pachetului"
+
+#: src/kuzpkg/callback.c:632
+#, c-format
+msgid "checking keys in keyring"
+msgstr "se verifică cheile din inelul de chei"
+
+#: src/kuzpkg/callback.c:635
+#, c-format
+msgid "loading package files"
+msgstr "se încarcă fișierele pachetului"
+
+#: src/kuzpkg/callback.c:756
+#, c-format
+msgid "Total"
+msgstr "Total"
+
+#: src/kuzpkg/callback.c:887
+#, c-format
+msgid " %s downloading...\n"
+msgstr "%s se descarcă...\n"
+
+#: src/kuzpkg/callback.c:1057
+#, c-format
+msgid " %s is up to date"
+msgstr "%s este actualizat"
+
+#: src/kuzpkg/callback.c:1083
+#, c-format
+msgid " %s failed to download"
+msgstr "%s nu a putut fi descărcat"
+
+#: src/kuzpkg/callback.c:1133
+#, c-format
+msgid "unknown callback event type %d for %s\n"
+msgstr "tip de eveniment callback necunoscut %d pentru %s\n"
+
+#: src/kuzpkg/check.c:63 src/kuzpkg/check.c:275
+#, c-format
+msgid "%s: %s (File type mismatch)\n"
+msgstr "%s: %s (Nepotrivire la nivel de tip de fișier)\n"
+
+#: src/kuzpkg/check.c:82
+#, c-format
+msgid "%s: %s (UID mismatch)\n"
+msgstr "%s: %s (Nepotrivire la nivel de UID)\n"
+
+#: src/kuzpkg/check.c:91
+#, c-format
+msgid "%s: %s (GID mismatch)\n"
+msgstr "%s: %s (Nepotrivire la nivel de GID)\n"
+
+#: src/kuzpkg/check.c:101
+#, c-format
+msgid "%s: %s (Permissions mismatch)\n"
+msgstr "%s: %s (Nepotrivire la nivel de permisiuni)\n"
+
+#: src/kuzpkg/check.c:115 src/kuzpkg/check.c:162 src/kuzpkg/check.c:202
+#, c-format
+msgid "backup file"
+msgstr "fișier copie de siguranță"
+
+#: src/kuzpkg/check.c:117 src/kuzpkg/check.c:123
+#, c-format
+msgid "%s: %s (Modification time mismatch)\n"
+msgstr "%s: %s (Nepotrivire la nivel de dată de modificare)\n"
+
+#: src/kuzpkg/check.c:140
+#, c-format
+msgid "unable to read symlink contents: %s\n"
+msgstr "nu se poate citi conținutul legăturii simbolice : %s\n"
+
+#: src/kuzpkg/check.c:147
+#, c-format
+msgid "%s: %s (Symlink path mismatch)\n"
+msgstr "%s: %s (Nepotrivire la calea legăturii simbolice)\n"
+
+#: src/kuzpkg/check.c:164 src/kuzpkg/check.c:170
+#, c-format
+msgid "%s: %s (Size mismatch)\n"
+msgstr "%s: %s (Nepotrivire la nivel de mărime)\n"
+
+#: src/kuzpkg/check.c:185
+#, c-format
+msgid "%s: %s (failed to calculate %s checksum)\n"
+msgstr "%s: %s (nu s-a putut calcula suma de verificare %s)\n"
+
+#: src/kuzpkg/check.c:193
+#, c-format
+msgid "%s: %s (%s checksum information not available)\n"
+msgstr "%s: %s (%s informația despre suma de verificare nu este valabilă)\n"
+
+#: src/kuzpkg/check.c:204 src/kuzpkg/check.c:210
+#, c-format
+msgid "%s: %s (%s checksum mismatch)\n"
+msgstr "%s: %s (%s nepotrivire suma de verificare)\n"
+
+#: src/kuzpkg/check.c:250 src/kuzpkg/check.c:265 src/kuzpkg/check.c:309
+#: src/kuzpkg/check.c:363
+#, c-format
+msgid "path too long: %s%s\n"
+msgstr "cale prea lungă: %s%s\n"
+
+#: src/kuzpkg/check.c:285 src/kuzpkg/check.c:428
+#, c-format
+msgid "%s: %jd total file, "
+msgid_plural "%s: %jd total files, "
+msgstr[0] "%s: %jd fișier în total, "
+msgstr[1] "%s: %jd fișiere în total, "
+msgstr[2] "%s: %jd de fișiere în total, "
+
+#: src/kuzpkg/check.c:287
+#, c-format
+msgid "%jd missing file\n"
+msgid_plural "%jd missing files\n"
+msgstr[0] "%jd fișier lipsă\n"
+msgstr[1] "%jd fișiere lipsă\n"
+msgstr[2] "%jd de fișiere lipsă\n"
+
+#: src/kuzpkg/check.c:318
+#, c-format
+msgid "%s: no mtree file\n"
+msgstr "%s: nu există fișier mtree\n"
+
+#: src/kuzpkg/check.c:355
+#, c-format
+msgid "path too long: %slocal/%s-%s/%s\n"
+msgstr "cale prea lungă: %slocal/%s-%s/%s\n"
+
+#: src/kuzpkg/check.c:382
+#, c-format
+msgid "file type not recognized: %s%s\n"
+msgstr "tipul fișierului nu este recunoscut: %s%s\n"
+
+#: src/kuzpkg/check.c:430
+#, c-format
+msgid "%jd altered file\n"
+msgid_plural "%jd altered files\n"
+msgstr[0] "%jd fișier modificat\n"
+msgstr[1] "%jd fișiere modificate\n"
+msgstr[2] "%jd de fișiere modificate\n"
+
+#: src/kuzpkg/conf.c:102 src/kuzpkg/conf.c:325
+#, c-format
+msgid "malloc failure: could not allocate %zu byte\n"
+msgid_plural "malloc failure: could not allocate %zu bytes\n"
+msgstr[0] "eșec malloc: nu s-a putut aloca %zu octet\n"
+msgstr[1] "eșec malloc: nu s-au putut aloca %zu octeți\n"
+msgstr[2] "eșec malloc: nu s-au putut aloca %zu de octeți\n"
+
+#: src/kuzpkg/conf.c:250
+#, c-format
+msgid "switching to sandbox user '%s' failed!\n"
+msgstr ""
+
+#: src/kuzpkg/conf.c:348
+#, c-format
+msgid "could not get current working directory\n"
+msgstr "nu s-a putut determina dosarul de lucru curent\n"
+
+#: src/kuzpkg/conf.c:353
+#, c-format
+msgid "could not chdir to download directory %s\n"
+msgstr "nu s-a putut schimba directorul în cel de descărcare %s\n"
+
+#: src/kuzpkg/conf.c:368
+#, c-format
+msgid "running XferCommand: fork failed!\n"
+msgstr "se rulează XferCommand: ramificarea a eșuat!\n"
+
+#: src/kuzpkg/conf.c:380
+#, c-format
+msgid "could not rename %s to %s (%s)\n"
+msgstr "nu s-a putut redenumi %s în %s (%s)\n"
+
+#: src/kuzpkg/conf.c:391
+#, c-format
+msgid "could not restore working directory (%s)\n"
+msgstr "nu s-a putut restabili directorul de lucru curent (%s)\n"
+
+#: src/kuzpkg/conf.c:529 src/kuzpkg/conf.c:578 src/kuzpkg/conf.c:722
+#: src/kuzpkg/conf.c:774
+#, c-format
+msgid "config file %s, line %d: invalid value for '%s' : '%s'\n"
+msgstr ""
+"fișierul de configurare %s, linia %d: valoare nevalidă pentru '%s' : '%s'\n"
+
+#: src/kuzpkg/conf.c:543
+#, c-format
+msgid "config file %s, line %d: '%s' option invalid, no signature support\n"
+msgstr ""
+"fișierul de configurare %s, linia %d: opțiunea '%s' nevalidă, fără suport "
+"pentru semnătură\n"
+
+#: src/kuzpkg/conf.c:640 src/kuzpkg/conf.c:796 src/kuzpkg/conf.c:1092
+#, c-format
+msgid ""
+"config file %s, line %d: directive '%s' in section '%s' not recognized.\n"
+msgstr ""
+"fișierul de configurare %s, linia %d: directiva '%s' din secțiunea '%s' nu a "
+"fost recunoscută.\n"
+
+#: src/kuzpkg/conf.c:781
+#, c-format
+msgid "config file %s, line %d: value for '%s' has to be positive : '%s'\n"
+msgstr ""
+"fișier de configurație %s, linia %d: valoarea pentru '%s' trebuie să fie "
+"pozitivă: '%s'\n"
+
+#: src/kuzpkg/conf.c:788
+#, c-format
+msgid "config file %s, line %d: value for '%s' is too large : '%s'\n"
+msgstr ""
+"fișier de configurație %s, linia %d: valoarea pentru '%s' e prea mare: '%s'\n"
+
+#: src/kuzpkg/conf.c:808
+#, c-format
+msgid "mirror '%s' contains the '%s' variable, but no '%s' is defined.\n"
+msgstr ""
+"oglinda '%s' conține variabila '%s', dar nu este definit niciun '%s'.\n"
+
+#: src/kuzpkg/conf.c:853
+#, c-format
+msgid "could not register '%s' database (%s)\n"
+msgstr "nu se poate înregistra '%s' baza de date (%s)\n"
+
+#: src/kuzpkg/conf.c:866
+#, c-format
+msgid "could not add cache server URL to database '%s': %s (%s)\n"
+msgstr ""
+
+#: src/kuzpkg/conf.c:875
+#, c-format
+msgid "could not add server URL to database '%s': %s (%s)\n"
+msgstr ""
+"nu s-a putut adăuga adresa URL a serverului la baza de date '%s': %s (%s)\n"
+
+#: src/kuzpkg/conf.c:902
+#, c-format
+msgid ""
+"failed to initialize klpm library:\n"
+"(root: %s, dbpath: %s)\n"
+"%s\n"
+msgstr ""
+"eșec la inițializarea bibliotecii klpm:\n"
+"(rădăcină: %s, dbpath: %s)\n"
+"%s\n"
+
+#: src/kuzpkg/conf.c:905
+#, c-format
+msgid "try running kuzpkg-db-upgrade\n"
+msgstr "încercați să rulați kuzpkg-db-upgrade\n"
+
+#: src/kuzpkg/conf.c:923
+#, c-format
+msgid "problem setting logfile '%s' (%s)\n"
+msgstr "problemă la setarea fișierului de jurnal '%s' (%s)\n"
+
+#: src/kuzpkg/conf.c:932
+#, c-format
+msgid "problem setting gpgdir '%s' (%s)\n"
+msgstr "problemă la setarea gpgdir '%s' (%s)\n"
+
+#: src/kuzpkg/conf.c:942
+#, c-format
+msgid "problem adding hookdir '%s' (%s)\n"
+msgstr "problemă la adăugarea hookdir '%s' (%s)\n"
+
+#: src/kuzpkg/conf.c:964
+#, c-format
+msgid "no '%s' configured\n"
+msgstr "niciun '%s' configurat\n"
+
+#: src/kuzpkg/conf.c:972
+#, c-format
+msgid "problem setting DownloadUser '%s' (user does not exist)\n"
+msgstr ""
+
+#: src/kuzpkg/conf.c:998
+#, c-format
+msgid "Failed to pass %s entry to libkuzpkg"
+msgstr "Eșec la transmiterea intrării %s către libkuzpkg"
+
+#: src/kuzpkg/conf.c:1038
+#, c-format
+msgid "config file %s, line %d: '%s' option '%s' not recognized\n"
+msgstr ""
+"fișierul de configurare %s, linia %d: '%s' opțiunea '%s' nu a fost "
+"recunoscută\n"
+
+#: src/kuzpkg/conf.c:1058 src/kuzpkg/conf.c:1216
+#, c-format
+msgid "config file %s, line %d: directive '%s' needs a value\n"
+msgstr ""
+"fișierul de configurare %s, linia %d: directiva '%s' are nevoie de o "
+"valoare\n"
+
+#: src/kuzpkg/conf.c:1223
+#, c-format
+msgid "config parsing exceeded max recursion depth of %d.\n"
+msgstr ""
+"parcurgerea configurării a depășit adâncimea max de recursivitate %d.\n"
+
+#: src/kuzpkg/conf.c:1271
+#, c-format
+msgid "config file %s could not be read: %s\n"
+msgstr "fișierul de configurare %s nu a putut fi citit: %s\n"
+
+#: src/kuzpkg/conf.c:1294
+#, c-format
+msgid "config file %s, line %d: All directives must belong to a section.\n"
+msgstr ""
+"fișierul de configurare %s, linia %d: Toate directivele trebuie să aparțină "
+"unei secțiuni.\n"
+
+#: src/kuzpkg/database.c:50 src/kuzpkg/files.c:335 src/kuzpkg/query.c:434
+#: src/kuzpkg/remove.c:85 src/kuzpkg/sync.c:972 src/kuzpkg/upgrade.c:76
+#, c-format
+msgid "no targets specified (use -h for help)\n"
+msgstr "nu sunt specificate ținte (folosiți -h pentru ajutor)\n"
+
+#: src/kuzpkg/database.c:59
+#, c-format
+msgid "no install reason specified (use -h for help)\n"
+msgstr ""
+"nu este specificat un motiv pentru instalare (folosește -h pentru ajutor)\n"
+
+#: src/kuzpkg/database.c:73
+#, c-format
+msgid "could not set install reason for package %s (%s)\n"
+msgstr "nu s-a putut seta motivul de instalare pentru pachetul %s (%s)\n"
+
+#: src/kuzpkg/database.c:79
+#, c-format
+msgid "%s: install reason has been set to 'installed as dependency'\n"
+msgstr ""
+"%s: motivul pentru instalare a fost schimbat în 'instalat ca dependență'\n"
+
+#: src/kuzpkg/database.c:81
+#, c-format
+msgid "%s: install reason has been set to 'explicitly installed'\n"
+msgstr "%s: motivul pentru instalare a fost schimbat în: 'instalat explicit'\n"
+
+#: src/kuzpkg/database.c:296
+#, c-format
+msgid "No database errors have been found!\n"
+msgstr "Nu au fost găsite erori în baza de date!\n"
+
+#: src/kuzpkg/files.c:55
+#, c-format
+msgid "%s is owned by %s%s/%s%s %s%s%s\n"
+msgstr "%s e deținut de către %s%s/%s%s%s%s%s\n"
+
+#: src/kuzpkg/files.c:129
+#, c-format
+msgid "invalid regular expression '%s'\n"
+msgstr "expresie regulată nevalidă '%s'\n"
+
+#: src/kuzpkg/files.c:253
+#, c-format
+msgid "invalid package: '%s'\n"
+msgstr "pachet nevalid: '%s'\n"
+
+#: src/kuzpkg/files.c:285 src/kuzpkg/query.c:488 src/kuzpkg/sync.c:448
+#, c-format
+msgid "package '%s' was not found\n"
+msgstr "pachetul '%s' nu a fost găsit\n"
+
+#: src/kuzpkg/files.c:321 src/kuzpkg/sync.c:932
+#, c-format
+msgid "Synchronizing package databases...\n"
+msgstr "Se sincronizează bazele de date cu pachete...\n"
+
+#: src/kuzpkg/package.c:99
+#, c-format
+msgid "Architecture"
+msgstr "Arhitectură"
+
+#: src/kuzpkg/package.c:100
+#, c-format
+msgid "Backup Files"
+msgstr "Fișiere copie de siguranță"
+
+#: src/kuzpkg/package.c:101
+#, c-format
+msgid "Build Date"
+msgstr "Dată construcție"
+
+#: src/kuzpkg/package.c:102
+#, c-format
+msgid "Compressed Size"
+msgstr "Mărime comprimată"
+
+#: src/kuzpkg/package.c:103
+#, c-format
+msgid "Conflicts With"
+msgstr "În conflict cu"
+
+#: src/kuzpkg/package.c:104
+#, c-format
+msgid "Depends On"
+msgstr "Depinde de"
+
+#: src/kuzpkg/package.c:105
+#, c-format
+msgid "Description"
+msgstr "Descriere"
+
+#: src/kuzpkg/package.c:106 src/kuzpkg/util.c:895
+#, c-format
+msgid "Download Size"
+msgstr "Mărime descărcare"
+
+#: src/kuzpkg/package.c:107
+#, c-format
+msgid "Groups"
+msgstr "Grupuri"
+
+#: src/kuzpkg/package.c:108
+#, c-format
+msgid "Install Date"
+msgstr "Dată instalare"
+
+#: src/kuzpkg/package.c:109
+#, c-format
+msgid "Install Reason"
+msgstr "Motiv instalare"
+
+#: src/kuzpkg/package.c:110
+#, c-format
+msgid "Install Script"
+msgstr "Script de instalare"
+
+#: src/kuzpkg/package.c:111
+#, c-format
+msgid "Installed Size"
+msgstr "Mărime instalare"
+
+#: src/kuzpkg/package.c:112
+#, c-format
+msgid "Licenses"
+msgstr "Licențe"
+
+#: src/kuzpkg/package.c:113 src/kuzpkg/package.c:239
+#, c-format
+msgid "MD5 Sum"
+msgstr "Suma MD5"
+
+#: src/kuzpkg/package.c:114
+#, c-format
+msgid "Name"
+msgstr "Nume"
+
+#: src/kuzpkg/package.c:115
+#, c-format
+msgid "Optional Deps"
+msgstr "Dep. opționale"
+
+#: src/kuzpkg/package.c:116
+#, c-format
+msgid "Optional For"
+msgstr "Opțional pentru"
+
+#: src/kuzpkg/package.c:117
+#, c-format
+msgid "Packager"
+msgstr "Autor pachet"
+
+#: src/kuzpkg/package.c:118
+#, c-format
+msgid "Provides"
+msgstr "Furnizează"
+
+#: src/kuzpkg/package.c:119
+#, c-format
+msgid "Replaces"
+msgstr "Înlocuiește"
+
+#: src/kuzpkg/package.c:120
+#, c-format
+msgid "Repository"
+msgstr "Depozit"
+
+#: src/kuzpkg/package.c:121
+#, c-format
+msgid "Required By"
+msgstr "Cerut de"
+
+#: src/kuzpkg/package.c:122 src/kuzpkg/package.c:242
+#, c-format
+msgid "SHA-256 Sum"
+msgstr "Sumă SHA-256"
+
+#: src/kuzpkg/package.c:123
+#, c-format
+msgid "Signatures"
+msgstr "Semnături"
+
+#: src/kuzpkg/package.c:124
+#, c-format
+msgid "URL"
+msgstr "URL"
+
+#: src/kuzpkg/package.c:125
+#, c-format
+msgid "Validated By"
+msgstr "Validat de"
+
+#: src/kuzpkg/package.c:126
+#, c-format
+msgid "Version"
+msgstr "Versiune"
+
+#: src/kuzpkg/package.c:174 src/kuzpkg/util.c:1350
+#, c-format
+msgid " [installed]"
+msgstr " [instalat]"
+
+#: src/kuzpkg/package.c:223
+#, c-format
+msgid "Explicitly installed"
+msgstr "Instalat în mod explicit"
+
+#: src/kuzpkg/package.c:226
+#, c-format
+msgid "Installed as a dependency for another package"
+msgstr "Instalat ca o dependență pentru un alt pachet"
+
+#: src/kuzpkg/package.c:229 src/kuzpkg/package.c:249
+#, c-format
+msgid "Unknown"
+msgstr "Necunoscut"
+
+#: src/kuzpkg/package.c:236 src/kuzpkg/package.c:321 src/kuzpkg/package.c:339
+#: src/kuzpkg/util.c:561 src/kuzpkg/util.c:749 src/kuzpkg/util.c:789
+#: src/kuzpkg/util.c:817
+#, c-format
+msgid "None"
+msgstr "Niciunul"
+
+#: src/kuzpkg/package.c:245
+#, c-format
+msgid "Signature"
+msgstr "Semnătură"
+
+#: src/kuzpkg/package.c:307
+#, c-format
+msgid "Yes"
+msgstr "Da"
+
+#: src/kuzpkg/package.c:307
+#, c-format
+msgid "No"
+msgstr "Nu"
+
+#: src/kuzpkg/package.c:389
+#, c-format
+msgid "could not calculate checksums for %s\n"
+msgstr "nu s-au putut calcula sumele de control pentru %s\n"
+
+#: src/kuzpkg/package.c:479
+#, c-format
+msgid "no changelog available for '%s'.\n"
+msgstr "nu exista istoric de modificări pentru '%s'.\n"
+
+#: src/kuzpkg/package.c:483
+#, c-format
+msgid "Changelog for %s:\n"
+msgstr "Istoric de modificări pentru %s:\n"
+
+#: src/kuzpkg/package.c:504 src/kuzpkg/package.c:506
+#, c-format
+msgid "installed"
+msgstr "instalat"
+
+#: src/kuzpkg/kuzpkg.c:100
+#, c-format
+msgid "options"
+msgstr "opțiuni"
+
+#: src/kuzpkg/kuzpkg.c:101
+#, c-format
+msgid "file(s)"
+msgstr "fișier(e)"
+
+#: src/kuzpkg/kuzpkg.c:102
+#, c-format
+msgid "package(s)"
+msgstr "pachet(e)"
+
+#: src/kuzpkg/kuzpkg.c:103
+#, c-format
+msgid "usage"
+msgstr "utilizare"
+
+#: src/kuzpkg/kuzpkg.c:104
+#, c-format
+msgid "operation"
+msgstr "operațiune"
+
+#: src/kuzpkg/kuzpkg.c:109
+#, c-format
+msgid "operations:\n"
+msgstr "operațiuni:\n"
+
+#: src/kuzpkg/kuzpkg.c:119
+#, c-format
+msgid ""
+"\n"
+"use '%s {-h --help}' with an operation for available options\n"
+msgstr ""
+"\n"
+"folosește '%s {-h --help}' cu o operațiune pentru opțiunile disponibile\n"
+
+#: src/kuzpkg/kuzpkg.c:125
+#, c-format
+msgid ""
+"  -c, --cascade        remove packages and all packages that depend on them\n"
+msgstr ""
+"  -c, --cascade        elimină pachete precum și toate pachetele care depind "
+"de ele\n"
+
+#: src/kuzpkg/kuzpkg.c:126
+#, c-format
+msgid "  -n, --nosave         remove configuration files\n"
+msgstr "  -n, --nosave         elimină fișierele de configurare\n"
+
+#: src/kuzpkg/kuzpkg.c:127
+#, c-format
+msgid ""
+"  -s, --recursive      remove unnecessary dependencies\n"
+"                       (-ss includes explicitly installed dependencies)\n"
+msgstr ""
+"  -s, --recursive      elimină dependențele inutile\n"
+"                       (-ss include dependențele instalate explicit\n"
+
+#: src/kuzpkg/kuzpkg.c:129
+#, c-format
+msgid "  -u, --unneeded       remove unneeded packages\n"
+msgstr "  -u, --unneeded       elimină pachetele care nu sunt necesare\n"
+
+#: src/kuzpkg/kuzpkg.c:132 src/kuzpkg/kuzpkg.c:166
+#, c-format
+msgid "      --needed         do not reinstall up to date packages\n"
+msgstr "      --needed         nu reinstalează pachetele deja actualizate\n"
+
+#: src/kuzpkg/kuzpkg.c:137
+#, c-format
+msgid "  -c, --changelog      view the changelog of a package\n"
+msgstr ""
+"  -c, --changelog      afișează istoricul de modificări al pachetului\n"
+
+#: src/kuzpkg/kuzpkg.c:138
+#, c-format
+msgid ""
+"  -d, --deps           list packages installed as dependencies [filter]\n"
+msgstr ""
+"  -d, --deps           listează pachetele instalate ca dependențe [filtru]\n"
+
+#: src/kuzpkg/kuzpkg.c:139
+#, c-format
+msgid "  -e, --explicit       list packages explicitly installed [filter]\n"
+msgstr ""
+"  -e, --explicit       listează pachetele instalate în mod explicit "
+"[filtru]\n"
+
+#: src/kuzpkg/kuzpkg.c:140
+#, c-format
+msgid "  -g, --groups         view all members of a package group\n"
+msgstr "  -g, --groups         afișează toți membrii unui grup de pachete\n"
+
+#: src/kuzpkg/kuzpkg.c:141
+#, c-format
+msgid ""
+"  -i, --info           view package information (-ii for backup files)\n"
+msgstr ""
+"  -i, --info           afișează informații despre pachet\n"
+"                       (-ii pentru fișierele copie de siguranță)\n"
+
+#: src/kuzpkg/kuzpkg.c:142
+#, c-format
+msgid ""
+"  -k, --check          check that package files exist (-kk for file "
+"properties)\n"
+msgstr ""
+"  -k, --check          verifică dacă fișierele pachetului există\n"
+"                       (-kk pentru proprietățile fișierului)\n"
+
+#: src/kuzpkg/kuzpkg.c:143 src/kuzpkg/kuzpkg.c:180
+#, c-format
+msgid "  -l, --list           list the files owned by the queried package\n"
+msgstr ""
+"  -l, --list           listează fișierele deținute de pachetul interogat\n"
+
+#: src/kuzpkg/kuzpkg.c:144
+#, c-format
+msgid ""
+"  -m, --foreign        list installed packages not found in sync db(s) "
+"[filter]\n"
+msgstr ""
+"  -m, --foreign        listează pachetele instalate ce nu se găsesc în "
+"bazele\n"
+"                       de date ale depozitelor [filtru]\n"
+
+#: src/kuzpkg/kuzpkg.c:145
+#, c-format
+msgid ""
+"  -n, --native         list installed packages only found in sync db(s) "
+"[filter]\n"
+msgstr ""
+"  -n, --native         listează doar pachetele instalate care se regăsesc în "
+"bazele\n"
+"                       de date ale depozitelor [filtru]\n"
+
+#: src/kuzpkg/kuzpkg.c:146
+#, c-format
+msgid "  -o, --owns <file>    query the package that owns <file>\n"
+msgstr "  -o, --owns <fișier>  interoghează pachetul care deține <fișier>\n"
+
+#: src/kuzpkg/kuzpkg.c:147
+#, c-format
+msgid "  -p, --file <package> query a package file instead of the database\n"
+msgstr ""
+"  -p, --file <pachet>  interoghează un fișier pachet în locul bazei de date\n"
+
+#: src/kuzpkg/kuzpkg.c:148 src/kuzpkg/kuzpkg.c:161 src/kuzpkg/kuzpkg.c:181
+#, c-format
+msgid "  -q, --quiet          show less information for query and search\n"
+msgstr ""
+"  -q, --quiet          arată mai puține informații pentru interogare și "
+"căutare\n"
+
+#: src/kuzpkg/kuzpkg.c:149
+#, c-format
+msgid ""
+"  -s, --search <regex> search locally-installed packages for matching "
+"strings\n"
+msgstr ""
+"  -s, --search <regex> caută pachete instalate local care se potrivesc "
+"șirurilor de caractere\n"
+
+#: src/kuzpkg/kuzpkg.c:150
+#, c-format
+msgid ""
+"  -t, --unrequired     list packages not (optionally) required by any\n"
+"                       package (-tt to ignore optdepends) [filter]\n"
+msgstr ""
+"  -t, --unrequired     listează pachetele care nu sunt cerute (opțional) de "
+"niciun\n"
+"                       pachet (-tt pentru a ignora optdepends) [filtru]\n"
+
+#: src/kuzpkg/kuzpkg.c:152
+#, c-format
+msgid "  -u, --upgrades       list outdated packages [filter]\n"
+msgstr "  -u, --upgrades       listează pachetele învechite [filtru]\n"
+
+#: src/kuzpkg/kuzpkg.c:156
+#, c-format
+msgid ""
+"  -c, --clean          remove old packages from cache directory (-cc for "
+"all)\n"
+msgstr ""
+"  -c, --clean          elimină pachetele vechi din dosarul cache (-cc pentru "
+"toate)\n"
+
+#: src/kuzpkg/kuzpkg.c:157
+#, c-format
+msgid ""
+"  -g, --groups         view all members of a package group\n"
+"                       (-gg to view all groups and members)\n"
+msgstr ""
+"  -g, --groups         vezi toți membrii unui grup de pachete\n"
+"                       (-gg pentru a vedea toate grupurile și toți membrii)\n"
+
+#: src/kuzpkg/kuzpkg.c:159
+#, c-format
+msgid ""
+"  -i, --info           view package information (-ii for extended "
+"information)\n"
+msgstr ""
+"  -i, --info           vezi informații despre pachet (-ii pentru informații "
+"extinse)\n"
+
+#: src/kuzpkg/kuzpkg.c:160
+#, c-format
+msgid "  -l, --list <repo>    view a list of packages in a repo\n"
+msgstr "  -l, --list <repo>    vezi o listă a pachetelor dintr-un depozit\n"
+
+#: src/kuzpkg/kuzpkg.c:162
+#, c-format
+msgid ""
+"  -s, --search <regex> search remote repositories for matching strings\n"
+msgstr ""
+"  -s, --search <regex> caută în depozitele la distanță potriviri cu șirurile "
+"de caractere\n"
+
+#: src/kuzpkg/kuzpkg.c:163
+#, c-format
+msgid ""
+"  -u, --sysupgrade     upgrade installed packages (-uu enables downgrades)\n"
+msgstr ""
+"  -u, --sysupgrade     actualizează pachetele instalate (-uu permite "
+"retrogradările)\n"
+
+#: src/kuzpkg/kuzpkg.c:164 src/kuzpkg/kuzpkg.c:183
+#, c-format
+msgid ""
+"  -y, --refresh        download fresh package databases from the server\n"
+"                       (-yy to force a refresh even if up to date)\n"
+msgstr ""
+"  -y, --refresh        descarcă baze de date actualizate ale pachetelor de "
+"pe server\n"
+"                       (-yy pentru a forța o împrospătare chiar și dacă deja "
+"actualizate)\n"
+
+#: src/kuzpkg/kuzpkg.c:170
+#, c-format
+msgid "      --asdeps         mark packages as non-explicitly installed\n"
+msgstr "      --asdeps         marchează pachetele ca instalate ne-explicit\n"
+
+#: src/kuzpkg/kuzpkg.c:171
+#, c-format
+msgid "      --asexplicit     mark packages as explicitly installed\n"
+msgstr ""
+"      --asexplicit     marchează pachetele ca instalate în mod explicit\n"
+
+#: src/kuzpkg/kuzpkg.c:172
+#, c-format
+msgid ""
+"  -k, --check          test local database for validity (-kk for sync "
+"databases)\n"
+msgstr ""
+"  -k, --check          testează baza de date locală pentru valabilitate\n"
+"                       (-kk pentru baze de date sync)\n"
+
+#: src/kuzpkg/kuzpkg.c:173
+#, c-format
+msgid "  -q, --quiet          suppress output of success messages\n"
+msgstr ""
+"-q, --quiet          arată mai puține informații în mesajele de succes\n"
+
+#: src/kuzpkg/kuzpkg.c:182
+#, c-format
+msgid "  -x, --regex          enable searching using regular expressions\n"
+msgstr ""
+"  -x, --regex          activează căutarea prin folosirea expresiilor "
+"regulate\n"
+
+#: src/kuzpkg/kuzpkg.c:185
+#, c-format
+msgid ""
+"      --machinereadable\n"
+"                       produce machine-readable output\n"
+msgstr ""
+"      --machinereadable\n"
+"                       produce un format optimizat pentru mașină\n"
+
+#: src/kuzpkg/kuzpkg.c:191
+#, c-format
+msgid ""
+"  -w, --downloadonly   download packages but do not install/upgrade "
+"anything\n"
+msgstr ""
+"  -w, --downloadonly   descarcă pachete dar nu instalează/actualizează "
+"nimic\n"
+
+#: src/kuzpkg/kuzpkg.c:192
+#, c-format
+msgid ""
+"      --overwrite <glob>\n"
+"                       overwrite conflicting files (can be used more than "
+"once)\n"
+msgstr ""
+"      --overwrite <glob>\n"
+"                        suprascrie fișierele aflate în conflict (poate fi "
+"utilizată de mai multe ori)\n"
+
+#: src/kuzpkg/kuzpkg.c:194
+#, c-format
+msgid "      --asdeps         install packages as non-explicitly installed\n"
+msgstr "      --asdeps         instalează pachetele ca instalate ne-explicit\n"
+
+#: src/kuzpkg/kuzpkg.c:195
+#, c-format
+msgid "      --asexplicit     install packages as explicitly installed\n"
+msgstr ""
+"      --asexplicit     instalează pachetele ca instalate în mod explicit\n"
+
+#: src/kuzpkg/kuzpkg.c:196
+#, c-format
+msgid ""
+"      --ignore <pkg>   ignore a package upgrade (can be used more than "
+"once)\n"
+msgstr ""
+"      --ignore <pkg>   ignoră actualizările unui pachet (se poate folosi de "
+"mai multe ori)\n"
+
+#: src/kuzpkg/kuzpkg.c:197
+#, c-format
+msgid ""
+"      --ignoregroup <grp>\n"
+"                       ignore a group upgrade (can be used more than once)\n"
+msgstr ""
+"      --ignoregroup <grp>\n"
+"                       ignoră o actualizare de grup (se poate folosi de mai "
+"multe ori)\n"
+
+#: src/kuzpkg/kuzpkg.c:201
+#, c-format
+msgid ""
+"  -d, --nodeps         skip dependency version checks (-dd to skip all "
+"checks)\n"
+msgstr ""
+"  -d, --nodeps         se omite verificare versiunii dependențelor (-dd "
+"pentru a omite toate verificările)\n"
+
+#: src/kuzpkg/kuzpkg.c:202
+#, c-format
+msgid ""
+"      --assume-installed <package=version>\n"
+"                       add a virtual package to satisfy dependencies\n"
+msgstr ""
+"      --assume-installed <pachet=versiune>\n"
+"                       adaugă un pachet virtual pentru a satisface "
+"dependențele\n"
+
+#: src/kuzpkg/kuzpkg.c:204
+#, c-format
+msgid ""
+"      --dbonly         only modify database entries, not package files\n"
+msgstr ""
+"      --dbonly         modifică doar intrările în baza de date, nu și "
+"fișierele pachetului\n"
+
+#: src/kuzpkg/kuzpkg.c:205
+#, c-format
+msgid ""
+"      --noprogressbar  do not show a progress bar when downloading files\n"
+msgstr ""
+"      --noprogressbar  nu afișa bara de progres la descărcarea fișierelor\n"
+
+#: src/kuzpkg/kuzpkg.c:206
+#, c-format
+msgid ""
+"      --noscriptlet    do not execute the install scriptlet if one exists\n"
+msgstr ""
+"      --noscriptlet    nu se execută scriptlet-ul de instalare dacă există "
+"deja unul\n"
+
+#: src/kuzpkg/kuzpkg.c:207
+#, c-format
+msgid ""
+"  -p, --print          print the targets instead of performing the "
+"operation\n"
+msgstr ""
+"  -p, --print          afișează țintele în loc de a efectua operațiunea\n"
+
+#: src/kuzpkg/kuzpkg.c:208
+#, c-format
+msgid ""
+"      --print-format <string>\n"
+"                       specify how the targets should be printed\n"
+msgstr ""
+"      --print-format <șir>\n"
+"                       specifică cum vor fi afișate țintele\n"
+
+#: src/kuzpkg/kuzpkg.c:213
+#, c-format
+msgid "  -b, --dbpath <path>  set an alternate database location\n"
+msgstr "  -b, --dbpath <cale>  setează o locație alternativă a bazei de date\n"
+
+#: src/kuzpkg/kuzpkg.c:214
+#, c-format
+msgid "  -r, --root <path>    set an alternate installation root\n"
+msgstr "  -r, --root <cale>    setează o cale de instalare alternativă\n"
+
+#: src/kuzpkg/kuzpkg.c:215
+#, c-format
+msgid "  -v, --verbose        be verbose\n"
+msgstr "  -v, --verbose        mai detaliat\n"
+
+#: src/kuzpkg/kuzpkg.c:216
+#, c-format
+msgid "      --arch <arch>    set an alternate architecture\n"
+msgstr "      --arch <arhit>   setează o arhitectură alternativă\n"
+
+#: src/kuzpkg/kuzpkg.c:217
+#, c-format
+msgid "      --sysroot        operate on a mounted guest system (root-only)\n"
+msgstr ""
+"      --sysroot        operează pe un sistem guest montat (doar ca root)\n"
+
+#: src/kuzpkg/kuzpkg.c:218
+#, c-format
+msgid "      --cachedir <dir> set an alternate package cache location\n"
+msgstr ""
+"      --cachedir <dir> setează o locație alternativă pentru cache-ul "
+"pachetului\n"
+
+#: src/kuzpkg/kuzpkg.c:219
+#, c-format
+msgid "      --hookdir <dir>  set an alternate hook location\n"
+msgstr "      --hookdir <dir>  setează o locație alternativă pentru hook\n"
+
+#: src/kuzpkg/kuzpkg.c:220
+#, c-format
+msgid "      --color <when>   colorize the output\n"
+msgstr "      --color <când>   colorează mesajele returnate\n"
+
+#: src/kuzpkg/kuzpkg.c:221
+#, c-format
+msgid "      --config <path>  set an alternate configuration file\n"
+msgstr "      --config <cale>  setează un fișier de configurare alternativ\n"
+
+#: src/kuzpkg/kuzpkg.c:222
+#, c-format
+msgid "      --debug          display debug messages\n"
+msgstr "      --debug          afișează mesaje de depanare\n"
+
+#: src/kuzpkg/kuzpkg.c:223
+#, c-format
+msgid "      --gpgdir <path>  set an alternate home directory for GnuPG\n"
+msgstr "      --gpgdir <cale>  setează un dosar alternativ pentru GnuPG\n"
+
+#: src/kuzpkg/kuzpkg.c:224
+#, c-format
+msgid "      --logfile <path> set an alternate log file\n"
+msgstr "      --logfile <cale> setează un fișier alternativ de jurnal\n"
+
+#: src/kuzpkg/kuzpkg.c:225
+#, c-format
+msgid "      --noconfirm      do not ask for any confirmation\n"
+msgstr "      --noconfirm      nu cere nicio confirmare\n"
+
+#: src/kuzpkg/kuzpkg.c:226
+#, c-format
+msgid "      --confirm        always ask for confirmation\n"
+msgstr "      --confirm        întotdeauna cere confirmare\n"
+
+#: src/kuzpkg/kuzpkg.c:227
+#, c-format
+msgid ""
+"      --disable-download-timeout\n"
+"                       use relaxed timeouts for download\n"
+msgstr ""
+"      --disable-download-timeout\n"
+"                       folosește timeout-uri relaxate pentru descărcare\n"
+
+#: src/kuzpkg/kuzpkg.c:229
+#, c-format
+msgid ""
+"      --disable-sandbox\n"
+"                       disables all sandbox features used for the downloader "
+"process\n"
+msgstr ""
+
+#: src/kuzpkg/kuzpkg.c:231
+#, c-format
+msgid ""
+"      --disable-sandbox-filesystem\n"
+"                       disables the filesystem part of the downloader "
+"process sandbox\n"
+msgstr ""
+
+#: src/kuzpkg/kuzpkg.c:233
+#, c-format
+msgid ""
+"      --disable-sandbox-syscalls\n"
+"                       disables the syscalls part of the downloader process "
+"sandbox\n"
+msgstr ""
+
+#: src/kuzpkg/kuzpkg.c:253
+#, c-format
+msgid ""
+"                       This program may be freely redistributed under\n"
+"                       the terms of the GNU General Public License.\n"
+msgstr ""
+"                       Acest program poate fi redistribuit liber sub\n"
+"                       termenii licenței GNU - General Public License.\n"
+
+#: src/kuzpkg/kuzpkg.c:286
+#, c-format
+msgid "HTTP_USER_AGENT truncated\n"
+msgstr "HTTP_USER_AGENT a fost trunchiat\n"
+
+#: src/kuzpkg/kuzpkg.c:319
+#, c-format
+msgid "invalid option: '%s' and '%s' may not be used together\n"
+msgstr "opțiune nevalidă: '%s' și '%s' nu pot fi folosite împreună\n"
+
+#: src/kuzpkg/kuzpkg.c:427
+#, c-format
+msgid "invalid argument '%s' for %s\n"
+msgstr "argumentul '%s' nu este valid pentru %s\n"
+
+#: src/kuzpkg/kuzpkg.c:449 src/kuzpkg/kuzpkg.c:462
+#, c-format
+msgid "'%s' is not a valid debug level\n"
+msgstr "'%s' nu este un nivel valid pentru depanare\n"
+
+#: src/kuzpkg/kuzpkg.c:1053
+#, c-format
+msgid "only one operation may be used at a time\n"
+msgstr "doar o operațiune poate fi utilizată în același timp\n"
+
+#: src/kuzpkg/kuzpkg.c:1112
+#, c-format
+msgid "invalid option '-%c'\n"
+msgstr "opțiune nevalidă '-%c'\n"
+
+#: src/kuzpkg/kuzpkg.c:1114
+#, c-format
+msgid "invalid option '--%s'\n"
+msgstr "opțiune nevalidă '--%s'\n"
+
+#: src/kuzpkg/kuzpkg.c:1225
+#, c-format
+msgid "you cannot perform this operation unless you are root.\n"
+msgstr "nu puteți efectua această operațiune decât dacă sunteți root.\n"
+
+#: src/kuzpkg/kuzpkg.c:1259
+#, c-format
+msgid "failed to read arguments from stdin: (%s)\n"
+msgstr "nu s-au putut citi argumentele din stdin: (%s)\n"
+
+#: src/kuzpkg/kuzpkg.c:1264
+#, c-format
+msgid "failed to reopen stdin for reading: (%s)\n"
+msgstr "eșec la redeschiderea stdin pentru citire: (%s)\n"
+
+#: src/kuzpkg/kuzpkg.c:1269
+#, c-format
+msgid "argument '-' specified with empty stdin\n"
+msgstr "argument '-' specificat cu stdin gol\n"
+
+#: src/kuzpkg/kuzpkg.c:1274
+#, c-format
+msgid "argument '-' specified without input on stdin\n"
+msgstr "argument '-' specificat fără o intrare din stdin\n"
+
+#: src/kuzpkg/kuzpkg.c:1351
+#, c-format
+msgid "no operation specified (use -h for help)\n"
+msgstr "nu este specificată nicio operațiune (folosiți -h pentru ajutor)\n"
+
+#: src/kuzpkg/query.c:87
+#, c-format
+msgid "%s is owned by %s%s %s%s%s\n"
+msgstr "%s e deținut de către %s%s%s%s%s\n"
+
+#: src/kuzpkg/query.c:149
+#, c-format
+msgid "no file was specified for --owns\n"
+msgstr "nu este specificat niciun fișier pentru --owns\n"
+
+#: src/kuzpkg/query.c:170
+#, c-format
+msgid "empty string passed to file owner query\n"
+msgstr "un șir gol a fost transmis interogării deținătorului de fișier\n"
+
+#: src/kuzpkg/query.c:197 src/kuzpkg/query.c:219
+#, c-format
+msgid "No package owns %s\n"
+msgstr "Niciun pachet nu deține %s\n"
+
+#: src/kuzpkg/query.c:206
+#, c-format
+msgid "path too long: %s/\n"
+msgstr "cale prea lungă: %s/\n"
+
+#: src/kuzpkg/query.c:340
+#, c-format
+msgid "[ignored]"
+msgstr "[ignorat]"
+
+#: src/kuzpkg/query.c:391
+#, c-format
+msgid "group '%s' was not found\n"
+msgstr "grupul '%s' nu a fost găsit\n"
+
+#: src/kuzpkg/query.c:472
+#, c-format
+msgid "could not load package '%s': %s\n"
+msgstr "nu s-a putut încărca pachetul '%s': %s\n"
+
+#: src/kuzpkg/query.c:491
+#, c-format
+msgid "'%s' is a file, you might want to use %s.\n"
+msgstr "'%s' este un fișier, probabil doriți să folosiți %s.\n"
+
+#: src/kuzpkg/remove.c:57 src/kuzpkg/sync.c:576
+#, c-format
+msgid "target not found: %s\n"
+msgstr "nu s-a găsit ținta: %s\n"
+
+#: src/kuzpkg/remove.c:112 src/kuzpkg/sync.c:772
+#, c-format
+msgid "failed to prepare transaction (%s)\n"
+msgstr "eșec la pregătirea tranzacției (%s)\n"
+
+#: src/kuzpkg/remove.c:119 src/kuzpkg/sync.c:758
+#, c-format
+msgid "removing %s breaks dependency '%s' required by %s\n"
+msgstr "prin eliminarea %s se întrerupe dependența '%s' cerută de către %s\n"
+
+#: src/kuzpkg/remove.c:138
+#, c-format
+msgid "%s is designated as a HoldPkg.\n"
+msgstr "%s este desemnat ca un HoldPkg.\n"
+
+#: src/kuzpkg/remove.c:143
+#, c-format
+msgid "HoldPkg was found in target list. Do you want to continue?"
+msgstr "HoldPkg a fost găsit în lista țintă. Doriți să continuați?"
+
+#: src/kuzpkg/remove.c:151 src/kuzpkg/sync.c:822
+#, c-format
+msgid " there is nothing to do\n"
+msgstr " nu e nimic de făcut\n"
+
+#: src/kuzpkg/remove.c:163
+#, c-format
+msgid "Do you want to remove these packages?"
+msgstr "Doriți să eliminați aceste pachete?"
+
+#: src/kuzpkg/remove.c:169 src/kuzpkg/sync.c:850
+#, c-format
+msgid "failed to commit transaction (%s)\n"
+msgstr "eșec la efectuarea tranzacției (%s)\n"
+
+#: src/kuzpkg/sync.c:48 src/kuzpkg/sync.c:94 src/kuzpkg/sync.c:99
+#, c-format
+msgid "could not remove %s: %s\n"
+msgstr "nu s-a putut elimina %s: %s\n"
+
+#: src/kuzpkg/sync.c:64
+#, c-format
+msgid "could not access database directory\n"
+msgstr "nu poate fi accesat dosarul bazei de date\n"
+
+#: src/kuzpkg/sync.c:88
+#, c-format
+msgid "could not remove %s%s: path exceeds PATH_MAX\n"
+msgstr ""
+
+#: src/kuzpkg/sync.c:142
+#, c-format
+msgid "Database directory: %s\n"
+msgstr "Dosar bază de date: %s\n"
+
+#: src/kuzpkg/sync.c:143
+#, c-format
+msgid "Do you want to remove unused repositories?"
+msgstr "Vreți să eliminați depozitele nefolosite?"
+
+#: src/kuzpkg/sync.c:146
+#, c-format
+msgid "removing unused sync repositories...\n"
+msgstr "se elimină depozitele de sincronizare nefolosite...\n"
+
+#: src/kuzpkg/sync.c:172
+#, c-format
+msgid "Packages to keep:\n"
+msgstr "Pachete de păstrat:\n"
+
+#: src/kuzpkg/sync.c:174
+#, c-format
+msgid "  All locally installed packages\n"
+msgstr "  Toate pachetele instalate local\n"
+
+#: src/kuzpkg/sync.c:177
+#, c-format
+msgid "  All current sync database packages\n"
+msgstr "  Toate pachetele din baza de date sincronizată\n"
+
+#: src/kuzpkg/sync.c:187
+#, c-format
+msgid "Cache directory: %s\n"
+msgstr "Dosar cache: %s\n"
+
+#: src/kuzpkg/sync.c:190
+#, c-format
+msgid "Do you want to remove all other packages from cache?"
+msgstr "Doriți să eliminați toate celelalte pachete din cache?"
+
+#: src/kuzpkg/sync.c:194
+#, c-format
+msgid "removing old packages from cache...\n"
+msgstr "se elimină pachetele vechi din cache... \n"
+
+#: src/kuzpkg/sync.c:196
+#, c-format
+msgid "Do you want to remove ALL files from cache?"
+msgstr "Doriți să eliminați TOATE fișierele din cache?"
+
+#: src/kuzpkg/sync.c:200
+#, c-format
+msgid "removing all files from cache...\n"
+msgstr "se elimină toate fișierele din cache... \n"
+
+#: src/kuzpkg/sync.c:206
+#, c-format
+msgid "could not access cache directory %s\n"
+msgstr "nu poate fi accesat dosarul cache %s\n"
+
+#: src/kuzpkg/sync.c:249
+#, c-format
+msgid "skipping %s%s: path exceeds PATH_MAX\n"
+msgstr ""
+
+#: src/kuzpkg/sync.c:368
+#, c-format
+msgid "package group '%s' was not found\n"
+msgstr ""
+
+#: src/kuzpkg/sync.c:443
+#, c-format
+msgid "repository '%s' does not exist\n"
+msgstr "depozitul '%s' nu există\n"
+
+#: src/kuzpkg/sync.c:489
+#, c-format
+msgid "repository \"%s\" was not found.\n"
+msgstr "depozitul \"%s\" nu a fost găsit.\n"
+
+#: src/kuzpkg/sync.c:591
+#, c-format
+msgid "There is %d member in group %s%s%s:\n"
+msgid_plural "There are %d members in group %s%s%s:\n"
+msgstr[0] "Există %d membru în grupul %s%s%s:\n"
+msgstr[1] "Există %d membri în grupul %s%s%s:\n"
+msgstr[2] "Există %d de membri în grupul %s%s%s:\n"
+
+#: src/kuzpkg/sync.c:641
+#, c-format
+msgid "skipping target: %s\n"
+msgstr "se omite ținta: %s\n"
+
+#: src/kuzpkg/sync.c:670
+#, c-format
+msgid "database not found: %s\n"
+msgstr "nu s-a găsit baza de date: %s\n"
+
+#: src/kuzpkg/sync.c:698
+#, c-format
+msgid "'%s' is a file, did you mean %s instead of %s?\n"
+msgstr "'%s' este un fișier, ați vrut %s în loc de %s?\n"
+
+#: src/kuzpkg/sync.c:729
+#, c-format
+msgid "Starting full system upgrade...\n"
+msgstr "Se pornește actualizarea completă a sistemului...\n"
+
+#: src/kuzpkg/sync.c:750
+#, c-format
+msgid "unable to satisfy dependency '%s' required by %s\n"
+msgstr "nu s-a putut satisface dependența '%s' cerută de către %s\n"
+
+#: src/kuzpkg/sync.c:754
+#, c-format
+msgid "installing %s (%s) breaks dependency '%s' required by %s\n"
+msgstr ""
+"prin instalarea %s (%s) se întrerupe dependența '%s' cerută de către %s\n"
+
+#: src/kuzpkg/sync.c:778
+#, c-format
+msgid "package %s does not have a valid architecture\n"
+msgstr "pachetul %s nu are o arhitectură validă\n"
+
+#: src/kuzpkg/sync.c:793
+#, c-format
+msgid "%s-%s and %s-%s are in conflict\n"
+msgstr ""
+
+#: src/kuzpkg/sync.c:800
+#, c-format
+msgid "%s-%s and %s-%s are in conflict (%s)\n"
+msgstr ""
+
+#: src/kuzpkg/sync.c:838
+#, c-format
+msgid "Proceed with download?"
+msgstr "Continuați cu descărcarea?"
+
+#: src/kuzpkg/sync.c:840
+#, c-format
+msgid "Proceed with installation?"
+msgstr "Continuați cu instalarea?"
+
+#: src/kuzpkg/sync.c:858
+#, c-format
+msgid "%s exists in both '%s' and '%s'\n"
+msgstr "%s există şi în '%s' şi în '%s'\n"
+
+#: src/kuzpkg/sync.c:863
+#, c-format
+msgid "%s: %s exists in filesystem (owned by %s)\n"
+msgstr "%s: %s există în sistemul de fișiere (deținut de către %s)\n"
+
+#: src/kuzpkg/sync.c:866
+#, c-format
+msgid "%s: %s exists in filesystem\n"
+msgstr "%s: %s există în sistemul de fișiere\n"
+
+#: src/kuzpkg/sync.c:879
+#, c-format
+msgid "%s is invalid or corrupted\n"
+msgstr "%s este nevalid sau corupt\n"
+
+#: src/kuzpkg/sync.c:887
+#, c-format
+msgid "Errors occurred, no packages were upgraded.\n"
+msgstr "Au apărut erori, niciun pachet nu a fost actualizat.\n"
+
+#: src/kuzpkg/upgrade.c:103
+#, c-format
+msgid "loading packages...\n"
+msgstr "se încarcă pachetele...\n"
+
+#: src/kuzpkg/util.c:100
+#, c-format
+msgid "failed to init transaction (%s)\n"
+msgstr "eșec la inițializarea tranzacției (%s)\n"
+
+#: src/kuzpkg/util.c:104
+#, c-format
+msgid "could not lock database: %s\n"
+msgstr "nu s-a putut bloca baza de date: %s\n"
+
+#: src/kuzpkg/util.c:107
+#, c-format
+msgid ""
+"  if you're sure a package manager is not already\n"
+"  running, you can remove %s\n"
+msgstr ""
+"  dacă sunteți sigur că niciun manager de pachete\n"
+"  nu este activ, atunci puteți elimina %s\n"
+
+#: src/kuzpkg/util.c:116
+#, c-format
+msgid "failed to release transaction (%s)\n"
+msgstr "eșec la realizarea tranzacției (%s)\n"
+
+#: src/kuzpkg/util.c:149
+#, c-format
+msgid "no usable package repositories configured.\n"
+msgstr "nu sunt configurate depozite de pachete utilizabile.\n"
+
+#: src/kuzpkg/util.c:158
+#, c-format
+msgid "database '%s' is not valid (%s)\n"
+msgstr "baza de date '%s' este nevalidă (%s)\n"
+
+#: src/kuzpkg/util.c:175
+#, c-format
+msgid "failed to synchronize all databases (%s)\n"
+msgstr "eșec la sincronizarea tuturor bazelor de date (%s)\n"
+
+#: src/kuzpkg/util.c:713
+#, c-format
+msgid "insufficient columns available for table display\n"
+msgstr "coloane insuficiente pentru afișarea tabelului\n"
+
+#: src/kuzpkg/util.c:834
+#, c-format
+msgid "Valid"
+msgstr "Valid"
+
+#: src/kuzpkg/util.c:837
+#, c-format
+msgid "Key expired"
+msgstr "Cheie expirată"
+
+#: src/kuzpkg/util.c:840
+#, c-format
+msgid "Expired"
+msgstr "Expirat"
+
+#: src/kuzpkg/util.c:843
+#, c-format
+msgid "Invalid"
+msgstr "Nevalid"
+
+#: src/kuzpkg/util.c:846
+#, c-format
+msgid "Key unknown"
+msgstr "Cheie necunoscută"
+
+#: src/kuzpkg/util.c:849
+#, c-format
+msgid "Key disabled"
+msgstr "Cheie dezactivată"
+
+#: src/kuzpkg/util.c:852
+#, c-format
+msgid "Signature error"
+msgstr "Eroare de semnătură"
+
+#: src/kuzpkg/util.c:857
+#, c-format
+msgid "full trust"
+msgstr "încredere deplină"
+
+#: src/kuzpkg/util.c:860
+#, c-format
+msgid "marginal trust"
+msgstr "încredere marginală"
+
+#: src/kuzpkg/util.c:863
+#, c-format
+msgid "never trust"
+msgstr "fără încredere"
+
+#: src/kuzpkg/util.c:867
+#, c-format
+msgid "unknown trust"
+msgstr "încredere necunoscută"
+
+#: src/kuzpkg/util.c:871
+#, c-format
+msgid "%s, %s from \"%s\""
+msgstr "%s, %s din \"%s\""
+
+#: src/kuzpkg/util.c:889
+#, c-format
+msgid "Package"
+msgstr "Pachet"
+
+#: src/kuzpkg/util.c:892
+#, c-format
+msgid "Old Version"
+msgstr "Versiune precedentă"
+
+#: src/kuzpkg/util.c:893
+#, c-format
+msgid "New Version"
+msgstr "Versiune nouă"
+
+#: src/kuzpkg/util.c:894
+#, c-format
+msgid "Net Change"
+msgstr "Schimbare netă"
+
+#: src/kuzpkg/util.c:992
+#, c-format
+msgid "removal"
+msgstr "eliminare"
+
+#: src/kuzpkg/util.c:998
+#, c-format
+msgid "Packages"
+msgstr "Pachete"
+
+#: src/kuzpkg/util.c:1019
+#, c-format
+msgid "Total Download Size:"
+msgstr "Mărimea totală a descărcării:"
+
+#: src/kuzpkg/util.c:1023
+#, c-format
+msgid "Total Installed Size:"
+msgstr "Mărimea totală a instalării:"
+
+#: src/kuzpkg/util.c:1026
+#, c-format
+msgid "Total Removed Size:"
+msgstr "Mărimea totală a eliminării:"
+
+#: src/kuzpkg/util.c:1030
+#, c-format
+msgid "Net Upgrade Size:"
+msgstr "Mărimea netă a actualizării:"
+
+#: src/kuzpkg/util.c:1352
+#, c-format
+msgid " [pending]"
+msgstr " [în așteptare]"
+
+#: src/kuzpkg/util.c:1376
+#, c-format
+msgid "New optional dependencies for %s\n"
+msgstr "Noi dependențe opționale pentru %s\n"
+
+#: src/kuzpkg/util.c:1398
+#, c-format
+msgid "Optional dependencies for %s\n"
+msgstr "Dependențe opționale pentru %s\n"
+
+#: src/kuzpkg/util.c:1412
+#, c-format
+msgid "Repository %s%s\n"
+msgstr "Depozitul %s%s\n"
+
+#: src/kuzpkg/util.c:1453
+#, c-format
+msgid "invalid value: %d is not between %d and %d\n"
+msgstr "valoare nevalidă: %d nu este între %d și %d\n"
+
+#: src/kuzpkg/util.c:1460
+#, c-format
+msgid "invalid number: %s\n"
+msgstr "număr nevalid: %s\n"
+
+#: src/kuzpkg/util.c:1577
+#, c-format
+msgid "Enter a selection (default=all)"
+msgstr "Introduceți o selecție (implicit=toate)"
+
+#: src/kuzpkg/util.c:1644
+#, c-format
+msgid "Enter a number (default=%d)"
+msgstr "Introduceți un număr (implicit=%d)"
+
+#: src/kuzpkg/util.c:1728
+#, c-format
+msgid "[Y/n]"
+msgstr "[D/n]"
+
+#: src/kuzpkg/util.c:1730
+#, c-format
+msgid "[y/N]"
+msgstr "[d/N]"
+
+#: src/kuzpkg/util.c:1755
+#, c-format
+msgid "Y"
+msgstr "D"
+
+#: src/kuzpkg/util.c:1755
+#, c-format
+msgid "YES"
+msgstr "DA"
+
+#: src/kuzpkg/util.c:1757
+#, c-format
+msgid "N"
+msgstr "N"
+
+#: src/kuzpkg/util.c:1757
+#, c-format
+msgid "NO"
+msgstr "NU"
+
+#: src/kuzpkg/util.c:1824
+#, c-format
+msgid "failed to allocate string\n"
+msgstr "Eșuare la alocarea șirului\n"
+
+#: src/kuzpkg/util.c:1861 src/kuzpkg/util.c:1911 src/util/testpkg.c:35
+#, c-format
+msgid "error: "
+msgstr "eroare: "
+
+#: src/kuzpkg/util.c:1865 src/kuzpkg/util.c:1915 src/util/testpkg.c:36
+#, c-format
+msgid "warning: "
+msgstr "avertisment: "
+
+#: src/kuzpkg/kuzpkg-conf.c:41
+#, c-format
+msgid "kuzpkg-conf - query kuzpkg's configuration file\n"
+msgstr "kuzpkg-conf - interoghează fișierul de configurare kuzpkg\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:42
+#, c-format
+msgid "usage:  kuzpkg-conf [options] [<directive>...]\n"
+msgstr "utilizare:  kuzpkg-conf [opțiuni] [<directive>...]\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:43
+#, c-format
+msgid "        kuzpkg-conf (--repo-list|--help|--version)\n"
+msgstr "        kuzpkg-conf (--repo-list|--help|--version)\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:44
+#, c-format
+msgid "options:\n"
+msgstr "opțiuni:\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:45
+#, c-format
+msgid "  -c, --config=<path>  set an alternate configuration file\n"
+msgstr "  -c, --config=<path> setează un fișier de configurare alternativ\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:46
+#, c-format
+msgid "  -R, --rootdir=<path> set an alternate installation root\n"
+msgstr "-R, --rootdir=<path> setează o cale de instalare alternativă\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:47
+#, c-format
+msgid "  -S, --sysroot=<path> set an alternate system root\n"
+msgstr ""
+
+#: src/kuzpkg/kuzpkg-conf.c:48
+#, c-format
+msgid "  -r, --repo=<remote>  query options for a specific repo\n"
+msgstr "  -r, --repo=<remote>  interoghează opțiunile specifice unui depozit\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:49
+#, c-format
+msgid "  -v, --verbose        always show directive names\n"
+msgstr "  -v, --verbose        arată mereu numele directivelor\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:50
+#, c-format
+msgid "  -l, --repo-list      list configured repositories\n"
+msgstr "  -l, --repo-list      arată depozitele configurate\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:51
+#, c-format
+msgid "  -h, --help           display this help information\n"
+msgstr "  -h, --help        arată această informație de ajutor\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:52
+#, c-format
+msgid "  -V, --version        display version information\n"
+msgstr "  -V, --version        arată informații despre versiune\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:83
+#, c-format
+msgid "error setting rootdir '%s': out of memory\n"
+msgstr "eroare la setarea căii de rădăcină '%s': fără memorie\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:91
+#, c-format
+msgid "error setting sysroot '%s': out of memory\n"
+msgstr ""
+
+#: src/kuzpkg/kuzpkg-conf.c:121
+#, c-format
+msgid "error parsing '%s'\n"
+msgstr "eroare în timpul analizei '%s'\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:315
+#, c-format
+msgid "error: repo '%s' not configured\n"
+msgstr "eroare: depozitul '%s' nu este configurat\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:334 src/kuzpkg/kuzpkg-conf.c:424
+#, c-format
+msgid "warning: '%s' directives cannot be queried\n"
+msgstr "avertizare: directivele '%s' nu pot fi interogate\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:337 src/kuzpkg/kuzpkg-conf.c:427
+#, c-format
+msgid "warning: unknown directive '%s'\n"
+msgstr "avertizare: directivă necunoscută '%s'\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:464
+#, c-format
+msgid "error: directives may not be specified with %s\n"
+msgstr "eroare: directivele nu pot fi specificate cu %s\n"
+
+#: src/util/testpkg.c:56
+#, c-format
+msgid ""
+"Test a kuzpkg package for validity.\n"
+"\n"
+msgstr "Testează validitatea unui pachet kuzpkg.\n"
+
+#: src/util/testpkg.c:57
+#, c-format
+msgid "Usage: testpkg <package file>\n"
+msgstr "Utilizare: testpkg<package file>\n"
+
+#: src/util/testpkg.c:63
+#, c-format
+msgid "cannot initialize klpm: %s\n"
+msgstr "klpm nu poate fi inițializat: %s\n"
+
+#: src/util/testpkg.c:78
+#, c-format
+msgid "Cannot find the given file.\n"
+msgstr "Nu se poate găsi fișierul dat.\n"
+
+#: src/util/testpkg.c:81
+#, c-format
+msgid "Cannot open the given file.\n"
+msgstr "Nu se poate deschide fișierul dat.\n"
+
+#: src/util/testpkg.c:85
+#, c-format
+msgid "Package is invalid.\n"
+msgstr "Pachetul este nevalid.\n"
+
+#: src/util/testpkg.c:88
+#, c-format
+msgid "libkuzpkg error: %s\n"
+msgstr "eroare libkuzpkg: %s\n"
+
+#: src/util/testpkg.c:94
+#, c-format
+msgid "Package is valid.\n"
+msgstr "Pachetul este valid.\n"
+
+#: src/util/testpkg.c:99
+#, c-format
+msgid "error releasing klpm\n"
+msgstr "eroare la eliberarea klpm\n"

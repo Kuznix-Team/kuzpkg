@@ -1,6 +1,6 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR "Pacman Development Team <pacman-dev@lists.archlinux.org>"
-# This file is distributed under the same license as the pacman-scripts package.
+# Copyright (C) 2026 Kuznix"
+# This file is distributed under the same license as the kuzpkg-scripts package.
 #
 # Translators:
 # Alessandro Menti <alessandro.menti@hotmail.it>, 2019
@@ -14,12 +14,12 @@
 # ~Smlb <smlb@riseup.net>, 2014
 msgid ""
 msgstr ""
-"Project-Id-Version: Arch Linux Pacman package manager\n"
-"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/pacman/pacman/-/issues\n"
+"Project-Id-Version: Arch Linux Kuzpkg package manager\n"
+"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/kuzpkg/kuzpkg/-/issues\n"
 "POT-Creation-Date: 2025-11-01 20:25+1000\n"
 "PO-Revision-Date: 2011-08-08 22:35+0000\n"
 "Last-Translator: Giovanni Scafora <scafora.giovanni@gmail.com>, 2023-2025\n"
-"Language-Team: Italian (http://app.transifex.com/toofishes/archlinux-pacman/"
+"Language-Team: Italian (http://app.transifex.com/toofishes/archlinux-kuzpkg/"
 "language/it/)\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
@@ -106,8 +106,8 @@ msgid "Aborting..."
 msgstr "L'operazione sta per essere interrotta..."
 
 #: scripts/makepkg.sh.in:249
-msgid "Pacman is currently in use, please wait..."
-msgstr "Pacman è attualmente in uso, attendere..."
+msgid "Kuzpkg is currently in use, please wait..."
+msgstr "Kuzpkg è attualmente in uso, attendere..."
 
 #: scripts/makepkg.sh.in:270
 #, sh-printf-format
@@ -247,15 +247,15 @@ msgstr ""
 "sovrascrivere)"
 
 #: scripts/makepkg.sh.in:883
-msgid "Make packages compatible for use with pacman"
-msgstr "Crea pacchetti compatibili con l'uso di pacman"
+msgid "Make packages compatible for use with kuzpkg"
+msgstr "Crea pacchetti compatibili con l'uso di kuzpkg"
 
-#: scripts/makepkg.sh.in:885 scripts/pacman-db-upgrade.sh.in:41
+#: scripts/makepkg.sh.in:885 scripts/kuzpkg-db-upgrade.sh.in:41
 #, sh-printf-format
 msgid "Usage: %s [options]"
 msgstr "Uso: %s [opzioni]"
 
-#: scripts/makepkg.sh.in:887 scripts/pacman-key.sh.in:82
+#: scripts/makepkg.sh.in:887 scripts/kuzpkg-key.sh.in:82
 msgid "Options:"
 msgstr "Opzioni:"
 
@@ -466,8 +466,8 @@ msgstr ""
 msgid "If %s is not specified, %s will look for '%s'"
 msgstr "Se %s non è stato specificato, %s cercherà '%s'"
 
-#: scripts/makepkg.sh.in:940 scripts/pacman-db-upgrade.sh.in:57
-#: scripts/pacman-key.sh.in:99 scripts/repo-add.sh.in:107
+#: scripts/makepkg.sh.in:940 scripts/kuzpkg-db-upgrade.sh.in:57
+#: scripts/kuzpkg-key.sh.in:99 scripts/repo-add.sh.in:107
 msgid ""
 "This is free software; see the source for copying conditions.\\nThere is NO "
 "WARRANTY, to the extent permitted by law.\\n"
@@ -582,148 +582,148 @@ msgstr "La directory del pacchetto è pronta."
 msgid "Finished making: %s"
 msgstr "Compilazione terminata: %s"
 
-#: scripts/pacman-db-upgrade.sh.in:39
-msgid "Upgrade the local pacman database to a newer format"
-msgstr "Aggiorna il database locale di pacman ad un nuovo formato"
+#: scripts/kuzpkg-db-upgrade.sh.in:39
+msgid "Upgrade the local kuzpkg database to a newer format"
+msgstr "Aggiorna il database locale di kuzpkg ad un nuovo formato"
 
-#: scripts/pacman-db-upgrade.sh.in:43
+#: scripts/kuzpkg-db-upgrade.sh.in:43
 msgid "options:"
 msgstr "opzioni:"
 
-#: scripts/pacman-db-upgrade.sh.in:44
+#: scripts/kuzpkg-db-upgrade.sh.in:44
 msgid "  -d, --dbpath <path>  set an alternate database location"
 msgstr ""
 "  -d, --dbpath <path>  imposta una collocazione alternativa per il database"
 
-#: scripts/pacman-db-upgrade.sh.in:45
+#: scripts/kuzpkg-db-upgrade.sh.in:45
 msgid "  -h, --help           show this help message and exit"
 msgstr "  -h, --help           mostra questo messaggio di aiuto ed esce"
 
-#: scripts/pacman-db-upgrade.sh.in:46
+#: scripts/kuzpkg-db-upgrade.sh.in:46
 msgid "  -r, --root <path>    set an alternate installation root"
 msgstr "  -r, --root <path>    imposta una root di installazione alternativa"
 
-#: scripts/pacman-db-upgrade.sh.in:47
+#: scripts/kuzpkg-db-upgrade.sh.in:47
 msgid "  -V, --version        show version information and exit"
 msgstr "  -V, --version        mostra le informazioni sulla versione ed esce"
 
-#: scripts/pacman-db-upgrade.sh.in:48
+#: scripts/kuzpkg-db-upgrade.sh.in:48
 msgid "  --config <path>      set an alternate configuration file"
 msgstr "  --config <path>      imposta un file di configurazione alternativo"
 
-#: scripts/pacman-db-upgrade.sh.in:49
+#: scripts/kuzpkg-db-upgrade.sh.in:49
 msgid "  --nocolor            disable colorized output messages"
 msgstr ""
 "  --nocolor            disabilita la visualizzazione dei messaggi colorati"
 
-#: scripts/pacman-db-upgrade.sh.in:122 scripts/repo-add.sh.in:409
+#: scripts/kuzpkg-db-upgrade.sh.in:122 scripts/repo-add.sh.in:409
 #, sh-printf-format
 msgid "%s does not exist or is not a directory."
 msgstr "%s non esiste o non è una directory."
 
-#: scripts/pacman-db-upgrade.sh.in:126
+#: scripts/kuzpkg-db-upgrade.sh.in:126
 #, sh-printf-format
-msgid "%s is not a pacman database directory."
-msgstr "%s non è una directory di un database di pacman."
+msgid "%s is not a kuzpkg database directory."
+msgstr "%s non è una directory di un database di kuzpkg."
 
-#: scripts/pacman-db-upgrade.sh.in:130
+#: scripts/kuzpkg-db-upgrade.sh.in:130
 msgid "You must have correct permissions to upgrade the database."
 msgstr "Per aggiornare il database devi avere i corretti permessi."
 
-#: scripts/pacman-db-upgrade.sh.in:140
-msgid "Pacman lock file was found. Cannot run while pacman is running."
+#: scripts/kuzpkg-db-upgrade.sh.in:140
+msgid "Kuzpkg lock file was found. Cannot run while kuzpkg is running."
 msgstr ""
-"Il file lock di pacman è stato trovato. Impossibile avviare di nuovo pacman "
+"Il file lock di kuzpkg è stato trovato. Impossibile avviare di nuovo kuzpkg "
 "mentre è ancora in funzione."
 
-#: scripts/pacman-db-upgrade.sh.in:152
+#: scripts/kuzpkg-db-upgrade.sh.in:152
 msgid "Pre-3.5 database format detected - upgrading..."
 msgstr ""
 "È stato individuato il formato del database pre-3.5, aggiornamento in "
 "corso..."
 
-#: scripts/pacman-db-upgrade.sh.in:159
+#: scripts/kuzpkg-db-upgrade.sh.in:159
 msgid "Done."
 msgstr "Fatto."
 
-#: scripts/pacman-db-upgrade.sh.in:163
+#: scripts/kuzpkg-db-upgrade.sh.in:163
 msgid "Pre-4.2 database format detected - upgrading..."
 msgstr ""
 "È stato individuato il formato del database pre-4.2 - aggiornamrnto in "
 "corso..."
 
-#: scripts/pacman-db-upgrade.sh.in:185
+#: scripts/kuzpkg-db-upgrade.sh.in:185
 #, sh-printf-format
-msgid "symlink '%s' points outside pacman root, manual repair required"
+msgid "symlink '%s' points outside kuzpkg root, manual repair required"
 msgstr ""
-"il link simbolico '%s' punta al di fuori della root di pacman, è richiesto "
+"il link simbolico '%s' punta al di fuori della root di kuzpkg, è richiesto "
 "un intervento manuale"
 
-#: scripts/pacman-key.sh.in:58
+#: scripts/kuzpkg-key.sh.in:58
 #, sh-printf-format
 msgid "Usage: %s [options] operation [targets]"
 msgstr "Uso: %s [opzioni] operazione [obiettivi]"
 
-#: scripts/pacman-key.sh.in:60
-msgid "Manage pacman's list of trusted keys"
-msgstr "Gestisce la lista delle chiavi attendibili di pacman"
+#: scripts/kuzpkg-key.sh.in:60
+msgid "Manage kuzpkg's list of trusted keys"
+msgstr "Gestisce la lista delle chiavi attendibili di kuzpkg"
 
-#: scripts/pacman-key.sh.in:62
+#: scripts/kuzpkg-key.sh.in:62
 msgid "Operations:"
 msgstr "Operazioni:"
 
-#: scripts/pacman-key.sh.in:63
+#: scripts/kuzpkg-key.sh.in:63
 msgid "  -a, --add                 Add the specified keys (empty for stdin)"
 msgstr ""
 "  -a, --add                 Aggiunge le chiavi specificate (vuoto per stdin)"
 
-#: scripts/pacman-key.sh.in:64
+#: scripts/kuzpkg-key.sh.in:64
 msgid "  -d, --delete              Remove the specified keyids"
 msgstr "  -d, --delete              Rimuove i keyid specificati"
 
-#: scripts/pacman-key.sh.in:65
+#: scripts/kuzpkg-key.sh.in:65
 msgid "  -e, --export              Export the specified or all keyids"
 msgstr "  -e, --export              Esporta tutti i keyid o quelli specificati"
 
-#: scripts/pacman-key.sh.in:66
+#: scripts/kuzpkg-key.sh.in:66
 msgid ""
 "  -f, --finger              List fingerprint for specified or all keyids"
 msgstr ""
 "  -f, --finger              Elenca i fingerprint di tutti i keyid o quelli "
 "specificati"
 
-#: scripts/pacman-key.sh.in:67
+#: scripts/kuzpkg-key.sh.in:67
 msgid "  -l, --list-keys           List the specified or all keys"
 msgstr ""
 "  -l, --list-keys           Elenca tutte le chiavi o quelle specificate"
 
-#: scripts/pacman-key.sh.in:68
+#: scripts/kuzpkg-key.sh.in:68
 msgid "  -r, --recv-keys           Fetch the specified keyids"
 msgstr "  -r, --recv-keys           Preleva i keyid specificati"
 
-#: scripts/pacman-key.sh.in:69
-msgid "  -u, --updatedb            Update the trustdb of pacman"
-msgstr "  -u, --updatedb            Aggiorna il database di pacman"
+#: scripts/kuzpkg-key.sh.in:69
+msgid "  -u, --updatedb            Update the trustdb of kuzpkg"
+msgstr "  -u, --updatedb            Aggiorna il database di kuzpkg"
 
-#: scripts/pacman-key.sh.in:70
+#: scripts/kuzpkg-key.sh.in:70
 msgid ""
 "  -v, --verify              Verify the file(s) specified by the signature(s)"
 msgstr ""
 "  -v, --verify              Verifica il file o i file specificati dalla(e) "
 "firma(e)"
 
-#: scripts/pacman-key.sh.in:71
+#: scripts/kuzpkg-key.sh.in:71
 msgid ""
 "  --edit-key                Present a menu for key management task on keyids"
 msgstr ""
 "  --edit-key                Presenta un menu per l'attività di gestione "
 "delle chiavi sui keyid"
 
-#: scripts/pacman-key.sh.in:72
+#: scripts/kuzpkg-key.sh.in:72
 msgid "  --import                  Imports pubring.gpg from dir(s)"
 msgstr "  --import                  Importa pubring.gpg dalla(e) directory"
 
-#: scripts/pacman-key.sh.in:73
+#: scripts/kuzpkg-key.sh.in:73
 msgid ""
 "  --import-trustdb          Imports ownertrust values from trustdb.gpg in "
 "dir(s)"
@@ -731,21 +731,21 @@ msgstr ""
 "  --import-trustdb          Importa i valori dell'ownertrust da trustdb.gpg "
 "nella(e) directory"
 
-#: scripts/pacman-key.sh.in:74
+#: scripts/kuzpkg-key.sh.in:74
 msgid "  --init                    Ensure the keyring is properly initialized"
 msgstr ""
 "  --init                    Assicura che il keyring sia inizializzato "
 "correttamente"
 
-#: scripts/pacman-key.sh.in:75
+#: scripts/kuzpkg-key.sh.in:75
 msgid "  --list-sigs               List keys and their signatures"
 msgstr "  --list-sigs               Elenca le chiavi e le rispettive firme"
 
-#: scripts/pacman-key.sh.in:76
+#: scripts/kuzpkg-key.sh.in:76
 msgid "  --lsign-key               Locally sign the specified keyid"
 msgstr "  --lsign-key               Firma localmente il keyid specificato"
 
-#: scripts/pacman-key.sh.in:77
+#: scripts/kuzpkg-key.sh.in:77
 #, sh-printf-format
 msgid ""
 "  --populate                Reload the default keys from the (given) "
@@ -754,18 +754,18 @@ msgstr ""
 "  --populate                Ricarica le chiavi di default dai portachiavi "
 "(specificati)\\n                            in '%s'"
 
-#: scripts/pacman-key.sh.in:79
+#: scripts/kuzpkg-key.sh.in:79
 msgid ""
 "  --refresh-keys            Update specified or all keys from a keyserver"
 msgstr ""
 "  --refresh-keys            Aggiorna le chiavi specificate o tutte le chiavi "
 "da un keyserver"
 
-#: scripts/pacman-key.sh.in:80
+#: scripts/kuzpkg-key.sh.in:80
 msgid "  --verbose                 Show extra information"
 msgstr "  --verbose                 Mostra ulteriori informazioni"
 
-#: scripts/pacman-key.sh.in:83
+#: scripts/kuzpkg-key.sh.in:83
 #, sh-printf-format
 msgid ""
 "  --config <file>           Use an alternate config file (instead "
@@ -774,7 +774,7 @@ msgstr ""
 "  --config <file>           Usa un file di configurazione alternativo "
 "(invece di\\n                            '%s')"
 
-#: scripts/pacman-key.sh.in:85
+#: scripts/kuzpkg-key.sh.in:85
 #, sh-printf-format
 msgid ""
 "  --gpgdir <dir>            Set an alternate directory for GnuPG "
@@ -783,7 +783,7 @@ msgstr ""
 "  --gpgdir <dir>            Imposta una directory alternativa per GnuPG "
 "(invece\\n                            di '%s')"
 
-#: scripts/pacman-key.sh.in:87
+#: scripts/kuzpkg-key.sh.in:87
 #, sh-printf-format
 msgid ""
 "  --populate-from <dir>     Set an alternate directory for --populate "
@@ -792,104 +792,104 @@ msgstr ""
 "  --populate-from <dir>     Imposta una directory alternativa per --populate "
 "(invece\\n                            di '%s')"
 
-#: scripts/pacman-key.sh.in:89
+#: scripts/kuzpkg-key.sh.in:89
 msgid "  --keyserver <server-url>  Specify a keyserver to use if necessary"
 msgstr ""
 "  --keyserver <server-url>  Se necessario, specifica un keyserver da "
 "utilizzare"
 
-#: scripts/pacman-key.sh.in:91
+#: scripts/kuzpkg-key.sh.in:91
 msgid "  -h, --help                Show this help message and exit"
 msgstr "  -h, --help                Mostra questo messaggio di aiuto ed esce"
 
-#: scripts/pacman-key.sh.in:92
+#: scripts/kuzpkg-key.sh.in:92
 msgid "  -V, --version             Show program version"
 msgstr "  -V, --version             Mostra la versione del programma"
 
-#: scripts/pacman-key.sh.in:134
+#: scripts/kuzpkg-key.sh.in:134
 msgid "Failed to lookup key by name:"
 msgstr "Impossibile cercare la chiave dal nome:"
 
-#: scripts/pacman-key.sh.in:142
+#: scripts/kuzpkg-key.sh.in:142
 msgid "Key name is ambiguous:"
 msgstr "Il nome della chiave è ambiguo:"
 
-#: scripts/pacman-key.sh.in:150
-msgid "Generating pacman master key. This may take some time."
+#: scripts/kuzpkg-key.sh.in:150
+msgid "Generating kuzpkg master key. This may take some time."
 msgstr ""
-"Generazione della chiave master di pacman. Questa operazione potrebbe "
+"Generazione della chiave master di kuzpkg. Questa operazione potrebbe "
 "richiedere del tempo."
 
-#: scripts/pacman-key.sh.in:187
+#: scripts/kuzpkg-key.sh.in:187
 #, sh-printf-format
 msgid "The key identified by %s could not be found locally."
 msgstr "La chiave identificata da %s non esiste localmente."
 
-#: scripts/pacman-key.sh.in:198 scripts/pacman-key.sh.in:210
+#: scripts/kuzpkg-key.sh.in:198 scripts/kuzpkg-key.sh.in:210
 #: scripts/libmakepkg/integrity/verify_signature.sh.in:219
 msgid "_"
 msgstr "_"
 
-#: scripts/pacman-key.sh.in:210
+#: scripts/kuzpkg-key.sh.in:210
 msgid "flags"
 msgstr "flag"
 
-#: scripts/pacman-key.sh.in:264
+#: scripts/kuzpkg-key.sh.in:264
 #, sh-printf-format
 msgid "You do not have sufficient permissions to read the %s keyring."
 msgstr "Non si dispone di permessi sufficienti per leggere il keyring %s."
 
-#: scripts/pacman-key.sh.in:265
+#: scripts/kuzpkg-key.sh.in:265
 #, sh-printf-format
 msgid "Use '%s' to correct the keyring permissions."
 msgstr "Usa '%s' per correggere i permessi del keyring."
 
-#: scripts/pacman-key.sh.in:270
+#: scripts/kuzpkg-key.sh.in:270
 msgid "You do not have sufficient permissions to run this command."
 msgstr "Non si dispone di permessi sufficienti per avviare questo comando."
 
-#: scripts/pacman-key.sh.in:276
+#: scripts/kuzpkg-key.sh.in:276
 msgid "There is no secret key available to sign with."
 msgstr "Non c'è nessuna chiave segreta disponibile per firmare."
 
-#: scripts/pacman-key.sh.in:277
+#: scripts/kuzpkg-key.sh.in:277
 #, sh-printf-format
 msgid "Use '%s' to generate a default secret key."
 msgstr "Usa '%s' per generare una chiave segreta di default."
 
-#: scripts/pacman-key.sh.in:295
+#: scripts/kuzpkg-key.sh.in:295
 #, sh-printf-format
 msgid "No keyring files exist in %s."
 msgstr "Non esiste nessun file di keyring in %s."
 
-#: scripts/pacman-key.sh.in:302
+#: scripts/kuzpkg-key.sh.in:302
 #, sh-printf-format
 msgid "The keyring file %s does not exist."
 msgstr "Il file di keyring %s non esiste."
 
-#: scripts/pacman-key.sh.in:317
+#: scripts/kuzpkg-key.sh.in:317
 #, sh-printf-format
 msgid "Appending keys from %s.gpg..."
 msgstr "Aggiunta delle chiavi da %s.gpg in corso..."
 
-#: scripts/pacman-key.sh.in:357
+#: scripts/kuzpkg-key.sh.in:357
 msgid "Locally signing trusted keys in keyring..."
 msgstr "Sto firmando localmente le chiavi verificate nel keyring..."
 
-#: scripts/pacman-key.sh.in:359
+#: scripts/kuzpkg-key.sh.in:359
 msgid "Importing owner trust values..."
 msgstr "Sto importando i valori..."
 
-#: scripts/pacman-key.sh.in:369
+#: scripts/kuzpkg-key.sh.in:369
 msgid "Disabling revoked keys in keyring..."
 msgstr "Disabilitazione delle chiavi revocate nel keyring in corso..."
 
-#: scripts/pacman-key.sh.in:372
+#: scripts/kuzpkg-key.sh.in:372
 #, sh-printf-format
 msgid "Disabling key %s..."
 msgstr "Disabilitazione della chiave %s in corso..."
 
-#: scripts/pacman-key.sh.in:378
+#: scripts/kuzpkg-key.sh.in:378
 #, sh-printf-format
 msgid "Disabled %s key."
 msgid_plural "Disabled %s keys."
@@ -897,56 +897,56 @@ msgstr[0] "È stata disabilitata %s chiave."
 msgstr[1] "Sono state disabilitate %s chiavi."
 msgstr[2] "Sono state disabilitate %s chiavi."
 
-#: scripts/pacman-key.sh.in:385
+#: scripts/kuzpkg-key.sh.in:385
 msgid "A specified keyfile could not be added to the keyring."
 msgstr "Un keyfile specificato non può essere aggiunto al portachiavi gpg."
 
-#: scripts/pacman-key.sh.in:393
+#: scripts/kuzpkg-key.sh.in:393
 msgid "A specified key could not be removed from the keyring."
 msgstr "Un keyfile specificato non può essere rimosso dal portachiavi gpg."
 
-#: scripts/pacman-key.sh.in:403
+#: scripts/kuzpkg-key.sh.in:403
 #, sh-printf-format
 msgid "The key identified by %s could not be edited."
 msgstr "La chiave identificata da %s non può essere modificata."
 
-#: scripts/pacman-key.sh.in:415
+#: scripts/kuzpkg-key.sh.in:415
 msgid "A specified key could not be exported from the keyring."
 msgstr "Un keyfile specificato non può essere esportato dal portachiavi gpg."
 
-#: scripts/pacman-key.sh.in:423
+#: scripts/kuzpkg-key.sh.in:423
 msgid "The fingerprint of a specified key could not be determined."
 msgstr "Il fingerprint di una chiave specificata non può essere determinata."
 
-#: scripts/pacman-key.sh.in:436 scripts/pacman-key.sh.in:455
+#: scripts/kuzpkg-key.sh.in:436 scripts/kuzpkg-key.sh.in:455
 #, sh-printf-format
 msgid "%s could not be imported."
 msgstr "%s non può essere importata."
 
-#: scripts/pacman-key.sh.in:440 scripts/pacman-key.sh.in:459
+#: scripts/kuzpkg-key.sh.in:440 scripts/kuzpkg-key.sh.in:459
 #, sh-printf-format
 msgid "File %s does not exist and could not be imported."
 msgstr "Il file %s non esiste e non può essere importato."
 
-#: scripts/pacman-key.sh.in:471
+#: scripts/kuzpkg-key.sh.in:471
 msgid "A specified key could not be listed."
 msgstr "Una chiave specificata non può essere elencata."
 
-#: scripts/pacman-key.sh.in:479
+#: scripts/kuzpkg-key.sh.in:479
 msgid "A specified signature could not be listed."
 msgstr "Una firma specificata non può essere elencata."
 
-#: scripts/pacman-key.sh.in:491
+#: scripts/kuzpkg-key.sh.in:491
 #, sh-printf-format
 msgid "Locally signing key %s..."
 msgstr "Sto firmando localmente la chiave %s..."
 
-#: scripts/pacman-key.sh.in:496
+#: scripts/kuzpkg-key.sh.in:496
 #, sh-printf-format
 msgid "%s could not be locally signed."
 msgstr "%s non può essere firmata localmente."
 
-#: scripts/pacman-key.sh.in:506
+#: scripts/kuzpkg-key.sh.in:506
 #, sh-printf-format
 msgid "Locally signed %s key."
 msgid_plural "Locally signed %s keys."
@@ -954,73 +954,73 @@ msgstr[0] "È stata firmata localmente %s chiave."
 msgstr[1] "Sono state firmate localmente %s chiavi."
 msgstr[2] "Sono state firmate localmente %s chiavi."
 
-#: scripts/pacman-key.sh.in:529
+#: scripts/kuzpkg-key.sh.in:529
 msgid "Remote key not fetched correctly from WKD or keyserver."
 msgstr ""
 "La chiave remota non è stata scaricata correttamente dal WKD o dal server "
 "delle chiavi."
 
-#: scripts/pacman-key.sh.in:534
+#: scripts/kuzpkg-key.sh.in:534
 msgid "Remote key not fetched correctly from keyserver."
 msgstr "La chiave remota non è stata correttamente scaricata dal keyserver."
 
-#: scripts/pacman-key.sh.in:566
+#: scripts/kuzpkg-key.sh.in:566
 #, sh-printf-format
 msgid "Could not update key: %s"
 msgstr "Impossibile aggiornare la chiave: %s"
 
-#: scripts/pacman-key.sh.in:587 scripts/repo-add.sh.in:271
+#: scripts/kuzpkg-key.sh.in:587 scripts/repo-add.sh.in:271
 #, sh-printf-format
 msgid "Cannot use armored signatures for packages: %s"
 msgstr "Impossibile utilizzare le firme blindate per i pacchetti: %s"
 
-#: scripts/pacman-key.sh.in:595
+#: scripts/kuzpkg-key.sh.in:595
 #, sh-printf-format
 msgid "The signature verification for %s failed."
 msgstr "La verifica della firma di %s non è riuscita."
 
-#: scripts/pacman-key.sh.in:601
+#: scripts/kuzpkg-key.sh.in:601
 #, sh-printf-format
 msgid "The signature %s is not trusted."
 msgstr "La firma %s non è attendibile."
 
-#: scripts/pacman-key.sh.in:609
+#: scripts/kuzpkg-key.sh.in:609
 msgid "Updating trust database..."
 msgstr "Aggiornamento del database in corso..."
 
-#: scripts/pacman-key.sh.in:611
+#: scripts/kuzpkg-key.sh.in:611
 msgid "Trust database could not be updated."
 msgstr "Il database non può essere aggiornato."
 
-#: scripts/pacman-key.sh.in:690
+#: scripts/kuzpkg-key.sh.in:690
 #, sh-printf-format
 msgid "Cannot find the %s binary required for all %s operations."
 msgstr "Impossibile trovare %s richiesto per tutte le operazioni di %s."
 
-#: scripts/pacman-key.sh.in:695
+#: scripts/kuzpkg-key.sh.in:695
 #, sh-printf-format
 msgid "%s needs to be run as root for this operation."
 msgstr "Per questa operazione %s necessita di essere avviato da root."
 
-#: scripts/pacman-key.sh.in:701
+#: scripts/kuzpkg-key.sh.in:701
 #, sh-printf-format
 msgid "%s configuration file '%s' not found."
 msgstr "Impossibile trovare il file di configurazione '%s' di %s."
 
-#: scripts/pacman-key.sh.in:724
+#: scripts/kuzpkg-key.sh.in:724
 msgid "no operation specified (use -h for help)"
 msgstr "nessuna operazione è stata specificata (usa -h per un aiuto)"
 
-#: scripts/pacman-key.sh.in:729
+#: scripts/kuzpkg-key.sh.in:729
 msgid "Multiple operations specified."
 msgstr "Operazioni multiple specificate."
 
-#: scripts/pacman-key.sh.in:730
+#: scripts/kuzpkg-key.sh.in:730
 #, sh-printf-format
 msgid "Please run %s with each operation separately."
 msgstr "Si prega di avviare %s separatamente per ciascuna operazione."
 
-#: scripts/pacman-key.sh.in:738
+#: scripts/kuzpkg-key.sh.in:738
 msgid "No targets specified"
 msgstr "Nessun pacchetto è stato specificato"
 
@@ -1131,9 +1131,9 @@ msgstr ""
 
 #: scripts/repo-add.sh.in:96
 msgid ""
-"Example:  repo-add /path/to/repo.db.tar.gz pacman-3.0.0-1-i686.pkg.tar.gz\\n"
+"Example:  repo-add /path/to/repo.db.tar.gz kuzpkg-3.0.0-1-i686.kuzpkg.tar.zst\\n"
 msgstr ""
-"Esempio:  repo-add /path/al/repo.db.tar.gz pacman-3.0.0-1-i686.pkg.tar.gz\\n"
+"Esempio:  repo-add /path/al/repo.db.tar.gz kuzpkg-3.0.0-1-i686.kuzpkg.tar.zst\\n"
 
 #: scripts/repo-add.sh.in:98
 msgid "Example:  repo-remove /path/to/repo.db.tar.gz kernel26\\n"
@@ -1241,8 +1241,8 @@ msgstr "Tenuto dal processo %s"
 
 #: scripts/repo-add.sh.in:443
 #, sh-printf-format
-msgid "Repository file '%s' is not a proper pacman database."
-msgstr "Il file di repository '%s' non è un valido database di pacman."
+msgid "Repository file '%s' is not a proper kuzpkg database."
+msgstr "Il file di repository '%s' non è un valido database di kuzpkg."
 
 #: scripts/repo-add.sh.in:448
 #, sh-printf-format
@@ -1358,7 +1358,7 @@ msgid "Cannot find the %s binary required for compressing man and info pages."
 msgstr ""
 "Impossibile trovare %s richiesto per comprimere le pagine info e i manuali."
 
-#: scripts/libmakepkg/executable/pacman.sh.in:33
+#: scripts/libmakepkg/executable/kuzpkg.sh.in:33
 #, sh-printf-format
 msgid "Cannot find the %s binary required for dependency operations."
 msgstr ""

@@ -1,6 +1,6 @@
-project('pacman',
+project('kuzpkg',
         'c',
-        version : '7.1.0',
+        version : '0.1.0-alpha',
         license : 'GPLv2+',
         default_options : [
           'c_std=gnu99',
@@ -10,7 +10,7 @@ project('pacman',
         ],
         meson_version : '>= 0.61')
 
-libalpm_version = '16.0.1'
+libkuzpkg_version = '0.1.0'
 
 cc = meson.get_compiler('c')
 
@@ -39,7 +39,7 @@ if BASH.found()
   have_bash = bash_version.version_compare('>= 4.4.0')
 endif
 if not have_bash
-  error('bash >= 4.4.0 is required for pacman scripts.')
+  error('bash >= 4.4.0 is required for kuzpkg scripts.')
 endif
 
 bashcompletion = dependency('bash-completion', required : false)
@@ -67,14 +67,14 @@ conf.set_quoted('PACKAGE_VERSION', PACKAGE_VERSION)
 conf.set_quoted('LOCALEDIR', LOCALEDIR)
 conf.set_quoted('SCRIPTLET_SHELL', get_option('scriptlet-shell'))
 conf.set_quoted('LDCONFIG', LDCONFIG)
-conf.set_quoted('LIB_VERSION', libalpm_version)
-conf.set_quoted('SYSHOOKDIR', join_paths(DATAROOTDIR, 'libalpm/hooks/'))
-conf.set_quoted('CONFFILE', join_paths(SYSCONFDIR, 'pacman.conf'))
-conf.set_quoted('DBPATH', join_paths(LOCALSTATEDIR, 'lib/pacman/'))
-conf.set_quoted('GPGDIR', join_paths(SYSCONFDIR, 'pacman.d/gnupg/'))
-conf.set_quoted('LOGFILE', join_paths(LOCALSTATEDIR, 'log/pacman.log'))
-conf.set_quoted('CACHEDIR', join_paths(LOCALSTATEDIR, 'cache/pacman/pkg/'))
-conf.set_quoted('HOOKDIR', join_paths(SYSCONFDIR, 'pacman.d/hooks/'))
+conf.set_quoted('LIB_VERSION', libkuzpkg_version)
+conf.set_quoted('SYSHOOKDIR', join_paths(DATAROOTDIR, 'libkuzpkg/hooks/'))
+conf.set_quoted('CONFFILE', join_paths(SYSCONFDIR, 'kuzpkg.conf'))
+conf.set_quoted('DBPATH', join_paths(LOCALSTATEDIR, 'lib/kuzpkg/'))
+conf.set_quoted('GPGDIR', join_paths(SYSCONFDIR, 'kuzpkg.d/gnupg/'))
+conf.set_quoted('LOGFILE', join_paths(LOCALSTATEDIR, 'log/kuzpkg.log'))
+conf.set_quoted('CACHEDIR', join_paths(LOCALSTATEDIR, 'cache/kuzpkg/pkg/'))
+conf.set_quoted('HOOKDIR', join_paths(SYSCONFDIR, 'kuzpkg.d/hooks/'))
 conf.set_quoted('ROOTDIR', ROOTDIR)
 
 libintl = dependency('', required: false)
@@ -239,7 +239,7 @@ if get_option('debug')
   ]
   add_project_arguments(cc.get_supported_arguments(extra_cflags), language : 'c')
 
-  conf.set('PACMAN_DEBUG', 1)
+  conf.set('KUZPKG_DEBUG', 1)
 endif
 
 config_h = configure_file(
@@ -301,17 +301,17 @@ substs.set('STRIP_SHARED', strip_shared)
 substs.set('STRIP_STATIC', strip_static)
 substs.set('BSDTAR_NO_READ_SPARSE', bsdtar_no_read_sparse)
 
-subdir('lib/libalpm')
+subdir('lib/libkuzpkg')
 subdir('src/common')
-subdir('src/pacman')
+subdir('src/kuzpkg')
 subdir('src/util')
 subdir('scripts')
 
 # Internationalization
 if get_option('i18n')
   i18n = import('i18n')
-  subdir('lib/libalpm/po')
-  subdir('src/pacman/po')
+  subdir('lib/libkuzpkg/po')
+  subdir('src/kuzpkg/po')
   subdir('scripts/po')
 endif
 
@@ -323,7 +323,7 @@ if build_doc
   subdir('doc')
 endif
 
-includes = include_directories('src/common', 'lib/libalpm')
+includes = include_directories('src/common', 'lib/libkuzpkg')
 
 libcommon = static_library(
   'common',
@@ -332,53 +332,53 @@ libcommon = static_library(
   gnu_symbol_visibility : 'hidden',
   install : false)
 
-alpm_deps = [crypto_provider, libarchive, libcurl, libintl, libseccomp, gpgme]
+klpm_deps = [crypto_provider, libarchive, libcurl, libintl, libseccomp, gpgme]
 
-libalpm_a = static_library(
-  'alpm_objlib',
-  libalpm_sources,
+libkuzpkg_a = static_library(
+  'klpm_objlib',
+  libkuzpkg_sources,
   # https://github.com/mesonbuild/meson/issues/3937
   objects : libcommon.extract_all_objects(recursive: true),
   include_directories : includes,
   gnu_symbol_visibility : 'hidden',
-  dependencies : alpm_deps)
+  dependencies : klpm_deps)
 
-libalpm = library(
-  'alpm',
-  version : libalpm_version,
-  objects: libalpm_a.extract_all_objects(recursive: true),
+libkuzpkg = library(
+  'kuzpkg',
+  version : libkuzpkg_version,
+  objects: libkuzpkg_a.extract_all_objects(recursive: true),
   include_directories : includes,
-  dependencies : alpm_deps,
+  dependencies : klpm_deps,
   install : true)
 
 install_headers(
-  'lib/libalpm/alpm.h',
-  'lib/libalpm/alpm_list.h')
+  'lib/libkuzpkg/klpm.h',
+  'lib/libkuzpkg/klpm_list.h')
 
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(
-  libalpm,
-  name : 'libalpm',
+  libkuzpkg,
+  name : 'libkuzpkg',
   description : 'Arch Linux package management library',
-  version : libalpm_version,
-  url : 'http://archlinux.org/pacman/',
+  version : libkuzpkg_version,
+  url : 'http://archlinux.org/kuzpkg/',
   extra_cflags: [ '-D_FILE_OFFSET_BITS=64' ],
 )
 
-pacman_bin = executable(
-  'pacman',
-  pacman_sources,
+kuzpkg_bin = executable(
+  'kuzpkg',
+  kuzpkg_sources,
   include_directories : includes,
-  link_with : [libalpm, libcommon],
+  link_with : [libkuzpkg, libcommon],
   dependencies : [libarchive],
   install : true,
 )
 
 executable(
-  'pacman-conf',
-  pacman_conf_sources,
+  'kuzpkg-conf',
+  kuzpkg_conf_sources,
   include_directories : includes,
-  link_with : [libalpm, libcommon],
+  link_with : [libkuzpkg, libcommon],
   dependencies : [libarchive],
   install : true,
 )
@@ -387,7 +387,7 @@ executable(
   'testpkg',
   testpkg_sources,
   include_directories : includes,
-  link_with : [libalpm],
+  link_with : [libkuzpkg],
   dependencies : [libarchive],
   install : true,
 )
@@ -396,7 +396,7 @@ executable(
   'vercmp',
   vercmp_sources,
   include_directories : includes,
-  link_with : [libalpm_a],
+  link_with : [libkuzpkg_a],
   install : true,
 )
 
@@ -436,8 +436,8 @@ configure_file(
 install_emptydir(join_paths(SYSCONFDIR, 'makepkg.d/'))
 
 configure_file(
-  input : 'etc/pacman.conf.in',
-  output : 'pacman.conf',
+  input : 'etc/kuzpkg.conf.in',
+  output : 'kuzpkg.conf',
   configuration : substs,
   install_dir : SYSCONFDIR)
 
@@ -446,13 +446,13 @@ install_data(
   'proto/PKGBUILD-vcs.proto',
   'proto/PKGBUILD.proto',
   'proto/proto.install',
-  install_dir : join_paths(DATAROOTDIR, 'pacman'))
+  install_dir : join_paths(DATAROOTDIR, 'kuzpkg'))
 
 foreach path : [
-	join_paths(LOCALSTATEDIR, 'lib/pacman/'),
-	join_paths(LOCALSTATEDIR, 'cache/pacman/pkg/'),
+	join_paths(LOCALSTATEDIR, 'lib/kuzpkg/'),
+	join_paths(LOCALSTATEDIR, 'cache/kuzpkg/pkg/'),
 	join_paths(DATAROOTDIR, 'makepkg-template/'),
-	join_paths(DATAROOTDIR, 'libalpm/hooks/'),
+	join_paths(DATAROOTDIR, 'libkuzpkg/hooks/'),
 	]
 	meson.add_install_script('sh', '-c', 'mkdir -p "$DESTDIR/@0@"'.format(path))
 endforeach
@@ -463,25 +463,25 @@ TEST_ENV.set('PMTEST_LIBMAKEPKG_DIR', join_paths(meson.project_build_root(), 'sc
 TEST_ENV.set('PMTEST_UTIL_DIR', meson.project_build_root() + '/')
 TEST_ENV.set('PMTEST_SCRIPT_DIR', join_paths(meson.project_build_root(), 'scripts/'))
 
-subdir('test/pacman')
+subdir('test/kuzpkg')
 subdir('test/scripts')
 subdir('test/util')
 
 summary({
   'prefix': PREFIX,
   'sysconfdir': SYSCONFDIR,
-  '    conf file': join_paths(SYSCONFDIR, 'pacman.conf'),
+  '    conf file': join_paths(SYSCONFDIR, 'kuzpkg.conf'),
   'localstatedir': LOCALSTATEDIR,
-  '    database dir': join_paths(LOCALSTATEDIR, 'lib/pacman/'),
-  '    cache dir': join_paths(LOCALSTATEDIR, 'cache/pacman/pkg/'),
+  '    database dir': join_paths(LOCALSTATEDIR, 'lib/kuzpkg/'),
+  '    cache dir': join_paths(LOCALSTATEDIR, 'cache/kuzpkg/pkg/'),
   'keyringdir': KEYRINGDIR,
   'compiler': '@0@ @1@\n'.format(cc.get_id(), cc.version()),
   'Architecture': carch,
   'Host Type': chost,
   'File inode command': inodecmd,
   'File seccomp command': filecmd,
-  'libalpm version': libalpm_version,
-  'pacman version': PACKAGE_VERSION,
+  'libkuzpkg version': libkuzpkg_version,
+  'kuzpkg version': PACKAGE_VERSION,
 }, section: 'Build information')
 
 summary({

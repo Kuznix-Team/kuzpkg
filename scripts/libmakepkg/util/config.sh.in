@@ -2,7 +2,7 @@
 #
 #   config.sh - functions for handling makepkg config files
 #
-#   Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
+#   Copyright (C) 2026 Kuznix
 #   Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
 #
 #   This program is free software; you can redistribute it and/or modify
@@ -50,10 +50,10 @@ source_makepkg_config() {
 
 	# Source user-specific makepkg.conf overrides, but only if no override config
 	# file was specified
-	XDG_PACMAN_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/pacman"
+	XDG_KUZPKG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kuzpkg"
 	if [[ $MAKEPKG_CONF = "@sysconfdir@/makepkg.conf" ]]; then
-		if [[ -r $XDG_PACMAN_DIR/makepkg.conf ]]; then
-			source_safe "$XDG_PACMAN_DIR/makepkg.conf"
+		if [[ -r $XDG_KUZPKG_DIR/makepkg.conf ]]; then
+			source_safe "$XDG_KUZPKG_DIR/makepkg.conf"
 		elif [[ -r $HOME/.makepkg.conf ]]; then
 			source_safe "$HOME/.makepkg.conf"
 		fi

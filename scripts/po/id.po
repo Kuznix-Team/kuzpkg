@@ -1,6 +1,6 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR "Pacman Development Team <pacman-dev@lists.archlinux.org>"
-# This file is distributed under the same license as the pacman-scripts package.
+# Copyright (C) 2026 Kuznix"
+# This file is distributed under the same license as the kuzpkg-scripts package.
 #
 # Translators:
 # Andika Triwidada <andika@gmail.com>, 2023
@@ -17,13 +17,13 @@
 # se7entime <se7entime@disroot.org>, 2013,2016
 msgid ""
 msgstr ""
-"Project-Id-Version: Arch Linux Pacman package manager\n"
-"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/pacman/pacman/-/issues\n"
+"Project-Id-Version: Arch Linux Kuzpkg package manager\n"
+"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/kuzpkg/kuzpkg/-/issues\n"
 "POT-Creation-Date: 2025-11-01 20:25+1000\n"
 "PO-Revision-Date: 2011-08-08 22:35+0000\n"
 "Last-Translator: se7entime <se7entime@disroot.org>, 2013,2016\n"
 "Language-Team: Indonesian (http://app.transifex.com/toofishes/archlinux-"
-"pacman/language/id/)\n"
+"kuzpkg/language/id/)\n"
 "Language: id\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -108,8 +108,8 @@ msgid "Aborting..."
 msgstr "Membatalkan..."
 
 #: scripts/makepkg.sh.in:249
-msgid "Pacman is currently in use, please wait..."
-msgstr "Pacman saat ini sedang dipakai, harap tunggu..."
+msgid "Kuzpkg is currently in use, please wait..."
+msgstr "Kuzpkg saat ini sedang dipakai, harap tunggu..."
 
 #: scripts/makepkg.sh.in:270
 #, sh-printf-format
@@ -242,15 +242,15 @@ msgid "Part of the package group has already been built. (use %s to overwrite)"
 msgstr "Bagian dari grup paket sudah dibuat. (gunakan %s untuk menimpa)"
 
 #: scripts/makepkg.sh.in:883
-msgid "Make packages compatible for use with pacman"
-msgstr "Buat paket sesuai dengan penggunaan pacman"
+msgid "Make packages compatible for use with kuzpkg"
+msgstr "Buat paket sesuai dengan penggunaan kuzpkg"
 
-#: scripts/makepkg.sh.in:885 scripts/pacman-db-upgrade.sh.in:41
+#: scripts/makepkg.sh.in:885 scripts/kuzpkg-db-upgrade.sh.in:41
 #, sh-printf-format
 msgid "Usage: %s [options]"
 msgstr "Penggunaan: %s [opsi]"
 
-#: scripts/makepkg.sh.in:887 scripts/pacman-key.sh.in:82
+#: scripts/makepkg.sh.in:887 scripts/kuzpkg-key.sh.in:82
 msgid "Options:"
 msgstr "Opsi:"
 
@@ -453,8 +453,8 @@ msgstr "--noprogressbar Jangan tunjukkan baris proses ketika mengunduh berkas"
 msgid "If %s is not specified, %s will look for '%s'"
 msgstr "Jika %s tidak dispesifikkan, %s akan mencari '%s'"
 
-#: scripts/makepkg.sh.in:940 scripts/pacman-db-upgrade.sh.in:57
-#: scripts/pacman-key.sh.in:99 scripts/repo-add.sh.in:107
+#: scripts/makepkg.sh.in:940 scripts/kuzpkg-db-upgrade.sh.in:57
+#: scripts/kuzpkg-key.sh.in:99 scripts/repo-add.sh.in:107
 msgid ""
 "This is free software; see the source for copying conditions.\\nThere is NO "
 "WARRANTY, to the extent permitted by law.\\n"
@@ -566,153 +566,153 @@ msgstr "Direktori paket siap."
 msgid "Finished making: %s"
 msgstr "Selesai membuat: %s"
 
-#: scripts/pacman-db-upgrade.sh.in:39
-msgid "Upgrade the local pacman database to a newer format"
-msgstr "Perbarui database lokal pacman ke format yang lebih baru"
+#: scripts/kuzpkg-db-upgrade.sh.in:39
+msgid "Upgrade the local kuzpkg database to a newer format"
+msgstr "Perbarui database lokal kuzpkg ke format yang lebih baru"
 
-#: scripts/pacman-db-upgrade.sh.in:43
+#: scripts/kuzpkg-db-upgrade.sh.in:43
 msgid "options:"
 msgstr "Opsi:"
 
-#: scripts/pacman-db-upgrade.sh.in:44
+#: scripts/kuzpkg-db-upgrade.sh.in:44
 msgid "  -d, --dbpath <path>  set an alternate database location"
 msgstr ""
 
-#: scripts/pacman-db-upgrade.sh.in:45
+#: scripts/kuzpkg-db-upgrade.sh.in:45
 msgid "  -h, --help           show this help message and exit"
 msgstr "-h, --help perlihatkan pesan ini dan keluar"
 
-#: scripts/pacman-db-upgrade.sh.in:46
+#: scripts/kuzpkg-db-upgrade.sh.in:46
 msgid "  -r, --root <path>    set an alternate installation root"
 msgstr "-r, --root <path> atur root pemasangan alternatif"
 
-#: scripts/pacman-db-upgrade.sh.in:47
+#: scripts/kuzpkg-db-upgrade.sh.in:47
 msgid "  -V, --version        show version information and exit"
 msgstr "-V, --version perlihatkan informasi versi dan keluar"
 
-#: scripts/pacman-db-upgrade.sh.in:48
+#: scripts/kuzpkg-db-upgrade.sh.in:48
 msgid "  --config <path>      set an alternate configuration file"
 msgstr "--config <pat> atur berkas konfigurasi alternatif"
 
-#: scripts/pacman-db-upgrade.sh.in:49
+#: scripts/kuzpkg-db-upgrade.sh.in:49
 msgid "  --nocolor            disable colorized output messages"
 msgstr "--nocolor lumpuhkan pesan keluaran berwarna"
 
-#: scripts/pacman-db-upgrade.sh.in:122 scripts/repo-add.sh.in:409
+#: scripts/kuzpkg-db-upgrade.sh.in:122 scripts/repo-add.sh.in:409
 #, sh-printf-format
 msgid "%s does not exist or is not a directory."
 msgstr "%s tidak ada atau bukan sebuah direktori."
 
-#: scripts/pacman-db-upgrade.sh.in:126
+#: scripts/kuzpkg-db-upgrade.sh.in:126
 #, sh-printf-format
-msgid "%s is not a pacman database directory."
-msgstr "%s bukan merupakan direktori database pacman."
+msgid "%s is not a kuzpkg database directory."
+msgstr "%s bukan merupakan direktori database kuzpkg."
 
-#: scripts/pacman-db-upgrade.sh.in:130
+#: scripts/kuzpkg-db-upgrade.sh.in:130
 msgid "You must have correct permissions to upgrade the database."
 msgstr "Anda harus mempunyai izin yang tepat untuk meningkatkan database."
 
-#: scripts/pacman-db-upgrade.sh.in:140
-msgid "Pacman lock file was found. Cannot run while pacman is running."
+#: scripts/kuzpkg-db-upgrade.sh.in:140
+msgid "Kuzpkg lock file was found. Cannot run while kuzpkg is running."
 msgstr ""
-"Berkas pengunci pacman ditemukan. Tidak dapat mengeksekusi ketika pacman "
+"Berkas pengunci kuzpkg ditemukan. Tidak dapat mengeksekusi ketika kuzpkg "
 "berjalan."
 
-#: scripts/pacman-db-upgrade.sh.in:152
+#: scripts/kuzpkg-db-upgrade.sh.in:152
 msgid "Pre-3.5 database format detected - upgrading..."
 msgstr "Format database pra-3.5 terdeteksi - meningkatkan..."
 
-#: scripts/pacman-db-upgrade.sh.in:159
+#: scripts/kuzpkg-db-upgrade.sh.in:159
 msgid "Done."
 msgstr "Selesai."
 
-#: scripts/pacman-db-upgrade.sh.in:163
+#: scripts/kuzpkg-db-upgrade.sh.in:163
 msgid "Pre-4.2 database format detected - upgrading..."
 msgstr "Format database Pra-4.2 terdeteksi - meningkatkan..."
 
-#: scripts/pacman-db-upgrade.sh.in:185
+#: scripts/kuzpkg-db-upgrade.sh.in:185
 #, sh-printf-format
-msgid "symlink '%s' points outside pacman root, manual repair required"
-msgstr "symlink '%s' mengacu diluar root pacman, perbaikan manual dibutuhkan"
+msgid "symlink '%s' points outside kuzpkg root, manual repair required"
+msgstr "symlink '%s' mengacu diluar root kuzpkg, perbaikan manual dibutuhkan"
 
-#: scripts/pacman-key.sh.in:58
+#: scripts/kuzpkg-key.sh.in:58
 #, sh-printf-format
 msgid "Usage: %s [options] operation [targets]"
 msgstr "Penggunaan: %s [opsi] operasi [target]"
 
-#: scripts/pacman-key.sh.in:60
-msgid "Manage pacman's list of trusted keys"
-msgstr "Kelola daftar kunci terpercaya pacman"
+#: scripts/kuzpkg-key.sh.in:60
+msgid "Manage kuzpkg's list of trusted keys"
+msgstr "Kelola daftar kunci terpercaya kuzpkg"
 
-#: scripts/pacman-key.sh.in:62
+#: scripts/kuzpkg-key.sh.in:62
 msgid "Operations:"
 msgstr "Operasi:"
 
-#: scripts/pacman-key.sh.in:63
+#: scripts/kuzpkg-key.sh.in:63
 msgid "  -a, --add                 Add the specified keys (empty for stdin)"
 msgstr "-a, --add Menambahkan kunci yang sudah ditentukan (kosong untuk stdin)"
 
-#: scripts/pacman-key.sh.in:64
+#: scripts/kuzpkg-key.sh.in:64
 msgid "  -d, --delete              Remove the specified keyids"
 msgstr "-d, --delete Hapus keyids yang ditentukan"
 
-#: scripts/pacman-key.sh.in:65
+#: scripts/kuzpkg-key.sh.in:65
 msgid "  -e, --export              Export the specified or all keyids"
 msgstr "-e, --export Ekspor kunci yang ditentukan atau semua kunci"
 
-#: scripts/pacman-key.sh.in:66
+#: scripts/kuzpkg-key.sh.in:66
 msgid ""
 "  -f, --finger              List fingerprint for specified or all keyids"
 msgstr ""
 "-f, --finger Daftar sidik jari untuk keyid yang ditentukan atau semuanya"
 
-#: scripts/pacman-key.sh.in:67
+#: scripts/kuzpkg-key.sh.in:67
 msgid "  -l, --list-keys           List the specified or all keys"
 msgstr "-l, --list-keys Daftar dari kunci yang ditentukan atau semuanya"
 
-#: scripts/pacman-key.sh.in:68
+#: scripts/kuzpkg-key.sh.in:68
 msgid "  -r, --recv-keys           Fetch the specified keyids"
 msgstr "-r, --recv-keys Ambil keyid yang ditentukan"
 
-#: scripts/pacman-key.sh.in:69
-msgid "  -u, --updatedb            Update the trustdb of pacman"
-msgstr "-u, --updatedb Mutakhirkan trustdb pacman"
+#: scripts/kuzpkg-key.sh.in:69
+msgid "  -u, --updatedb            Update the trustdb of kuzpkg"
+msgstr "-u, --updatedb Mutakhirkan trustdb kuzpkg"
 
-#: scripts/pacman-key.sh.in:70
+#: scripts/kuzpkg-key.sh.in:70
 msgid ""
 "  -v, --verify              Verify the file(s) specified by the signature(s)"
 msgstr ""
 "-v, --verify Verifikasi berkas(-berkas) yang ditentukan oleh signature(s)"
 
-#: scripts/pacman-key.sh.in:71
+#: scripts/kuzpkg-key.sh.in:71
 msgid ""
 "  --edit-key                Present a menu for key management task on keyids"
 msgstr "--edit-key Tampilkan menu untuk tugas pengelolaan keyid"
 
-#: scripts/pacman-key.sh.in:72
+#: scripts/kuzpkg-key.sh.in:72
 msgid "  --import                  Imports pubring.gpg from dir(s)"
 msgstr "--import Mengimpor pubring.gpg dari direktori(s)"
 
-#: scripts/pacman-key.sh.in:73
+#: scripts/kuzpkg-key.sh.in:73
 msgid ""
 "  --import-trustdb          Imports ownertrust values from trustdb.gpg in "
 "dir(s)"
 msgstr ""
 "--import-trustdb Impor nilai ownertrust dari trustdb.gpg pada direktori(s)"
 
-#: scripts/pacman-key.sh.in:74
+#: scripts/kuzpkg-key.sh.in:74
 msgid "  --init                    Ensure the keyring is properly initialized"
 msgstr "--init Memastikan keyring sudah dimulai dengan layak"
 
-#: scripts/pacman-key.sh.in:75
+#: scripts/kuzpkg-key.sh.in:75
 msgid "  --list-sigs               List keys and their signatures"
 msgstr "--list-sigs Tampilkan daftar key dan signature"
 
-#: scripts/pacman-key.sh.in:76
+#: scripts/kuzpkg-key.sh.in:76
 msgid "  --lsign-key               Locally sign the specified keyid"
 msgstr "-lsign-key Menandai keyid yang ditentukan"
 
-#: scripts/pacman-key.sh.in:77
+#: scripts/kuzpkg-key.sh.in:77
 #, sh-printf-format
 msgid ""
 "  --populate                Reload the default keys from the (given) "
@@ -720,18 +720,18 @@ msgid ""
 msgstr ""
 "--populate Memuat ulang key default dari keyring (yang diberikan) pada '%s'"
 
-#: scripts/pacman-key.sh.in:79
+#: scripts/kuzpkg-key.sh.in:79
 msgid ""
 "  --refresh-keys            Update specified or all keys from a keyserver"
 msgstr ""
 "--refresh-keys Memutakhirkan kunci yang ditentukan atau semuanya dari "
 "keyserver"
 
-#: scripts/pacman-key.sh.in:80
+#: scripts/kuzpkg-key.sh.in:80
 msgid "  --verbose                 Show extra information"
 msgstr ""
 
-#: scripts/pacman-key.sh.in:83
+#: scripts/kuzpkg-key.sh.in:83
 #, sh-printf-format
 msgid ""
 "  --config <file>           Use an alternate config file (instead "
@@ -739,240 +739,240 @@ msgid ""
 msgstr ""
 "--config <berkas> Gunakan berkas konfigurasi alternatif (selain \\n'%s')"
 
-#: scripts/pacman-key.sh.in:85
+#: scripts/kuzpkg-key.sh.in:85
 #, sh-printf-format
 msgid ""
 "  --gpgdir <dir>            Set an alternate directory for GnuPG "
 "(instead\\n                            of '%s')"
 msgstr "--gpgdir <dir> Mengatur direktori alternatif GnuPG (daripada\\n '%s')"
 
-#: scripts/pacman-key.sh.in:87
+#: scripts/kuzpkg-key.sh.in:87
 #, sh-printf-format
 msgid ""
 "  --populate-from <dir>     Set an alternate directory for --populate "
 "(instead\\n                            of '%s')"
 msgstr ""
 
-#: scripts/pacman-key.sh.in:89
+#: scripts/kuzpkg-key.sh.in:89
 msgid "  --keyserver <server-url>  Specify a keyserver to use if necessary"
 msgstr ""
 "--keyserver <server-url> menentukan keyserver yang digunakan bila dibutuhkan"
 
-#: scripts/pacman-key.sh.in:91
+#: scripts/kuzpkg-key.sh.in:91
 msgid "  -h, --help                Show this help message and exit"
 msgstr "-h, --help tunjukkan pesan bantuan ini dan keluar"
 
-#: scripts/pacman-key.sh.in:92
+#: scripts/kuzpkg-key.sh.in:92
 msgid "  -V, --version             Show program version"
 msgstr "-V, --version Perlihatkan versi program"
 
-#: scripts/pacman-key.sh.in:134
+#: scripts/kuzpkg-key.sh.in:134
 msgid "Failed to lookup key by name:"
 msgstr "Gagal untuk mencari kunci dengan nama:"
 
-#: scripts/pacman-key.sh.in:142
+#: scripts/kuzpkg-key.sh.in:142
 msgid "Key name is ambiguous:"
 msgstr "Nama kunci ambigu:"
 
-#: scripts/pacman-key.sh.in:150
-msgid "Generating pacman master key. This may take some time."
+#: scripts/kuzpkg-key.sh.in:150
+msgid "Generating kuzpkg master key. This may take some time."
 msgstr ""
 
-#: scripts/pacman-key.sh.in:187
+#: scripts/kuzpkg-key.sh.in:187
 #, sh-printf-format
 msgid "The key identified by %s could not be found locally."
 msgstr "Kunci diidentifikasi oleh %s tidak dapat ditemukan pada lokal."
 
-#: scripts/pacman-key.sh.in:198 scripts/pacman-key.sh.in:210
+#: scripts/kuzpkg-key.sh.in:198 scripts/kuzpkg-key.sh.in:210
 #: scripts/libmakepkg/integrity/verify_signature.sh.in:219
 msgid "_"
 msgstr "_"
 
-#: scripts/pacman-key.sh.in:210
+#: scripts/kuzpkg-key.sh.in:210
 msgid "flags"
 msgstr "flag"
 
-#: scripts/pacman-key.sh.in:264
+#: scripts/kuzpkg-key.sh.in:264
 #, sh-printf-format
 msgid "You do not have sufficient permissions to read the %s keyring."
 msgstr "Anda tidak mempunyai izin yang cukup untuk membaca keyring %s."
 
-#: scripts/pacman-key.sh.in:265
+#: scripts/kuzpkg-key.sh.in:265
 #, sh-printf-format
 msgid "Use '%s' to correct the keyring permissions."
 msgstr "Gunakan '%s' untuk membenarkan izin keyring."
 
-#: scripts/pacman-key.sh.in:270
+#: scripts/kuzpkg-key.sh.in:270
 msgid "You do not have sufficient permissions to run this command."
 msgstr "Anda tidak memiliki izin yang cukup untuk menjalankan perintah ini."
 
-#: scripts/pacman-key.sh.in:276
+#: scripts/kuzpkg-key.sh.in:276
 msgid "There is no secret key available to sign with."
 msgstr "Tak ada kunci rahasia yang tersedia untuk menandai."
 
-#: scripts/pacman-key.sh.in:277
+#: scripts/kuzpkg-key.sh.in:277
 #, sh-printf-format
 msgid "Use '%s' to generate a default secret key."
 msgstr "Menggunakan '%s' untuk menghasilkan kunci rahasia default."
 
-#: scripts/pacman-key.sh.in:295
+#: scripts/kuzpkg-key.sh.in:295
 #, sh-printf-format
 msgid "No keyring files exist in %s."
 msgstr "Tidak ada berkas keyring ada di %s."
 
-#: scripts/pacman-key.sh.in:302
+#: scripts/kuzpkg-key.sh.in:302
 #, sh-printf-format
 msgid "The keyring file %s does not exist."
 msgstr "Berkas keyring %s tidak ada."
 
-#: scripts/pacman-key.sh.in:317
+#: scripts/kuzpkg-key.sh.in:317
 #, sh-printf-format
 msgid "Appending keys from %s.gpg..."
 msgstr "Menambahkan kunci dari %s.gpg..."
 
-#: scripts/pacman-key.sh.in:357
+#: scripts/kuzpkg-key.sh.in:357
 msgid "Locally signing trusted keys in keyring..."
 msgstr "Menandai kunci terpercaya lokal pada keyring..."
 
-#: scripts/pacman-key.sh.in:359
+#: scripts/kuzpkg-key.sh.in:359
 msgid "Importing owner trust values..."
 msgstr "Mengimpor nilai trust dari pemilik..."
 
-#: scripts/pacman-key.sh.in:369
+#: scripts/kuzpkg-key.sh.in:369
 msgid "Disabling revoked keys in keyring..."
 msgstr "Menonaktifkan kunci yang dihapus pada keyring..."
 
-#: scripts/pacman-key.sh.in:372
+#: scripts/kuzpkg-key.sh.in:372
 #, sh-printf-format
 msgid "Disabling key %s..."
 msgstr "Menonaktifkan kunci %s..."
 
-#: scripts/pacman-key.sh.in:378
+#: scripts/kuzpkg-key.sh.in:378
 #, sh-printf-format
 msgid "Disabled %s key."
 msgid_plural "Disabled %s keys."
 msgstr[0] ""
 
-#: scripts/pacman-key.sh.in:385
+#: scripts/kuzpkg-key.sh.in:385
 msgid "A specified keyfile could not be added to the keyring."
 msgstr "BerkasKunci yang ditentukan tidak dapat ditambahkan ke keyring."
 
-#: scripts/pacman-key.sh.in:393
+#: scripts/kuzpkg-key.sh.in:393
 msgid "A specified key could not be removed from the keyring."
 msgstr "Kunci yang ditentukan tidak dapat dihapus dari keyring."
 
-#: scripts/pacman-key.sh.in:403
+#: scripts/kuzpkg-key.sh.in:403
 #, sh-printf-format
 msgid "The key identified by %s could not be edited."
 msgstr "Kunci yang diidentifikasi sebagai %s tidak dapat disunting."
 
-#: scripts/pacman-key.sh.in:415
+#: scripts/kuzpkg-key.sh.in:415
 msgid "A specified key could not be exported from the keyring."
 msgstr "Kunci yang ditentukan tidak dapat diekspor dari keyring."
 
-#: scripts/pacman-key.sh.in:423
+#: scripts/kuzpkg-key.sh.in:423
 msgid "The fingerprint of a specified key could not be determined."
 msgstr "Sidik jari dari kunci yang ditentukan tidak dapat ditentukan."
 
-#: scripts/pacman-key.sh.in:436 scripts/pacman-key.sh.in:455
+#: scripts/kuzpkg-key.sh.in:436 scripts/kuzpkg-key.sh.in:455
 #, sh-printf-format
 msgid "%s could not be imported."
 msgstr "%s tidak dapat diimpor."
 
-#: scripts/pacman-key.sh.in:440 scripts/pacman-key.sh.in:459
+#: scripts/kuzpkg-key.sh.in:440 scripts/kuzpkg-key.sh.in:459
 #, sh-printf-format
 msgid "File %s does not exist and could not be imported."
 msgstr "Berkas %s tidak ada dan tidak dapat diimpor."
 
-#: scripts/pacman-key.sh.in:471
+#: scripts/kuzpkg-key.sh.in:471
 msgid "A specified key could not be listed."
 msgstr "Sebuah kunci yang ditentukan tidak dapat didaftar."
 
-#: scripts/pacman-key.sh.in:479
+#: scripts/kuzpkg-key.sh.in:479
 msgid "A specified signature could not be listed."
 msgstr "Sebuah signature yang ditentukan tidak dapat didaftarkan."
 
-#: scripts/pacman-key.sh.in:491
+#: scripts/kuzpkg-key.sh.in:491
 #, sh-printf-format
 msgid "Locally signing key %s..."
 msgstr "Menandai kunci %s secara lokal..."
 
-#: scripts/pacman-key.sh.in:496
+#: scripts/kuzpkg-key.sh.in:496
 #, sh-printf-format
 msgid "%s could not be locally signed."
 msgstr "%s tidak dapat ditandai secara lokal."
 
-#: scripts/pacman-key.sh.in:506
+#: scripts/kuzpkg-key.sh.in:506
 #, sh-printf-format
 msgid "Locally signed %s key."
 msgid_plural "Locally signed %s keys."
 msgstr[0] ""
 
-#: scripts/pacman-key.sh.in:529
+#: scripts/kuzpkg-key.sh.in:529
 msgid "Remote key not fetched correctly from WKD or keyserver."
 msgstr ""
 
-#: scripts/pacman-key.sh.in:534
+#: scripts/kuzpkg-key.sh.in:534
 msgid "Remote key not fetched correctly from keyserver."
 msgstr "Kunci remote tidak dapat diambil dengan benar dari kunci server."
 
-#: scripts/pacman-key.sh.in:566
+#: scripts/kuzpkg-key.sh.in:566
 #, sh-printf-format
 msgid "Could not update key: %s"
 msgstr ""
 
-#: scripts/pacman-key.sh.in:587 scripts/repo-add.sh.in:271
+#: scripts/kuzpkg-key.sh.in:587 scripts/repo-add.sh.in:271
 #, sh-printf-format
 msgid "Cannot use armored signatures for packages: %s"
 msgstr "Tidak dapat menggunakan tanda yang diperkuat untuk paket: %s"
 
-#: scripts/pacman-key.sh.in:595
+#: scripts/kuzpkg-key.sh.in:595
 #, sh-printf-format
 msgid "The signature verification for %s failed."
 msgstr ""
 
-#: scripts/pacman-key.sh.in:601
+#: scripts/kuzpkg-key.sh.in:601
 #, sh-printf-format
 msgid "The signature %s is not trusted."
 msgstr ""
 
-#: scripts/pacman-key.sh.in:609
+#: scripts/kuzpkg-key.sh.in:609
 msgid "Updating trust database..."
 msgstr "Memutakhirkan database trust..."
 
-#: scripts/pacman-key.sh.in:611
+#: scripts/kuzpkg-key.sh.in:611
 msgid "Trust database could not be updated."
 msgstr "Trust database tidak dapat dimutakhirkan."
 
-#: scripts/pacman-key.sh.in:690
+#: scripts/kuzpkg-key.sh.in:690
 #, sh-printf-format
 msgid "Cannot find the %s binary required for all %s operations."
 msgstr "Tidak dapat mencari binary %s yang dibutuhkan untuk semua %s operasi."
 
-#: scripts/pacman-key.sh.in:695
+#: scripts/kuzpkg-key.sh.in:695
 #, sh-printf-format
 msgid "%s needs to be run as root for this operation."
 msgstr "%s harus dijalankan sebagai root untuk operasi ini."
 
-#: scripts/pacman-key.sh.in:701
+#: scripts/kuzpkg-key.sh.in:701
 #, sh-printf-format
 msgid "%s configuration file '%s' not found."
 msgstr "%s berkas konfigurasi '%s' tidak ditemukan."
 
-#: scripts/pacman-key.sh.in:724
+#: scripts/kuzpkg-key.sh.in:724
 msgid "no operation specified (use -h for help)"
 msgstr "tidak ada operasi yang ditentukan (gunakan -h untuk bantuan)"
 
-#: scripts/pacman-key.sh.in:729
+#: scripts/kuzpkg-key.sh.in:729
 msgid "Multiple operations specified."
 msgstr "Operasi jamak ditentukan."
 
-#: scripts/pacman-key.sh.in:730
+#: scripts/kuzpkg-key.sh.in:730
 #, sh-printf-format
 msgid "Please run %s with each operation separately."
 msgstr "Mohon jalankan %s pada tiap operasi terpisah."
 
-#: scripts/pacman-key.sh.in:738
+#: scripts/kuzpkg-key.sh.in:738
 msgid "No targets specified"
 msgstr "Tak ada target yang ditentukan"
 
@@ -1068,9 +1068,9 @@ msgstr "\\nLihat %s(8) untuk detail dan deskripsi dari opsi yang tersedia.\\n"
 
 #: scripts/repo-add.sh.in:96
 msgid ""
-"Example:  repo-add /path/to/repo.db.tar.gz pacman-3.0.0-1-i686.pkg.tar.gz\\n"
+"Example:  repo-add /path/to/repo.db.tar.gz kuzpkg-3.0.0-1-i686.kuzpkg.tar.zst\\n"
 msgstr ""
-"Contoh: repo-add /path/ke/repo.db.tar.gz pacman-3.0.0-1-i686.pkg.tar.gz\\n"
+"Contoh: repo-add /path/ke/repo.db.tar.gz kuzpkg-3.0.0-1-i686.kuzpkg.tar.zst\\n"
 
 #: scripts/repo-add.sh.in:98
 msgid "Example:  repo-remove /path/to/repo.db.tar.gz kernel26\\n"
@@ -1176,8 +1176,8 @@ msgstr "Proses ditahan oleh %s"
 
 #: scripts/repo-add.sh.in:443
 #, sh-printf-format
-msgid "Repository file '%s' is not a proper pacman database."
-msgstr "Berkas repositori '%s' bukan merupakan database pacman yang layak."
+msgid "Repository file '%s' is not a proper kuzpkg database."
+msgstr "Berkas repositori '%s' bukan merupakan database kuzpkg yang layak."
 
 #: scripts/repo-add.sh.in:448
 #, sh-printf-format
@@ -1295,7 +1295,7 @@ msgstr ""
 "Tidak dapat mencari binary %s yang dibutuhkan untuk mengkompresi man dan "
 "halaman info."
 
-#: scripts/libmakepkg/executable/pacman.sh.in:33
+#: scripts/libmakepkg/executable/kuzpkg.sh.in:33
 #, sh-printf-format
 msgid "Cannot find the %s binary required for dependency operations."
 msgstr "Tidak dapat mencari binary %s yang dibutuhkan untuk operasi dependensi"

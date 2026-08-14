@@ -1,4 +1,4 @@
-The following checklist should be used for making a pacman release.
+The following checklist should be used for making a kuzpkg release.
 
 - Ensure "ninja dist" succeeds
 - Call a freeze to development.

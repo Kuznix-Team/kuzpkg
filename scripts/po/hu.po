@@ -1,6 +1,6 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR "Pacman Development Team <pacman-dev@lists.archlinux.org>"
-# This file is distributed under the same license as the pacman-scripts package.
+# Copyright (C) 2026 Kuznix"
+# This file is distributed under the same license as the kuzpkg-scripts package.
 #
 # Translators:
 # Balló György <ballogyor@gmail.com>, 2013
@@ -20,13 +20,13 @@
 # user14 <nleknh@gmail.com>, 2019
 msgid ""
 msgstr ""
-"Project-Id-Version: Arch Linux Pacman package manager\n"
-"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/pacman/pacman/-/issues\n"
+"Project-Id-Version: Arch Linux Kuzpkg package manager\n"
+"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/kuzpkg/kuzpkg/-/issues\n"
 "POT-Creation-Date: 2025-11-01 20:25+1000\n"
 "PO-Revision-Date: 2011-08-08 22:35+0000\n"
 "Last-Translator: summoner <summoner@disroot.org>, 2025\n"
 "Language-Team: Hungarian (http://app.transifex.com/toofishes/archlinux-"
-"pacman/language/hu/)\n"
+"kuzpkg/language/hu/)\n"
 "Language: hu\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -111,8 +111,8 @@ msgid "Aborting..."
 msgstr "Megszakítás…"
 
 #: scripts/makepkg.sh.in:249
-msgid "Pacman is currently in use, please wait..."
-msgstr "A Pacman jelenleg használatban van. Kis türelmet…"
+msgid "Kuzpkg is currently in use, please wait..."
+msgstr "A Kuzpkg jelenleg használatban van. Kis türelmet…"
 
 #: scripts/makepkg.sh.in:270
 #, sh-printf-format
@@ -251,15 +251,15 @@ msgstr ""
 "a(z) %s kapcsolót)"
 
 #: scripts/makepkg.sh.in:883
-msgid "Make packages compatible for use with pacman"
-msgstr "Csomagok kompatibilitássá tétele a Pacmannel történő használathoz"
+msgid "Make packages compatible for use with kuzpkg"
+msgstr "Csomagok kompatibilitássá tétele a Kuzpkgnel történő használathoz"
 
-#: scripts/makepkg.sh.in:885 scripts/pacman-db-upgrade.sh.in:41
+#: scripts/makepkg.sh.in:885 scripts/kuzpkg-db-upgrade.sh.in:41
 #, sh-printf-format
 msgid "Usage: %s [options]"
 msgstr "Használat: %s [kapcsolók]"
 
-#: scripts/makepkg.sh.in:887 scripts/pacman-key.sh.in:82
+#: scripts/makepkg.sh.in:887 scripts/kuzpkg-key.sh.in:82
 msgid "Options:"
 msgstr "Kapcsolók:"
 
@@ -477,8 +477,8 @@ msgid "If %s is not specified, %s will look for '%s'"
 msgstr ""
 "Ha a(z) %s nincs megadva, akkor a(z) %s a következőt fogja keresni: „%s”"
 
-#: scripts/makepkg.sh.in:940 scripts/pacman-db-upgrade.sh.in:57
-#: scripts/pacman-key.sh.in:99 scripts/repo-add.sh.in:107
+#: scripts/makepkg.sh.in:940 scripts/kuzpkg-db-upgrade.sh.in:57
+#: scripts/kuzpkg-key.sh.in:99 scripts/repo-add.sh.in:107
 msgid ""
 "This is free software; see the source for copying conditions.\\nThere is NO "
 "WARRANTY, to the extent permitted by law.\\n"
@@ -596,143 +596,143 @@ msgstr "A csomagkönyvtár kész."
 msgid "Finished making: %s"
 msgstr "Létrehozás befejezve: %s"
 
-#: scripts/pacman-db-upgrade.sh.in:39
-msgid "Upgrade the local pacman database to a newer format"
-msgstr "A helyi Pacman adatbázis frissítése egy újabb formátumúra"
+#: scripts/kuzpkg-db-upgrade.sh.in:39
+msgid "Upgrade the local kuzpkg database to a newer format"
+msgstr "A helyi Kuzpkg adatbázis frissítése egy újabb formátumúra"
 
-#: scripts/pacman-db-upgrade.sh.in:43
+#: scripts/kuzpkg-db-upgrade.sh.in:43
 msgid "options:"
 msgstr "kapcsolók:"
 
-#: scripts/pacman-db-upgrade.sh.in:44
+#: scripts/kuzpkg-db-upgrade.sh.in:44
 msgid "  -d, --dbpath <path>  set an alternate database location"
 msgstr "  -d, --dbpath <path>  alternatív adatbázishely beállítása"
 
-#: scripts/pacman-db-upgrade.sh.in:45
+#: scripts/kuzpkg-db-upgrade.sh.in:45
 msgid "  -h, --help           show this help message and exit"
 msgstr "  -h, --help           megjeleníti ezt a súgót, majd kilép"
 
-#: scripts/pacman-db-upgrade.sh.in:46
+#: scripts/kuzpkg-db-upgrade.sh.in:46
 msgid "  -r, --root <path>    set an alternate installation root"
 msgstr "  -r, --root <útvonal> alternatív telepítési gyökérkönyvtár beállítása"
 
-#: scripts/pacman-db-upgrade.sh.in:47
+#: scripts/kuzpkg-db-upgrade.sh.in:47
 msgid "  -V, --version        show version information and exit"
 msgstr "  -V, --version        megjeleníti a verzióinformációt, majd kilép"
 
-#: scripts/pacman-db-upgrade.sh.in:48
+#: scripts/kuzpkg-db-upgrade.sh.in:48
 msgid "  --config <path>      set an alternate configuration file"
 msgstr "  --config <útvonal>   egy alternatív konfigurációs fájl beállítása"
 
-#: scripts/pacman-db-upgrade.sh.in:49
+#: scripts/kuzpkg-db-upgrade.sh.in:49
 msgid "  --nocolor            disable colorized output messages"
 msgstr "  --nocolor            színezett kimeneti üzenetek letiltása"
 
-#: scripts/pacman-db-upgrade.sh.in:122 scripts/repo-add.sh.in:409
+#: scripts/kuzpkg-db-upgrade.sh.in:122 scripts/repo-add.sh.in:409
 #, sh-printf-format
 msgid "%s does not exist or is not a directory."
 msgstr "A %s nem létezik vagy nem egy könyvtár."
 
-#: scripts/pacman-db-upgrade.sh.in:126
+#: scripts/kuzpkg-db-upgrade.sh.in:126
 #, sh-printf-format
-msgid "%s is not a pacman database directory."
-msgstr "A(z) %s nem egy Pacman adatbáziskönyvtár."
+msgid "%s is not a kuzpkg database directory."
+msgstr "A(z) %s nem egy Kuzpkg adatbáziskönyvtár."
 
-#: scripts/pacman-db-upgrade.sh.in:130
+#: scripts/kuzpkg-db-upgrade.sh.in:130
 msgid "You must have correct permissions to upgrade the database."
 msgstr "Megfelelő jogosultságok kellenek az adatbázis frissítéséhez."
 
-#: scripts/pacman-db-upgrade.sh.in:140
-msgid "Pacman lock file was found. Cannot run while pacman is running."
+#: scripts/kuzpkg-db-upgrade.sh.in:140
+msgid "Kuzpkg lock file was found. Cannot run while kuzpkg is running."
 msgstr ""
-"Pacman zárolófájl megtalálva. Nem futtatható más, miközben a Pacman fut."
+"Kuzpkg zárolófájl megtalálva. Nem futtatható más, miközben a Kuzpkg fut."
 
-#: scripts/pacman-db-upgrade.sh.in:152
+#: scripts/kuzpkg-db-upgrade.sh.in:152
 msgid "Pre-3.5 database format detected - upgrading..."
 msgstr "v3.5 verzió előtti adatbázis-formátum lett felismerve - frissítés…"
 
-#: scripts/pacman-db-upgrade.sh.in:159
+#: scripts/kuzpkg-db-upgrade.sh.in:159
 msgid "Done."
 msgstr "Kész."
 
-#: scripts/pacman-db-upgrade.sh.in:163
+#: scripts/kuzpkg-db-upgrade.sh.in:163
 msgid "Pre-4.2 database format detected - upgrading..."
 msgstr "v4.2 verzió előtti adatbázis-formátum lett felismerve - frissítés…"
 
-#: scripts/pacman-db-upgrade.sh.in:185
+#: scripts/kuzpkg-db-upgrade.sh.in:185
 #, sh-printf-format
-msgid "symlink '%s' points outside pacman root, manual repair required"
+msgid "symlink '%s' points outside kuzpkg root, manual repair required"
 msgstr ""
-"a(z) „%s” szimbolikus hivatkozás a Pacman gyökérkönyvtáron kívülre mutat, "
+"a(z) „%s” szimbolikus hivatkozás a Kuzpkg gyökérkönyvtáron kívülre mutat, "
 "kézi javítás szükséges"
 
-#: scripts/pacman-key.sh.in:58
+#: scripts/kuzpkg-key.sh.in:58
 #, sh-printf-format
 msgid "Usage: %s [options] operation [targets]"
 msgstr "Használat: %s [kapcsolók] művelet [célok]"
 
-#: scripts/pacman-key.sh.in:60
-msgid "Manage pacman's list of trusted keys"
-msgstr "A Pacman megbízható kulcslistájának kezelése"
+#: scripts/kuzpkg-key.sh.in:60
+msgid "Manage kuzpkg's list of trusted keys"
+msgstr "A Kuzpkg megbízható kulcslistájának kezelése"
 
-#: scripts/pacman-key.sh.in:62
+#: scripts/kuzpkg-key.sh.in:62
 msgid "Operations:"
 msgstr "Műveletek:"
 
-#: scripts/pacman-key.sh.in:63
+#: scripts/kuzpkg-key.sh.in:63
 msgid "  -a, --add                 Add the specified keys (empty for stdin)"
 msgstr ""
 "  -a, --add                 A megadott kulcsok hozzáadása (üres stdin-hez)"
 
-#: scripts/pacman-key.sh.in:64
+#: scripts/kuzpkg-key.sh.in:64
 msgid "  -d, --delete              Remove the specified keyids"
 msgstr "  -d, --delete              A megadott kulcsazonosítók eltávolítása"
 
-#: scripts/pacman-key.sh.in:65
+#: scripts/kuzpkg-key.sh.in:65
 msgid "  -e, --export              Export the specified or all keyids"
 msgstr ""
 "  -e, --export              A megadott vagy az összes kulcsazonosító "
 "exportálása"
 
-#: scripts/pacman-key.sh.in:66
+#: scripts/kuzpkg-key.sh.in:66
 msgid ""
 "  -f, --finger              List fingerprint for specified or all keyids"
 msgstr ""
 "  -f, --finger              Ujjlenyomatok felsorolása a megadott vagy az "
 "összes kulcsazonosítóhoz"
 
-#: scripts/pacman-key.sh.in:67
+#: scripts/kuzpkg-key.sh.in:67
 msgid "  -l, --list-keys           List the specified or all keys"
 msgstr ""
 "  -l, --list-keys           A megadott vagy az összes kulcs felsorolása"
 
-#: scripts/pacman-key.sh.in:68
+#: scripts/kuzpkg-key.sh.in:68
 msgid "  -r, --recv-keys           Fetch the specified keyids"
 msgstr "  -r, --recv-keys           A megadott kulcsazonosítók lekérése"
 
-#: scripts/pacman-key.sh.in:69
-msgid "  -u, --updatedb            Update the trustdb of pacman"
-msgstr "  -u, --updatedb            A Pacman trustdb-jének frissítése"
+#: scripts/kuzpkg-key.sh.in:69
+msgid "  -u, --updatedb            Update the trustdb of kuzpkg"
+msgstr "  -u, --updatedb            A Kuzpkg trustdb-jének frissítése"
 
-#: scripts/pacman-key.sh.in:70
+#: scripts/kuzpkg-key.sh.in:70
 msgid ""
 "  -v, --verify              Verify the file(s) specified by the signature(s)"
 msgstr ""
 "  -v, --verify              A fájl(ok) ellenőrzése a megadott aláírás(ok) "
 "alapján"
 
-#: scripts/pacman-key.sh.in:71
+#: scripts/kuzpkg-key.sh.in:71
 msgid ""
 "  --edit-key                Present a menu for key management task on keyids"
 msgstr ""
 "  --edit-key                Menü megjelenítése a kulcskezelési feladatokhoz "
 "a kulcsazonosítókon"
 
-#: scripts/pacman-key.sh.in:72
+#: scripts/kuzpkg-key.sh.in:72
 msgid "  --import                  Imports pubring.gpg from dir(s)"
 msgstr "  --import                  pubring.gpg importálása a könyvtár(ak)ból"
 
-#: scripts/pacman-key.sh.in:73
+#: scripts/kuzpkg-key.sh.in:73
 msgid ""
 "  --import-trustdb          Imports ownertrust values from trustdb.gpg in "
 "dir(s)"
@@ -740,22 +740,22 @@ msgstr ""
 "  --import-trustdb          ownertrust értékek importálása a könyvtár(ak)ban "
 "lévő trustdb.gpg fájlból"
 
-#: scripts/pacman-key.sh.in:74
+#: scripts/kuzpkg-key.sh.in:74
 msgid "  --init                    Ensure the keyring is properly initialized"
 msgstr ""
 "  --init                    Ellenőrzi, hogy a kulcstartó megfelelően van-e "
 "előkészítve"
 
-#: scripts/pacman-key.sh.in:75
+#: scripts/kuzpkg-key.sh.in:75
 msgid "  --list-sigs               List keys and their signatures"
 msgstr "  --list-sigs               Kulcsok és aláírásaik listája"
 
-#: scripts/pacman-key.sh.in:76
+#: scripts/kuzpkg-key.sh.in:76
 msgid "  --lsign-key               Locally sign the specified keyid"
 msgstr ""
 "  --lsign-key               Helyileg írja alá a megadott kulcsazonosítókat"
 
-#: scripts/pacman-key.sh.in:77
+#: scripts/kuzpkg-key.sh.in:77
 #, sh-printf-format
 msgid ""
 "  --populate                Reload the default keys from the (given) "
@@ -764,18 +764,18 @@ msgstr ""
 "  --populate                Az alapértelmezett kulcsok újratöltése a "
 "(megadott) kulcstartókból\\n                            a következőben: „%s”"
 
-#: scripts/pacman-key.sh.in:79
+#: scripts/kuzpkg-key.sh.in:79
 msgid ""
 "  --refresh-keys            Update specified or all keys from a keyserver"
 msgstr ""
 "  --refresh-keys            Egy megadott vagy az összes kulcs frissítése egy "
 "kulcskiszolgálóról"
 
-#: scripts/pacman-key.sh.in:80
+#: scripts/kuzpkg-key.sh.in:80
 msgid "  --verbose                 Show extra information"
 msgstr "  --verbose                 További információk megjelenítése"
 
-#: scripts/pacman-key.sh.in:83
+#: scripts/kuzpkg-key.sh.in:83
 #, sh-printf-format
 msgid ""
 "  --config <file>           Use an alternate config file (instead "
@@ -784,7 +784,7 @@ msgstr ""
 "  --config <fájl>           Alternatív konfigurációs fájl "
 "használata\\n                            (a(z) „%s” helyett)"
 
-#: scripts/pacman-key.sh.in:85
+#: scripts/kuzpkg-key.sh.in:85
 #, sh-printf-format
 msgid ""
 "  --gpgdir <dir>            Set an alternate directory for GnuPG "
@@ -793,7 +793,7 @@ msgstr ""
 "  --gpgdir <könyvtár>       Alternatív könyvtár beállítása a GnuPG-"
 "hez\\n                            (a(z) „%s” helyett)"
 
-#: scripts/pacman-key.sh.in:87
+#: scripts/kuzpkg-key.sh.in:87
 #, sh-printf-format
 msgid ""
 "  --populate-from <dir>     Set an alternate directory for --populate "
@@ -802,232 +802,232 @@ msgstr ""
 "  --populate-from <dir>     Alternatív könyvtár beállítása a --populate "
 "számára\\n                            (a(z) „%s” helyett)"
 
-#: scripts/pacman-key.sh.in:89
+#: scripts/kuzpkg-key.sh.in:89
 msgid "  --keyserver <server-url>  Specify a keyserver to use if necessary"
 msgstr ""
 "  --keyserver <server-url> Használandó kulcskiszolgáló megadása, ha szükséges"
 
-#: scripts/pacman-key.sh.in:91
+#: scripts/kuzpkg-key.sh.in:91
 msgid "  -h, --help                Show this help message and exit"
 msgstr "  -h, --help                Megjeleníti ezt a súgót, majd kilép"
 
-#: scripts/pacman-key.sh.in:92
+#: scripts/kuzpkg-key.sh.in:92
 msgid "  -V, --version             Show program version"
 msgstr "  -V, --version             Programverzió megjelenítése"
 
-#: scripts/pacman-key.sh.in:134
+#: scripts/kuzpkg-key.sh.in:134
 msgid "Failed to lookup key by name:"
 msgstr "Nem sikerült megtalálni a kulcsot a név alapján:"
 
-#: scripts/pacman-key.sh.in:142
+#: scripts/kuzpkg-key.sh.in:142
 msgid "Key name is ambiguous:"
 msgstr "A kulcs neve kétértelmű:"
 
-#: scripts/pacman-key.sh.in:150
-msgid "Generating pacman master key. This may take some time."
-msgstr "A Pacman mesterkulcsának előállítása. Ez eltarthat egy néhány percig."
+#: scripts/kuzpkg-key.sh.in:150
+msgid "Generating kuzpkg master key. This may take some time."
+msgstr "A Kuzpkg mesterkulcsának előállítása. Ez eltarthat egy néhány percig."
 
-#: scripts/pacman-key.sh.in:187
+#: scripts/kuzpkg-key.sh.in:187
 #, sh-printf-format
 msgid "The key identified by %s could not be found locally."
 msgstr "Nem található a(z) %s azonosítójú helyi kulcs."
 
-#: scripts/pacman-key.sh.in:198 scripts/pacman-key.sh.in:210
+#: scripts/kuzpkg-key.sh.in:198 scripts/kuzpkg-key.sh.in:210
 #: scripts/libmakepkg/integrity/verify_signature.sh.in:219
 msgid "_"
 msgstr "_"
 
-#: scripts/pacman-key.sh.in:210
+#: scripts/kuzpkg-key.sh.in:210
 msgid "flags"
 msgstr "jelölők"
 
-#: scripts/pacman-key.sh.in:264
+#: scripts/kuzpkg-key.sh.in:264
 #, sh-printf-format
 msgid "You do not have sufficient permissions to read the %s keyring."
 msgstr "Nincs megfelelő jogosultsága, hogy olvassa a(z) %s kulcstartót."
 
-#: scripts/pacman-key.sh.in:265
+#: scripts/kuzpkg-key.sh.in:265
 #, sh-printf-format
 msgid "Use '%s' to correct the keyring permissions."
 msgstr ""
 "A kulcstartó jogosultságainak javításához használja a következőt: „%s”."
 
-#: scripts/pacman-key.sh.in:270
+#: scripts/kuzpkg-key.sh.in:270
 msgid "You do not have sufficient permissions to run this command."
 msgstr "Nincs megfelelő jogosultsága, hogy futtassa ezt a parancsot."
 
-#: scripts/pacman-key.sh.in:276
+#: scripts/kuzpkg-key.sh.in:276
 msgid "There is no secret key available to sign with."
 msgstr "Nem érhető el titkos kulcs az aláíráshoz."
 
-#: scripts/pacman-key.sh.in:277
+#: scripts/kuzpkg-key.sh.in:277
 #, sh-printf-format
 msgid "Use '%s' to generate a default secret key."
 msgstr ""
 "Egy alapértelmezett titkos kulcs előállításához használja a következőt: „%s”."
 
-#: scripts/pacman-key.sh.in:295
+#: scripts/kuzpkg-key.sh.in:295
 #, sh-printf-format
 msgid "No keyring files exist in %s."
 msgstr "Nem létezik kulcstartó a(z) %s könyvtárban."
 
-#: scripts/pacman-key.sh.in:302
+#: scripts/kuzpkg-key.sh.in:302
 #, sh-printf-format
 msgid "The keyring file %s does not exist."
 msgstr "A(z) %s kulcstartófájl nem létezik."
 
-#: scripts/pacman-key.sh.in:317
+#: scripts/kuzpkg-key.sh.in:317
 #, sh-printf-format
 msgid "Appending keys from %s.gpg..."
 msgstr "Kulcsok hozzáfűzése a(z) %s.gpg fájlból…"
 
-#: scripts/pacman-key.sh.in:357
+#: scripts/kuzpkg-key.sh.in:357
 msgid "Locally signing trusted keys in keyring..."
 msgstr "Megbízható kulcsok aláírása helyileg a kulcstartóban…"
 
-#: scripts/pacman-key.sh.in:359
+#: scripts/kuzpkg-key.sh.in:359
 msgid "Importing owner trust values..."
 msgstr "Megbízhatósági értékek importálása…"
 
-#: scripts/pacman-key.sh.in:369
+#: scripts/kuzpkg-key.sh.in:369
 msgid "Disabling revoked keys in keyring..."
 msgstr "Visszavont kulcsok tiltása a kulcstartóban…"
 
-#: scripts/pacman-key.sh.in:372
+#: scripts/kuzpkg-key.sh.in:372
 #, sh-printf-format
 msgid "Disabling key %s..."
 msgstr "%s kulcs letiltása…"
 
-#: scripts/pacman-key.sh.in:378
+#: scripts/kuzpkg-key.sh.in:378
 #, sh-printf-format
 msgid "Disabled %s key."
 msgid_plural "Disabled %s keys."
 msgstr[0] "%s kulcs letiltva."
 msgstr[1] "%s kulcs letiltva."
 
-#: scripts/pacman-key.sh.in:385
+#: scripts/kuzpkg-key.sh.in:385
 msgid "A specified keyfile could not be added to the keyring."
 msgstr "Egy megadott kulcsfájlt nem sikerült hozzáadni a kulcstartóhoz."
 
-#: scripts/pacman-key.sh.in:393
+#: scripts/kuzpkg-key.sh.in:393
 msgid "A specified key could not be removed from the keyring."
 msgstr "Egy megadott kulcsot nem sikerült eltávolítani a kulcstartóból."
 
-#: scripts/pacman-key.sh.in:403
+#: scripts/kuzpkg-key.sh.in:403
 #, sh-printf-format
 msgid "The key identified by %s could not be edited."
 msgstr "A(z) %s azonosítójú kulcsot nem sikerült szerkeszteni."
 
-#: scripts/pacman-key.sh.in:415
+#: scripts/kuzpkg-key.sh.in:415
 msgid "A specified key could not be exported from the keyring."
 msgstr "Egy megadott kulcsot nem sikerült exportálni a kulcstartóból."
 
-#: scripts/pacman-key.sh.in:423
+#: scripts/kuzpkg-key.sh.in:423
 msgid "The fingerprint of a specified key could not be determined."
 msgstr "Egy megadott kulcs ujjlenyomatát nem sikerült meghatározni."
 
-#: scripts/pacman-key.sh.in:436 scripts/pacman-key.sh.in:455
+#: scripts/kuzpkg-key.sh.in:436 scripts/kuzpkg-key.sh.in:455
 #, sh-printf-format
 msgid "%s could not be imported."
 msgstr "Nem sikerült importálni a következőt: %s"
 
-#: scripts/pacman-key.sh.in:440 scripts/pacman-key.sh.in:459
+#: scripts/kuzpkg-key.sh.in:440 scripts/kuzpkg-key.sh.in:459
 #, sh-printf-format
 msgid "File %s does not exist and could not be imported."
 msgstr "A(z) %s fájl nem létezik, és nem sikerült importálni."
 
-#: scripts/pacman-key.sh.in:471
+#: scripts/kuzpkg-key.sh.in:471
 msgid "A specified key could not be listed."
 msgstr "Egy megadott kulcsot nem sikerült listázni."
 
-#: scripts/pacman-key.sh.in:479
+#: scripts/kuzpkg-key.sh.in:479
 msgid "A specified signature could not be listed."
 msgstr "Egy megadott aláírást nem sikerült listázni."
 
-#: scripts/pacman-key.sh.in:491
+#: scripts/kuzpkg-key.sh.in:491
 #, sh-printf-format
 msgid "Locally signing key %s..."
 msgstr "%s kulcs aláírása helyileg…"
 
-#: scripts/pacman-key.sh.in:496
+#: scripts/kuzpkg-key.sh.in:496
 #, sh-printf-format
 msgid "%s could not be locally signed."
 msgstr "A(z) %s nem írható alá helyileg."
 
-#: scripts/pacman-key.sh.in:506
+#: scripts/kuzpkg-key.sh.in:506
 #, sh-printf-format
 msgid "Locally signed %s key."
 msgid_plural "Locally signed %s keys."
 msgstr[0] "%s helyileg aláírt kulcs."
 msgstr[1] "%s helyileg aláírt kulcs."
 
-#: scripts/pacman-key.sh.in:529
+#: scripts/kuzpkg-key.sh.in:529
 msgid "Remote key not fetched correctly from WKD or keyserver."
 msgstr ""
 "A távoli kulcs nem lett megfelelően lekérve a WKD-ból vagy a "
 "kulcskiszolgálóról."
 
-#: scripts/pacman-key.sh.in:534
+#: scripts/kuzpkg-key.sh.in:534
 msgid "Remote key not fetched correctly from keyserver."
 msgstr "A távoli kulcs nem lett helyesen lekérve a kulcskiszolgálóról."
 
-#: scripts/pacman-key.sh.in:566
+#: scripts/kuzpkg-key.sh.in:566
 #, sh-printf-format
 msgid "Could not update key: %s"
 msgstr "Nem sikerült frissíteni a következő kulcsot: %s"
 
-#: scripts/pacman-key.sh.in:587 scripts/repo-add.sh.in:271
+#: scripts/kuzpkg-key.sh.in:587 scripts/repo-add.sh.in:271
 #, sh-printf-format
 msgid "Cannot use armored signatures for packages: %s"
 msgstr "Nem használhatók páncélozott aláírások a csomagokhoz: %s"
 
-#: scripts/pacman-key.sh.in:595
+#: scripts/kuzpkg-key.sh.in:595
 #, sh-printf-format
 msgid "The signature verification for %s failed."
 msgstr "A(z) „%s” aláírás-ellenőrzése sikertelen."
 
-#: scripts/pacman-key.sh.in:601
+#: scripts/kuzpkg-key.sh.in:601
 #, sh-printf-format
 msgid "The signature %s is not trusted."
 msgstr "A(z) „%s” aláírás nem megbízható."
 
-#: scripts/pacman-key.sh.in:609
+#: scripts/kuzpkg-key.sh.in:609
 msgid "Updating trust database..."
 msgstr "Megbízhatósági adatbázis frissítése…"
 
-#: scripts/pacman-key.sh.in:611
+#: scripts/kuzpkg-key.sh.in:611
 msgid "Trust database could not be updated."
 msgstr "A megbízhatósági adatbázist nem sikerült frissíteni."
 
-#: scripts/pacman-key.sh.in:690
+#: scripts/kuzpkg-key.sh.in:690
 #, sh-printf-format
 msgid "Cannot find the %s binary required for all %s operations."
 msgstr "Nem található a(z) %s bináris, ami minden %s művelethez szükséges."
 
-#: scripts/pacman-key.sh.in:695
+#: scripts/kuzpkg-key.sh.in:695
 #, sh-printf-format
 msgid "%s needs to be run as root for this operation."
 msgstr "Rendszergazdaként kell futtatni ehhez a művelethez a következőt: %s."
 
-#: scripts/pacman-key.sh.in:701
+#: scripts/kuzpkg-key.sh.in:701
 #, sh-printf-format
 msgid "%s configuration file '%s' not found."
 msgstr "Nem található a(z) %s konfigurációs fájl: „%s”."
 
-#: scripts/pacman-key.sh.in:724
+#: scripts/kuzpkg-key.sh.in:724
 msgid "no operation specified (use -h for help)"
 msgstr "nincs művelet megadva (használja a „-h”-t a súgóhoz)"
 
-#: scripts/pacman-key.sh.in:729
+#: scripts/kuzpkg-key.sh.in:729
 msgid "Multiple operations specified."
 msgstr "Több művelet lett megadva."
 
-#: scripts/pacman-key.sh.in:730
+#: scripts/kuzpkg-key.sh.in:730
 #, sh-printf-format
 msgid "Please run %s with each operation separately."
 msgstr "Futtassa a következőt: %s minden egyes művelettel külön-külön."
 
-#: scripts/pacman-key.sh.in:738
+#: scripts/kuzpkg-key.sh.in:738
 msgid "No targets specified"
 msgstr "Nincs cél megadva"
 
@@ -1134,9 +1134,9 @@ msgstr ""
 
 #: scripts/repo-add.sh.in:96
 msgid ""
-"Example:  repo-add /path/to/repo.db.tar.gz pacman-3.0.0-1-i686.pkg.tar.gz\\n"
+"Example:  repo-add /path/to/repo.db.tar.gz kuzpkg-3.0.0-1-i686.kuzpkg.tar.zst\\n"
 msgstr ""
-"Példa:  repo-add /path/to/repo.db.tar.gz pacman-3.0.0-1-i686.pkg.tar.gz\\n"
+"Példa:  repo-add /path/to/repo.db.tar.gz kuzpkg-3.0.0-1-i686.kuzpkg.tar.zst\\n"
 
 #: scripts/repo-add.sh.in:98
 msgid "Example:  repo-remove /path/to/repo.db.tar.gz kernel26\\n"
@@ -1244,8 +1244,8 @@ msgstr "A(z) %s folyamat használja"
 
 #: scripts/repo-add.sh.in:443
 #, sh-printf-format
-msgid "Repository file '%s' is not a proper pacman database."
-msgstr "A(z) „%s” tárolófájl nem egy megfelelő pacman-adatbázis."
+msgid "Repository file '%s' is not a proper kuzpkg database."
+msgstr "A(z) „%s” tárolófájl nem egy megfelelő kuzpkg-adatbázis."
 
 #: scripts/repo-add.sh.in:448
 #, sh-printf-format
@@ -1367,7 +1367,7 @@ msgstr ""
 "Nem található a %s bináris, ami a man és info oldalak tömörítéséhez "
 "szükséges."
 
-#: scripts/libmakepkg/executable/pacman.sh.in:33
+#: scripts/libmakepkg/executable/kuzpkg.sh.in:33
 #, sh-printf-format
 msgid "Cannot find the %s binary required for dependency operations."
 msgstr "Nem található a %s bináris, ami a függőségi műveletekhez szükséges."

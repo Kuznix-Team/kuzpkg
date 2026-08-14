@@ -3,8 +3,8 @@
 # scripts with gettext translations
 scripts/makepkg.sh.in
 scripts/makepkg-template.pl.in
-scripts/pacman-db-upgrade.sh.in
-scripts/pacman-key.sh.in
+scripts/kuzpkg-db-upgrade.sh.in
+scripts/kuzpkg-key.sh.in
 scripts/repo-add.sh.in
 scripts/libmakepkg/autodep/library_depends.sh.in
 scripts/libmakepkg/autodep/library_provides.sh.in
@@ -24,7 +24,7 @@ scripts/libmakepkg/executable/distcc.sh.in
 scripts/libmakepkg/executable/fakeroot.sh.in
 scripts/libmakepkg/executable/gpg.sh.in
 scripts/libmakepkg/executable/gzip.sh.in
-scripts/libmakepkg/executable/pacman.sh.in
+scripts/libmakepkg/executable/kuzpkg.sh.in
 scripts/libmakepkg/executable.sh.in
 scripts/libmakepkg/executable/sccache.sh.in
 scripts/libmakepkg/executable/strip.sh.in

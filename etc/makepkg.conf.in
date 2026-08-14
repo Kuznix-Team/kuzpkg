@@ -158,5 +158,5 @@ SRCEXT='@SRCEXT@'
 # OTHER
 #########################################################################
 #
-#-- Command used to run pacman as root, instead of trying sudo and su
-PACMAN_AUTH=()
+#-- Command used to run kuzpkg as root, instead of trying sudo and su
+KUZPKG_AUTH=()

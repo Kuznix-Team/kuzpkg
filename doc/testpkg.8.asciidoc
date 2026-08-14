@@ -3,7 +3,7 @@ testpkg(8)
 
 Name
 ----
-testpkg - test a pacman package for validity
+testpkg - test a kuzpkg package for validity
 
 Synopsis
 --------
@@ -11,10 +11,10 @@ Synopsis
 
 Description
 -----------
-'testpkg' is a script used to make sure that a pacman package is valid.
+'testpkg' is a script used to make sure that a kuzpkg package is valid.
 
 See Also
 --------
-linkman:pacman[8]
+linkman:kuzpkg[8]
 
 include::footer.asciidoc[]

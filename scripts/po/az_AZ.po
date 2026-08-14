@@ -1,6 +1,6 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR "Pacman Development Team <pacman-dev@lists.archlinux.org>"
-# This file is distributed under the same license as the pacman-scripts package.
+# Copyright (C) 2026 Kuznix"
+# This file is distributed under the same license as the kuzpkg-scripts package.
 #
 # Translators:
 # Zaur_Baku, 2015
@@ -10,13 +10,13 @@
 # Zaur_Baku, 2015
 msgid ""
 msgstr ""
-"Project-Id-Version: Arch Linux Pacman package manager\n"
-"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/pacman/pacman/-/issues\n"
+"Project-Id-Version: Arch Linux Kuzpkg package manager\n"
+"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/kuzpkg/kuzpkg/-/issues\n"
 "POT-Creation-Date: 2025-11-01 20:25+1000\n"
 "PO-Revision-Date: 2011-08-08 22:35+0000\n"
 "Last-Translator: Zaur_Baku, 2015\n"
 "Language-Team: Azerbaijani (Azerbaijan) (http://app.transifex.com/toofishes/"
-"archlinux-pacman/language/az_AZ/)\n"
+"archlinux-kuzpkg/language/az_AZ/)\n"
 "Language: az_AZ\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -101,8 +101,8 @@ msgid "Aborting..."
 msgstr "Dayandırmaq..."
 
 #: scripts/makepkg.sh.in:249
-msgid "Pacman is currently in use, please wait..."
-msgstr "Pacman hazırda istifadə olunur, lütfən gözləyin..."
+msgid "Kuzpkg is currently in use, please wait..."
+msgstr "Kuzpkg hazırda istifadə olunur, lütfən gözləyin..."
 
 #: scripts/makepkg.sh.in:270
 #, sh-printf-format
@@ -237,15 +237,15 @@ msgstr ""
 "edin)"
 
 #: scripts/makepkg.sh.in:883
-msgid "Make packages compatible for use with pacman"
-msgstr "Paketləri, pacman ilə istifadə üçün uyğunlaşdırın"
+msgid "Make packages compatible for use with kuzpkg"
+msgstr "Paketləri, kuzpkg ilə istifadə üçün uyğunlaşdırın"
 
-#: scripts/makepkg.sh.in:885 scripts/pacman-db-upgrade.sh.in:41
+#: scripts/makepkg.sh.in:885 scripts/kuzpkg-db-upgrade.sh.in:41
 #, sh-printf-format
 msgid "Usage: %s [options]"
 msgstr "İstifadəsi: %s [seçimlər]"
 
-#: scripts/makepkg.sh.in:887 scripts/pacman-key.sh.in:82
+#: scripts/makepkg.sh.in:887 scripts/kuzpkg-key.sh.in:82
 msgid "Options:"
 msgstr "Seçimlər:"
 
@@ -461,8 +461,8 @@ msgstr "  --noprogressbar  Fayllar endirilərkən gedişat çubuğunu göstərm�
 msgid "If %s is not specified, %s will look for '%s'"
 msgstr "Əgər %s göstərilməyibsə, %s, '%s'-i axtaracaqdır"
 
-#: scripts/makepkg.sh.in:940 scripts/pacman-db-upgrade.sh.in:57
-#: scripts/pacman-key.sh.in:99 scripts/repo-add.sh.in:107
+#: scripts/makepkg.sh.in:940 scripts/kuzpkg-db-upgrade.sh.in:57
+#: scripts/kuzpkg-key.sh.in:99 scripts/repo-add.sh.in:107
 msgid ""
 "This is free software; see the source for copying conditions.\\nThere is NO "
 "WARRANTY, to the extent permitted by law.\\n"
@@ -578,143 +578,143 @@ msgstr "Pket qovluğu hazırdır."
 msgid "Finished making: %s"
 msgstr "Başa çatmış qurulma: %s"
 
-#: scripts/pacman-db-upgrade.sh.in:39
-msgid "Upgrade the local pacman database to a newer format"
-msgstr "Pacman verilənlər bazasını ən yeni formata yeniləyin"
+#: scripts/kuzpkg-db-upgrade.sh.in:39
+msgid "Upgrade the local kuzpkg database to a newer format"
+msgstr "Kuzpkg verilənlər bazasını ən yeni formata yeniləyin"
 
-#: scripts/pacman-db-upgrade.sh.in:43
+#: scripts/kuzpkg-db-upgrade.sh.in:43
 msgid "options:"
 msgstr "seçimlər:"
 
-#: scripts/pacman-db-upgrade.sh.in:44
+#: scripts/kuzpkg-db-upgrade.sh.in:44
 msgid "  -d, --dbpath <path>  set an alternate database location"
 msgstr "  -d, --dbpath <path>  alternativ verilənlər bazası yerini təyin edin"
 
-#: scripts/pacman-db-upgrade.sh.in:45
+#: scripts/kuzpkg-db-upgrade.sh.in:45
 msgid "  -h, --help           show this help message and exit"
 msgstr "  -h, --help           bu kömək ismarıcını göstərmək və çıxmaq"
 
-#: scripts/pacman-db-upgrade.sh.in:46
+#: scripts/kuzpkg-db-upgrade.sh.in:46
 msgid "  -r, --root <path>    set an alternate installation root"
 msgstr "  -r, --root <path>    alternativ quraşdırma kökünü təyin edin"
 
-#: scripts/pacman-db-upgrade.sh.in:47
+#: scripts/kuzpkg-db-upgrade.sh.in:47
 msgid "  -V, --version        show version information and exit"
 msgstr "  -V, --version        versiya məlumatlarını göstərmək və çıxmaq"
 
-#: scripts/pacman-db-upgrade.sh.in:48
+#: scripts/kuzpkg-db-upgrade.sh.in:48
 msgid "  --config <path>      set an alternate configuration file"
 msgstr "  --config <path>      alternativ tənzimləmə faylını təyin edin"
 
-#: scripts/pacman-db-upgrade.sh.in:49
+#: scripts/kuzpkg-db-upgrade.sh.in:49
 msgid "  --nocolor            disable colorized output messages"
 msgstr "  --nocolor            çıxış ismarıclrı rənglənməsin"
 
-#: scripts/pacman-db-upgrade.sh.in:122 scripts/repo-add.sh.in:409
+#: scripts/kuzpkg-db-upgrade.sh.in:122 scripts/repo-add.sh.in:409
 #, sh-printf-format
 msgid "%s does not exist or is not a directory."
 msgstr "%s mövcud deyil və ya qovluq deyil."
 
-#: scripts/pacman-db-upgrade.sh.in:126
+#: scripts/kuzpkg-db-upgrade.sh.in:126
 #, sh-printf-format
-msgid "%s is not a pacman database directory."
-msgstr "%s, pacman verilənlər bazası qovluğu deyil"
+msgid "%s is not a kuzpkg database directory."
+msgstr "%s, kuzpkg verilənlər bazası qovluğu deyil"
 
-#: scripts/pacman-db-upgrade.sh.in:130
+#: scripts/kuzpkg-db-upgrade.sh.in:130
 msgid "You must have correct permissions to upgrade the database."
 msgstr ""
 "Verilənlər bazasını ən son versiyaya yeniləmək üçün düzgün icazələriniz "
 "olmalıdır."
 
-#: scripts/pacman-db-upgrade.sh.in:140
-msgid "Pacman lock file was found. Cannot run while pacman is running."
-msgstr "Pacman kilid faylı tapıldı. Pacman işlədiyi zaman başladıla bilməz."
+#: scripts/kuzpkg-db-upgrade.sh.in:140
+msgid "Kuzpkg lock file was found. Cannot run while kuzpkg is running."
+msgstr "Kuzpkg kilid faylı tapıldı. Kuzpkg işlədiyi zaman başladıla bilməz."
 
-#: scripts/pacman-db-upgrade.sh.in:152
+#: scripts/kuzpkg-db-upgrade.sh.in:152
 msgid "Pre-3.5 database format detected - upgrading..."
 msgstr "Pre-3.5 ver. bazası formatı aşkarlandı - yenilənir..."
 
-#: scripts/pacman-db-upgrade.sh.in:159
+#: scripts/kuzpkg-db-upgrade.sh.in:159
 msgid "Done."
 msgstr "Hazırdır."
 
-#: scripts/pacman-db-upgrade.sh.in:163
+#: scripts/kuzpkg-db-upgrade.sh.in:163
 msgid "Pre-4.2 database format detected - upgrading..."
 msgstr "Pre-4.2 ver. bazası formatı aşkarlandı - yenilənir..."
 
-#: scripts/pacman-db-upgrade.sh.in:185
+#: scripts/kuzpkg-db-upgrade.sh.in:185
 #, sh-printf-format
-msgid "symlink '%s' points outside pacman root, manual repair required"
+msgid "symlink '%s' points outside kuzpkg root, manual repair required"
 msgstr ""
-"'%s' simvolik keçidi pacman kökü xaricində göstərilir, əl ilə bərpa tələb "
+"'%s' simvolik keçidi kuzpkg kökü xaricində göstərilir, əl ilə bərpa tələb "
 "olundu"
 
-#: scripts/pacman-key.sh.in:58
+#: scripts/kuzpkg-key.sh.in:58
 #, sh-printf-format
 msgid "Usage: %s [options] operation [targets]"
 msgstr "İstifadəsi: %s [ixtiyari] əməliyyat [hədəf]"
 
-#: scripts/pacman-key.sh.in:60
-msgid "Manage pacman's list of trusted keys"
-msgstr "Etibarlı pacman açarların siyahılarını idarə edin"
+#: scripts/kuzpkg-key.sh.in:60
+msgid "Manage kuzpkg's list of trusted keys"
+msgstr "Etibarlı kuzpkg açarların siyahılarını idarə edin"
 
-#: scripts/pacman-key.sh.in:62
+#: scripts/kuzpkg-key.sh.in:62
 msgid "Operations:"
 msgstr "Əməliyyatlar:"
 
-#: scripts/pacman-key.sh.in:63
+#: scripts/kuzpkg-key.sh.in:63
 msgid "  -a, --add                 Add the specified keys (empty for stdin)"
 msgstr ""
 "  -a, --add                 Göstərilmiş açarları əlavə edin (stdin üçün "
 "boşdur)"
 
-#: scripts/pacman-key.sh.in:64
+#: scripts/kuzpkg-key.sh.in:64
 msgid "  -d, --delete              Remove the specified keyids"
 msgstr "  -d, --delete              Göstərilmiş açar İD-lərini silin"
 
-#: scripts/pacman-key.sh.in:65
+#: scripts/kuzpkg-key.sh.in:65
 msgid "  -e, --export              Export the specified or all keyids"
 msgstr ""
 "  -e, --export              Göstərilmiş və ya bütün açar İD-lərini ixrac "
 "etmək"
 
-#: scripts/pacman-key.sh.in:66
+#: scripts/kuzpkg-key.sh.in:66
 msgid ""
 "  -f, --finger              List fingerprint for specified or all keyids"
 msgstr ""
 "  -f, --finger              Göztərilmiş və ya bütün açar İD-ləri çün barmaq "
 "izinı üzə çıxarmaq"
 
-#: scripts/pacman-key.sh.in:67
+#: scripts/kuzpkg-key.sh.in:67
 msgid "  -l, --list-keys           List the specified or all keys"
 msgstr ""
 "  -l, --list-keys           Göstərilmiş və ya bütün açarları üzə çıxarmaq"
 
-#: scripts/pacman-key.sh.in:68
+#: scripts/kuzpkg-key.sh.in:68
 msgid "  -r, --recv-keys           Fetch the specified keyids"
 msgstr "  -r, --recv-keys           Göstərilmiş açar İD-lərini almaq"
 
-#: scripts/pacman-key.sh.in:69
-msgid "  -u, --updatedb            Update the trustdb of pacman"
-msgstr "  -u, --updatedb            Pacman etibarlılıq bazasını yeniləmək"
+#: scripts/kuzpkg-key.sh.in:69
+msgid "  -u, --updatedb            Update the trustdb of kuzpkg"
+msgstr "  -u, --updatedb            Kuzpkg etibarlılıq bazasını yeniləmək"
 
-#: scripts/pacman-key.sh.in:70
+#: scripts/kuzpkg-key.sh.in:70
 msgid ""
 "  -v, --verify              Verify the file(s) specified by the signature(s)"
 msgstr ""
 "  -v, --verify              İmza(lar) tərəfindən verilmiş fayl(lar)ı "
 "doğrulamaq"
 
-#: scripts/pacman-key.sh.in:71
+#: scripts/kuzpkg-key.sh.in:71
 msgid ""
 "  --edit-key                Present a menu for key management task on keyids"
 msgstr "  --edit-key                Açarların idarəetmə menyusunu göstərmək"
 
-#: scripts/pacman-key.sh.in:72
+#: scripts/kuzpkg-key.sh.in:72
 msgid "  --import                  Imports pubring.gpg from dir(s)"
 msgstr "  --import                  pubring.gpg qovluq(lar)dan idxal edilir"
 
-#: scripts/pacman-key.sh.in:73
+#: scripts/kuzpkg-key.sh.in:73
 msgid ""
 "  --import-trustdb          Imports ownertrust values from trustdb.gpg in "
 "dir(s)"
@@ -722,22 +722,22 @@ msgstr ""
 "  --import-trustdb          özgüvən dəyərlərini trustdb.gpg -dən qovluq(lar) "
 "daxilinə idxal edin"
 
-#: scripts/pacman-key.sh.in:74
+#: scripts/kuzpkg-key.sh.in:74
 msgid "  --init                    Ensure the keyring is properly initialized"
 msgstr ""
 "  --init                    Açarlar bağının əvvəlcədən başladıldığına əmin "
 "olun"
 
-#: scripts/pacman-key.sh.in:75
+#: scripts/kuzpkg-key.sh.in:75
 msgid "  --list-sigs               List keys and their signatures"
 msgstr "  --list-sigs               Açarlar və onların imzalarının siyahısı"
 
-#: scripts/pacman-key.sh.in:76
+#: scripts/kuzpkg-key.sh.in:76
 msgid "  --lsign-key               Locally sign the specified keyid"
 msgstr ""
 "  --lsign-key               Göstərilmiş açar İD-lərini yerli olaraq imzalamaq"
 
-#: scripts/pacman-key.sh.in:77
+#: scripts/kuzpkg-key.sh.in:77
 #, sh-printf-format
 msgid ""
 "  --populate                Reload the default keys from the (given) "
@@ -746,18 +746,18 @@ msgstr ""
 "  --populate                Standart açarları '%s' daxilindəki (verilmiş) "
 "açarlar\\n                           bağından yenidən yükləmək"
 
-#: scripts/pacman-key.sh.in:79
+#: scripts/kuzpkg-key.sh.in:79
 msgid ""
 "  --refresh-keys            Update specified or all keys from a keyserver"
 msgstr ""
 "  --refresh-keys            Göstərilmiş və ya bütün açarları açar "
 "serverindən yeniləmək"
 
-#: scripts/pacman-key.sh.in:80
+#: scripts/kuzpkg-key.sh.in:80
 msgid "  --verbose                 Show extra information"
 msgstr "  --verbose                 Əlavə məlumatları göstərmək"
 
-#: scripts/pacman-key.sh.in:83
+#: scripts/kuzpkg-key.sh.in:83
 #, sh-printf-format
 msgid ""
 "  --config <file>           Use an alternate config file (instead "
@@ -766,7 +766,7 @@ msgstr ""
 "  --config <file>           Alternativ tənzimləmə faylını istifadə edin "
 "('%s'\\n                  əvəzinə)"
 
-#: scripts/pacman-key.sh.in:85
+#: scripts/kuzpkg-key.sh.in:85
 #, sh-printf-format
 msgid ""
 "  --gpgdir <dir>            Set an alternate directory for GnuPG "
@@ -775,7 +775,7 @@ msgstr ""
 "  --gpgdir <dir>            GnuPG üçün alternativ qovluq təyin etmək "
 "('%s'\\n                            əvəzinə)"
 
-#: scripts/pacman-key.sh.in:87
+#: scripts/kuzpkg-key.sh.in:87
 #, sh-printf-format
 msgid ""
 "  --populate-from <dir>     Set an alternate directory for --populate "
@@ -784,227 +784,227 @@ msgstr ""
 " --populate-from <dir>      --populate üçün başqa kataloq təyin din (/"
 "n                             '%s' əvəzinə)"
 
-#: scripts/pacman-key.sh.in:89
+#: scripts/kuzpkg-key.sh.in:89
 msgid "  --keyserver <server-url>  Specify a keyserver to use if necessary"
 msgstr "  --keyserver <server-url>  Lazım olduqda bir açar serveri göstərmək"
 
-#: scripts/pacman-key.sh.in:91
+#: scripts/kuzpkg-key.sh.in:91
 msgid "  -h, --help                Show this help message and exit"
 msgstr "  -h, --help                Bu kömək ismarıcını göstərmək və çıxmaq"
 
-#: scripts/pacman-key.sh.in:92
+#: scripts/kuzpkg-key.sh.in:92
 msgid "  -V, --version             Show program version"
 msgstr "  -V, --version             Proqramın versiyasını göstərmək"
 
-#: scripts/pacman-key.sh.in:134
+#: scripts/kuzpkg-key.sh.in:134
 msgid "Failed to lookup key by name:"
 msgstr "Açar bu ad ilə axtarıla bilmədi:"
 
-#: scripts/pacman-key.sh.in:142
+#: scripts/kuzpkg-key.sh.in:142
 msgid "Key name is ambiguous:"
 msgstr "Açar adı aydın deyil:"
 
-#: scripts/pacman-key.sh.in:150
-msgid "Generating pacman master key. This may take some time."
-msgstr "Pacman ana açarı yaradılır. Bu bir az vaxt apara bilər."
+#: scripts/kuzpkg-key.sh.in:150
+msgid "Generating kuzpkg master key. This may take some time."
+msgstr "Kuzpkg ana açarı yaradılır. Bu bir az vaxt apara bilər."
 
-#: scripts/pacman-key.sh.in:187
+#: scripts/kuzpkg-key.sh.in:187
 #, sh-printf-format
 msgid "The key identified by %s could not be found locally."
 msgstr "%s kimi tanınmış açar yerli olaraq tapılmadı."
 
-#: scripts/pacman-key.sh.in:198 scripts/pacman-key.sh.in:210
+#: scripts/kuzpkg-key.sh.in:198 scripts/kuzpkg-key.sh.in:210
 #: scripts/libmakepkg/integrity/verify_signature.sh.in:219
 msgid "_"
 msgstr "_"
 
-#: scripts/pacman-key.sh.in:210
+#: scripts/kuzpkg-key.sh.in:210
 msgid "flags"
 msgstr "bayraqlar"
 
-#: scripts/pacman-key.sh.in:264
+#: scripts/kuzpkg-key.sh.in:264
 #, sh-printf-format
 msgid "You do not have sufficient permissions to read the %s keyring."
 msgstr "%s açar bağını oxumaq üçün sizin yetərli icazələriniz yoxdur."
 
-#: scripts/pacman-key.sh.in:265
+#: scripts/kuzpkg-key.sh.in:265
 #, sh-printf-format
 msgid "Use '%s' to correct the keyring permissions."
 msgstr "Açar bağı icazələrini düzəltmək üçün '%s' istifadə edin."
 
-#: scripts/pacman-key.sh.in:270
+#: scripts/kuzpkg-key.sh.in:270
 msgid "You do not have sufficient permissions to run this command."
 msgstr "Bu əmri başlatmaq üçün yetərli icazələriniz yoxdur."
 
-#: scripts/pacman-key.sh.in:276
+#: scripts/kuzpkg-key.sh.in:276
 msgid "There is no secret key available to sign with."
 msgstr "İmzalamaq üçün istifadə oluna biləcək gizli açarlar yoxdur."
 
-#: scripts/pacman-key.sh.in:277
+#: scripts/kuzpkg-key.sh.in:277
 #, sh-printf-format
 msgid "Use '%s' to generate a default secret key."
 msgstr "İlkin gizli açar yaratmaq üçün '%s' istifadə edin."
 
-#: scripts/pacman-key.sh.in:295
+#: scripts/kuzpkg-key.sh.in:295
 #, sh-printf-format
 msgid "No keyring files exist in %s."
 msgstr "%s daxilində açarlar bağı faylı yoxdur."
 
-#: scripts/pacman-key.sh.in:302
+#: scripts/kuzpkg-key.sh.in:302
 #, sh-printf-format
 msgid "The keyring file %s does not exist."
 msgstr "%s açarlar bağı faylı mövcud deyil."
 
-#: scripts/pacman-key.sh.in:317
+#: scripts/kuzpkg-key.sh.in:317
 #, sh-printf-format
 msgid "Appending keys from %s.gpg..."
 msgstr "%s.gpg -dən açarlar əlavə olunur..."
 
-#: scripts/pacman-key.sh.in:357
+#: scripts/kuzpkg-key.sh.in:357
 msgid "Locally signing trusted keys in keyring..."
 msgstr "Açarlar bağındakı etibarlı açarlar yerli olaraq imzalanır..."
 
-#: scripts/pacman-key.sh.in:359
+#: scripts/kuzpkg-key.sh.in:359
 msgid "Importing owner trust values..."
 msgstr "Özgüvən dəyərləri idxal edilir..."
 
-#: scripts/pacman-key.sh.in:369
+#: scripts/kuzpkg-key.sh.in:369
 msgid "Disabling revoked keys in keyring..."
 msgstr "Açarlar bağındakı ləğv edilmiş açarlar söndürülür..."
 
-#: scripts/pacman-key.sh.in:372
+#: scripts/kuzpkg-key.sh.in:372
 #, sh-printf-format
 msgid "Disabling key %s..."
 msgstr "%s açarı söndürülür..."
 
-#: scripts/pacman-key.sh.in:378
+#: scripts/kuzpkg-key.sh.in:378
 #, sh-printf-format
 msgid "Disabled %s key."
 msgid_plural "Disabled %s keys."
 msgstr[0] "%s açar söndürüldü"
 msgstr[1] "%s açar söndürüldü"
 
-#: scripts/pacman-key.sh.in:385
+#: scripts/kuzpkg-key.sh.in:385
 msgid "A specified keyfile could not be added to the keyring."
 msgstr "Göstərilmiş açar faylı açarlar bağına əlavə edilə bilmədi."
 
-#: scripts/pacman-key.sh.in:393
+#: scripts/kuzpkg-key.sh.in:393
 msgid "A specified key could not be removed from the keyring."
 msgstr "Göstərilmiş açar, açarlar bağından silinə bilmədi."
 
-#: scripts/pacman-key.sh.in:403
+#: scripts/kuzpkg-key.sh.in:403
 #, sh-printf-format
 msgid "The key identified by %s could not be edited."
 msgstr "%s tərəfindən tanıdılmış açara düzəliş edilə bilmədi."
 
-#: scripts/pacman-key.sh.in:415
+#: scripts/kuzpkg-key.sh.in:415
 msgid "A specified key could not be exported from the keyring."
 msgstr "Göstərilimiş açar açarlar bağından irac edilə bilmədi."
 
-#: scripts/pacman-key.sh.in:423
+#: scripts/kuzpkg-key.sh.in:423
 msgid "The fingerprint of a specified key could not be determined."
 msgstr "Göstərilmiş açarın barmaq izi aşkarlana bilmədi."
 
-#: scripts/pacman-key.sh.in:436 scripts/pacman-key.sh.in:455
+#: scripts/kuzpkg-key.sh.in:436 scripts/kuzpkg-key.sh.in:455
 #, sh-printf-format
 msgid "%s could not be imported."
 msgstr "%s idxal edilə bilmədi."
 
-#: scripts/pacman-key.sh.in:440 scripts/pacman-key.sh.in:459
+#: scripts/kuzpkg-key.sh.in:440 scripts/kuzpkg-key.sh.in:459
 #, sh-printf-format
 msgid "File %s does not exist and could not be imported."
 msgstr "%s faylı yoxdur və idxal edilə bilmədi."
 
-#: scripts/pacman-key.sh.in:471
+#: scripts/kuzpkg-key.sh.in:471
 msgid "A specified key could not be listed."
 msgstr "Göstərilmiş açar üzə çıxarıla bilmədi."
 
-#: scripts/pacman-key.sh.in:479
+#: scripts/kuzpkg-key.sh.in:479
 msgid "A specified signature could not be listed."
 msgstr "Göstərilmiş imza üzə çıxarıla bilmədi."
 
-#: scripts/pacman-key.sh.in:491
+#: scripts/kuzpkg-key.sh.in:491
 #, sh-printf-format
 msgid "Locally signing key %s..."
 msgstr "%s açarı yerli olaraq imzalanır..."
 
-#: scripts/pacman-key.sh.in:496
+#: scripts/kuzpkg-key.sh.in:496
 #, sh-printf-format
 msgid "%s could not be locally signed."
 msgstr "%s yerli olaraq imzalan abilmədi."
 
-#: scripts/pacman-key.sh.in:506
+#: scripts/kuzpkg-key.sh.in:506
 #, sh-printf-format
 msgid "Locally signed %s key."
 msgid_plural "Locally signed %s keys."
 msgstr[0] "Yerli imzalanmış %s açar"
 msgstr[1] "Yerli imzalanmış %s açar"
 
-#: scripts/pacman-key.sh.in:529
+#: scripts/kuzpkg-key.sh.in:529
 msgid "Remote key not fetched correctly from WKD or keyserver."
 msgstr "Uzaq açar WKD-dən və açar serverindən düzgün alına bilmədi."
 
-#: scripts/pacman-key.sh.in:534
+#: scripts/kuzpkg-key.sh.in:534
 msgid "Remote key not fetched correctly from keyserver."
 msgstr "Uzaq açar açar serverindən düzgün alına bilmədi."
 
-#: scripts/pacman-key.sh.in:566
+#: scripts/kuzpkg-key.sh.in:566
 #, sh-printf-format
 msgid "Could not update key: %s"
 msgstr "Yenilənə bilməyən açar: %s"
 
-#: scripts/pacman-key.sh.in:587 scripts/repo-add.sh.in:271
+#: scripts/kuzpkg-key.sh.in:587 scripts/repo-add.sh.in:271
 #, sh-printf-format
 msgid "Cannot use armored signatures for packages: %s"
 msgstr "Qorunan imzaları bu paketlər üçün istifadə etmək olmaz: %s"
 
-#: scripts/pacman-key.sh.in:595
+#: scripts/kuzpkg-key.sh.in:595
 #, sh-printf-format
 msgid "The signature verification for %s failed."
 msgstr "%s üçün imzanın doğrulanması baş tutmadı."
 
-#: scripts/pacman-key.sh.in:601
+#: scripts/kuzpkg-key.sh.in:601
 #, sh-printf-format
 msgid "The signature %s is not trusted."
 msgstr "%s imzası etibarlı deyil."
 
-#: scripts/pacman-key.sh.in:609
+#: scripts/kuzpkg-key.sh.in:609
 msgid "Updating trust database..."
 msgstr "Etibarlılıq verilənlər bazası yenilənir..."
 
-#: scripts/pacman-key.sh.in:611
+#: scripts/kuzpkg-key.sh.in:611
 msgid "Trust database could not be updated."
 msgstr "Etibarlılıq verilənlər bazası yenilənə bilmədi."
 
-#: scripts/pacman-key.sh.in:690
+#: scripts/kuzpkg-key.sh.in:690
 #, sh-printf-format
 msgid "Cannot find the %s binary required for all %s operations."
 msgstr "Bütün %s əməliyyatları üçün tələb olunan %s binar faylı tapıla bilmir."
 
-#: scripts/pacman-key.sh.in:695
+#: scripts/kuzpkg-key.sh.in:695
 #, sh-printf-format
 msgid "%s needs to be run as root for this operation."
 msgstr "Bu əməliyyat üçün, %s, kök imtiyazları ilə başlamalıdır."
 
-#: scripts/pacman-key.sh.in:701
+#: scripts/kuzpkg-key.sh.in:701
 #, sh-printf-format
 msgid "%s configuration file '%s' not found."
 msgstr "%s tənzimləmə faylı '%s', tapılmadı."
 
-#: scripts/pacman-key.sh.in:724
+#: scripts/kuzpkg-key.sh.in:724
 msgid "no operation specified (use -h for help)"
 msgstr "əməliyyat göstərilməyib (kömək üçün -h istifadə edin)"
 
-#: scripts/pacman-key.sh.in:729
+#: scripts/kuzpkg-key.sh.in:729
 msgid "Multiple operations specified."
 msgstr "Birdən çox əməliyyatlar göstərilib."
 
-#: scripts/pacman-key.sh.in:730
+#: scripts/kuzpkg-key.sh.in:730
 #, sh-printf-format
 msgid "Please run %s with each operation separately."
 msgstr "Ayrı-ayrılıqda hər əməliyyat üçün %s başlatmanız xahiş olunur."
 
-#: scripts/pacman-key.sh.in:738
+#: scripts/kuzpkg-key.sh.in:738
 msgid "No targets specified"
 msgstr "Hədəflər göstərilməyib"
 
@@ -1111,8 +1111,8 @@ msgstr ""
 
 #: scripts/repo-add.sh.in:96
 msgid ""
-"Example:  repo-add /path/to/repo.db.tar.gz pacman-3.0.0-1-i686.pkg.tar.gz\\n"
-msgstr "Nümunə: repo-add /yol/repo.db.tar.gz pacman-3.0.0-1-i686.pkg.tar.gz\\n"
+"Example:  repo-add /path/to/repo.db.tar.gz kuzpkg-3.0.0-1-i686.kuzpkg.tar.zst\\n"
+msgstr "Nümunə: repo-add /yol/repo.db.tar.gz kuzpkg-3.0.0-1-i686.kuzpkg.tar.zst\\n"
 
 #: scripts/repo-add.sh.in:98
 msgid "Example:  repo-remove /path/to/repo.db.tar.gz kernel26\\n"
@@ -1218,8 +1218,8 @@ msgstr "%s prosesi tərəfindən tutlur"
 
 #: scripts/repo-add.sh.in:443
 #, sh-printf-format
-msgid "Repository file '%s' is not a proper pacman database."
-msgstr "'%s' repozitoriya faylı uyğun pacman verilənlər bazası deyil."
+msgid "Repository file '%s' is not a proper kuzpkg database."
+msgstr "'%s' repozitoriya faylı uyğun kuzpkg verilənlər bazası deyil."
 
 #: scripts/repo-add.sh.in:448
 #, sh-printf-format
@@ -1330,7 +1330,7 @@ msgstr ""
 msgid "Cannot find the %s binary required for compressing man and info pages."
 msgstr ""
 
-#: scripts/libmakepkg/executable/pacman.sh.in:33
+#: scripts/libmakepkg/executable/kuzpkg.sh.in:33
 #, sh-printf-format
 msgid "Cannot find the %s binary required for dependency operations."
 msgstr ""

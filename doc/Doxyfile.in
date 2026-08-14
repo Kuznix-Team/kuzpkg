@@ -4,7 +4,7 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = libalpm
+PROJECT_NAME           = libkuzpkg
 PROJECT_NUMBER         =
 PROJECT_BRIEF          = "Arch Linux Package Manager Library"
 PROJECT_LOGO           =
@@ -119,16 +119,16 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = @INPUT_DIRECTORY@/../lib/libalpm/alpm.h \
-                         @INPUT_DIRECTORY@/../lib/libalpm/alpm_list.h
+INPUT                  = @INPUT_DIRECTORY@/../lib/libkuzpkg/klpm.h \
+                         @INPUT_DIRECTORY@/../lib/libkuzpkg/klpm_list.h
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          =
 RECURSIVE              = NO
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       =
-EXCLUDE_SYMBOLS        = _alpm_* \
-                         __alpm_*
+EXCLUDE_SYMBOLS        = _klpm_* \
+                         __klpm_*
 EXAMPLE_PATH           =
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = NO

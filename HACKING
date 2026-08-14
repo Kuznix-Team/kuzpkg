@@ -1,8 +1,8 @@
-Pacman - Contributing
+Kuzpkg - Contributing
 =====================
 
 This file is meant to give you a brief overview of coding style and other
-concerns when hacking on pacman. If you are interested in contributing, please
+concerns when hacking on kuzpkg. If you are interested in contributing, please
 read link:submitting-patches.html[submitting-patches] and
 link:translation-help.html[translation-help] as well.
 
@@ -24,7 +24,7 @@ Coding Style
 [source,C]
 -------------------------------------------
 for(lp = list; lp; lp = lp->next) {
-  newlist = _alpm_list_add(newlist, strdup(lp->data));
+  newlist = _klpm_list_add(newlist, strdup(lp->data));
 }
 
 while(it) {
@@ -45,9 +45,9 @@ while(it) {
 +
 [source,C]
 -------------------------------------------
-alpm_list_t *alpm_list_add(alpm_list_t *list, void *data)
+klpm_list_t *klpm_list_add(klpm_list_t *list, void *data)
 {
-  alpm_list_t *ptr, *lp;
+  klpm_list_t *ptr, *lp;
 
   ptr = list;
   if(ptr == NULL) {
@@ -93,7 +93,7 @@ alpm_list_t *alpm_list_add(alpm_list_t *list, void *data)
 8.  Declare all variables at the start of the block.
 [source,C]
 -------------------------------------------
-int SYMEXPORT alpm_db_remove_server(alpm_db_t *db, const char *url)
+int SYMEXPORT klpm_db_remove_server(klpm_db_t *db, const char *url)
 {
   char *newurl, *vdata = NULL;
 
@@ -116,7 +116,7 @@ int SYMEXPORT alpm_db_remove_server(alpm_db_t *db, const char *url)
 
 [source,C]
 -------------------------------------------
-int SYMEXPORT alpm_db_remove_server(alpm_db_t *db, const char *url)
+int SYMEXPORT klpm_db_remove_server(klpm_db_t *db, const char *url)
 {
   char *newurl = url;
 
@@ -152,25 +152,25 @@ general pattern, including blank lines:
 #include <...>
 -------------------------------------------
 
-Follow this with some more headers, depending on whether the file is in libalpm
-or pacman proper. For libalpm:
+Follow this with some more headers, depending on whether the file is in libkuzpkg
+or kuzpkg proper. For libkuzpkg:
 
 [source,C]
 -------------------------------------------
-/* libalpm */
+/* libkuzpkg */
 #include "yourfile.h"
-#include "alpm_list.h"
+#include "klpm_list.h"
 #include "anythingelse.h"
 -------------------------------------------
 
-For pacman:
+For kuzpkg:
 
 [source,C]
 -------------------------------------------
-#include <alpm.h>
-#include <alpm_list.h>
+#include <klpm.h>
+#include <klpm_list.h>
 
-/* pacman */
+/* kuzpkg */
 #include "yourfile.h"
 #include "anythingelse.h"
 -------------------------------------------

@@ -1,0 +1,36 @@
+kuzpkg-db-upgrade(8)
+====================
+
+Name
+----
+kuzpkg-db-upgrade - upgrade the local kuzpkg database to a newer format
+
+Synopsis
+--------
+'kuzpkg-db-upgrade' [options]
+
+Description
+-----------
+'kuzpkg-db-upgrade' is a script that upgrades the local database used
+by linkman:kuzpkg[8] to a newer format.
+
+Options
+--------------
+*-h, \--help*::
+Show the built-in help message and exit.
+*-V, \--version*::
+Show version information and exit.
+*-d, \--dbpath* <path>::
+Set an alternate database location.
+*-r, \--root* <path>::
+Set an alternate installation root.
+*\--config* <path>::
+Set an alternate configuration file.
+*\--nocolor*::
+Remove color from output.
+
+See Also
+--------
+linkman:kuzpkg[8]
+
+include::footer.asciidoc[]

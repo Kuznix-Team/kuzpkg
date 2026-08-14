@@ -1,0 +1,2084 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2026 Kuznix"
+# This file is distributed under the same license as the kuzpkg package.
+#
+# Translators:
+# Ács Zoltán, 2021
+# Ács Zoltán, 2021
+# Balló György <ballogyor@gmail.com>, 2014
+# Balló György <ballogyor@gmail.com>, 2014,2017
+# Gábor Nagy <ngaba@bibl.u-szeged.hu>, 2011,2013
+# gyeben <gyonkibendeguz@gmail.com>, 2016
+# gyeben <gyonkibendeguz@gmail.com>, 2016
+# Balló György <ballogyor@gmail.com>, 2011-2014,2016
+# Balló György <ballogyor@gmail.com>, 2014,2017
+# Gábor Nagy <ngaba@bibl.u-szeged.hu>, 2013
+# Gábor Nagy <ngaba@bibl.u-szeged.hu>, 2011,2013
+# ef06d5cbf35386ff2203d186eeff7923_fc5bdc4 <3b4340729d39520cef20e48ccdc2f16a_153038>, 2019
+# PB, 2021,2023
+# PB, 2021,2023
+# summoner <summoner@disroot.org>, 2025
+# summoner <summoner@disroot.org>, 2025
+# summoner <summoner@disroot.org>, 2025
+# user14 <nleknh@gmail.com>, 2019
+msgid ""
+msgstr ""
+"Project-Id-Version: Arch Linux Kuzpkg package manager\n"
+"Report-Msgid-Bugs-To: https://gitlab.archlinux.org/kuzpkg/kuzpkg/-/issues\n"
+"POT-Creation-Date: 2025-11-01 17:34+1000\n"
+"PO-Revision-Date: 2010-11-29 23:17+0000\n"
+"Last-Translator: summoner <summoner@disroot.org>, 2025\n"
+"Language-Team: Hungarian (http://app.transifex.com/toofishes/archlinux-"
+"kuzpkg/language/hu/)\n"
+"Language: hu\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/kuzpkg/callback.c:228
+#, c-format
+msgid "Running pre-transaction hooks...\n"
+msgstr "Tranzakció előtti horgok futtatása…\n"
+
+#: src/kuzpkg/callback.c:230
+#, c-format
+msgid "Running post-transaction hooks...\n"
+msgstr "Tranzakció utáni horgok futtatása…\n"
+
+#: src/kuzpkg/callback.c:243
+#, c-format
+msgid "checking dependencies...\n"
+msgstr "függőségek vizsgálata…\n"
+
+#: src/kuzpkg/callback.c:247
+#, c-format
+msgid "checking for file conflicts...\n"
+msgstr "fájlütközések vizsgálata…\n"
+
+#: src/kuzpkg/callback.c:251
+#, c-format
+msgid "resolving dependencies...\n"
+msgstr "függőségek feloldása…\n"
+
+#: src/kuzpkg/callback.c:254
+#, c-format
+msgid "looking for conflicting packages...\n"
+msgstr "ütköző csomagok keresése…\n"
+
+#: src/kuzpkg/callback.c:257
+#, c-format
+msgid "Processing package changes...\n"
+msgstr "Csomagváltozások feldolgozása…\n"
+
+#: src/kuzpkg/callback.c:264
+#, c-format
+msgid "installing %s...\n"
+msgstr "%s telepítése…\n"
+
+#: src/kuzpkg/callback.c:267
+#, c-format
+msgid "upgrading %s...\n"
+msgstr "%s frissítése…\n"
+
+#: src/kuzpkg/callback.c:270
+#, c-format
+msgid "reinstalling %s...\n"
+msgstr "%s újratelepítése…\n"
+
+#: src/kuzpkg/callback.c:273
+#, c-format
+msgid "downgrading %s...\n"
+msgstr "%s visszafejlesztése…\n"
+
+#: src/kuzpkg/callback.c:276
+#, c-format
+msgid "removing %s...\n"
+msgstr "%s eltávolítása…\n"
+
+#: src/kuzpkg/callback.c:300
+#, c-format
+msgid "checking package integrity...\n"
+msgstr "csomagok integritásának ellenőrzése…\n"
+
+#: src/kuzpkg/callback.c:305
+#, c-format
+msgid "checking keyring...\n"
+msgstr "kulcstartó ellenőrzése…\n"
+
+#: src/kuzpkg/callback.c:309
+#, c-format
+msgid "downloading required keys...\n"
+msgstr "szükséges kulcsok letöltése…\n"
+
+#: src/kuzpkg/callback.c:313
+#, c-format
+msgid "loading package files...\n"
+msgstr "csomagfájlok betöltése…\n"
+
+#: src/kuzpkg/callback.c:323
+#, c-format
+msgid "Retrieving packages...\n"
+msgstr "Csomagok letöltése…\n"
+
+#: src/kuzpkg/callback.c:335
+#, c-format
+msgid "checking available disk space...\n"
+msgstr "szabad lemezterület ellenőrzése…\n"
+
+#: src/kuzpkg/callback.c:342
+#, c-format
+msgid "%s optionally requires %s\n"
+msgstr "a(z) %s nem kötelező függőségei: %s\n"
+
+#: src/kuzpkg/callback.c:361 src/kuzpkg/callback.c:367
+#, c-format
+msgid "%s installed as %s.pacnew\n"
+msgstr "a(z) %s telepítve lett mint %s.pacnew\n"
+
+#: src/kuzpkg/callback.c:377 src/kuzpkg/callback.c:383
+#, c-format
+msgid "%s saved as %s.pacsave\n"
+msgstr "a(z) %s elmentve mint %s.pacsave\n"
+
+#: src/kuzpkg/callback.c:446
+#, c-format
+msgid "%s is in IgnorePkg/IgnoreGroup. Install anyway?"
+msgstr "a(z) %s az IgnorePkg/IgnoreGroup része. Mégis telepíti?"
+
+#: src/kuzpkg/callback.c:456
+#, c-format
+msgid "Replace %s with %s/%s?"
+msgstr "Lecseréli a következőt: %s, erre: %s/%s?"
+
+#: src/kuzpkg/callback.c:468
+#, c-format
+msgid "%s-%s%s%s and %s-%s%s%s are in conflict. Remove %s?"
+msgstr ""
+"A(z) %s-%s%s%s és a(z) %s-%s%s%s ütközik egymással. Eltávolítja a "
+"következőt: %s?"
+
+#: src/kuzpkg/callback.c:479
+#, c-format
+msgid "%s-%s%s%s and %s-%s%s%s are in conflict (%s). Remove %s?"
+msgstr ""
+"A(z) %s-%s%s%s és a(z) %s-%s%s%s ütközik egymással (%s). Eltávolítja a "
+"következőt: %s?"
+
+#: src/kuzpkg/callback.c:504
+#, c-format
+msgid ""
+"The following package cannot be upgraded due to unresolvable dependencies:\n"
+msgid_plural ""
+"The following packages cannot be upgraded due to unresolvable dependencies:\n"
+msgstr[0] ""
+"Az alábbi csomagot nem lehet telepíteni feloldhatatlan függőségek miatt:\n"
+msgstr[1] ""
+"Az alábbi csomagok nem frissíthetők feloldhatatlan függőségek miatt:\n"
+
+#: src/kuzpkg/callback.c:510
+#, c-format
+msgid "Do you want to skip the above package for this upgrade?"
+msgid_plural "Do you want to skip the above packages for this upgrade?"
+msgstr[0] "Mellőzzük a fenti csomag telepítését ennél a frissítésnél?"
+msgstr[1] "Szeretné kihagyni a fenti csomagokat ebből a frissítésből?"
+
+#: src/kuzpkg/callback.c:521
+#, c-format
+msgid "There is %zu provider available for %s\n"
+msgid_plural "There are %zu providers available for %s:\n"
+msgstr[0] "%zu szolgáltató érhető el a következő csomaghoz: %s\n"
+msgstr[1] "%zu szolgáltató érhető el a következő csomaghoz: %s\n"
+
+#: src/kuzpkg/callback.c:532
+#, c-format
+msgid ""
+"File %s is corrupted (%s).\n"
+"Do you want to delete it?"
+msgstr ""
+"A(z) %s fájl sérült (%s).\n"
+"Szeretné törölni?"
+
+#: src/kuzpkg/callback.c:543
+#, c-format
+msgid "Import PGP key %s?"
+msgstr "Importálja a(z) %s PGP-kulcsot?"
+
+#: src/kuzpkg/callback.c:546
+#, c-format
+msgid "Import PGP key %s, \"%s\"?"
+msgstr "Importálja a(z) %s, „%s” PGP-kulcsot?"
+
+#: src/kuzpkg/callback.c:608
+#, c-format
+msgid "installing"
+msgstr "telepítés:"
+
+#: src/kuzpkg/callback.c:611
+#, c-format
+msgid "upgrading"
+msgstr "frissítés:"
+
+#: src/kuzpkg/callback.c:614
+#, c-format
+msgid "downgrading"
+msgstr "visszafejlesztés:"
+
+#: src/kuzpkg/callback.c:617
+#, c-format
+msgid "reinstalling"
+msgstr "újratelepítés:"
+
+#: src/kuzpkg/callback.c:620
+#, c-format
+msgid "removing"
+msgstr "eltávolítás:"
+
+#: src/kuzpkg/callback.c:623
+#, c-format
+msgid "checking for file conflicts"
+msgstr "fájlütközések vizsgálata"
+
+#: src/kuzpkg/callback.c:626
+#, c-format
+msgid "checking available disk space"
+msgstr "szabad lemezterület ellenőrzése"
+
+#: src/kuzpkg/callback.c:629
+#, c-format
+msgid "checking package integrity"
+msgstr "csomagok integritásának ellenőrzése"
+
+#: src/kuzpkg/callback.c:632
+#, c-format
+msgid "checking keys in keyring"
+msgstr "kulcsok vizsgálata a kulcstartóban"
+
+#: src/kuzpkg/callback.c:635
+#, c-format
+msgid "loading package files"
+msgstr "csomagfájlok betöltése"
+
+#: src/kuzpkg/callback.c:756
+#, c-format
+msgid "Total"
+msgstr "Összes"
+
+#: src/kuzpkg/callback.c:887
+#, c-format
+msgid " %s downloading...\n"
+msgstr "%s letöltése…\n"
+
+#: src/kuzpkg/callback.c:1057
+#, c-format
+msgid " %s is up to date"
+msgstr " %s naprakész"
+
+#: src/kuzpkg/callback.c:1083
+#, c-format
+msgid " %s failed to download"
+msgstr " nem sikerült letölteni a következőt: %s"
+
+#: src/kuzpkg/callback.c:1133
+#, c-format
+msgid "unknown callback event type %d for %s\n"
+msgstr "ismeretlen visszahívási eseménytípus: %d, a következőhöz: %s\n"
+
+#: src/kuzpkg/check.c:63 src/kuzpkg/check.c:275
+#, c-format
+msgid "%s: %s (File type mismatch)\n"
+msgstr "%s: %s (Eltérő fájltípus)\n"
+
+#: src/kuzpkg/check.c:82
+#, c-format
+msgid "%s: %s (UID mismatch)\n"
+msgstr "%s: %s (Eltérő UID)\n"
+
+#: src/kuzpkg/check.c:91
+#, c-format
+msgid "%s: %s (GID mismatch)\n"
+msgstr "%s: %s (Eltérő GID)\n"
+
+#: src/kuzpkg/check.c:101
+#, c-format
+msgid "%s: %s (Permissions mismatch)\n"
+msgstr "%s: %s (Eltérő engedélyek)\n"
+
+#: src/kuzpkg/check.c:115 src/kuzpkg/check.c:162 src/kuzpkg/check.c:202
+#, c-format
+msgid "backup file"
+msgstr "biztonsági mentési fájl"
+
+#: src/kuzpkg/check.c:117 src/kuzpkg/check.c:123
+#, c-format
+msgid "%s: %s (Modification time mismatch)\n"
+msgstr "%s: %s (Eltérő módosítási időpont)\n"
+
+#: src/kuzpkg/check.c:140
+#, c-format
+msgid "unable to read symlink contents: %s\n"
+msgstr "nem sikerült olvasni a szimbolikus hivatkozás tartalmát: %s\n"
+
+#: src/kuzpkg/check.c:147
+#, c-format
+msgid "%s: %s (Symlink path mismatch)\n"
+msgstr "%s: %s (Eltérő szimbolikus hivatkozás útvonal)\n"
+
+#: src/kuzpkg/check.c:164 src/kuzpkg/check.c:170
+#, c-format
+msgid "%s: %s (Size mismatch)\n"
+msgstr "%s: %s (Eltérő méret)\n"
+
+#: src/kuzpkg/check.c:185
+#, c-format
+msgid "%s: %s (failed to calculate %s checksum)\n"
+msgstr "%s: %s (nem sikerült kiszámítani a(z) %s ellenőrzőösszegét)\n"
+
+#: src/kuzpkg/check.c:193
+#, c-format
+msgid "%s: %s (%s checksum information not available)\n"
+msgstr "%s: %s (%s nem érhető el az ellenőrzőösszeg-információ)\n"
+
+#: src/kuzpkg/check.c:204 src/kuzpkg/check.c:210
+#, c-format
+msgid "%s: %s (%s checksum mismatch)\n"
+msgstr "%s: %s (%s eltérő ellenőrzőösszeg)\n"
+
+#: src/kuzpkg/check.c:250 src/kuzpkg/check.c:265 src/kuzpkg/check.c:309
+#: src/kuzpkg/check.c:363
+#, c-format
+msgid "path too long: %s%s\n"
+msgstr "túl hosszú útvonal: %s%s\n"
+
+#: src/kuzpkg/check.c:285 src/kuzpkg/check.c:428
+#, c-format
+msgid "%s: %jd total file, "
+msgid_plural "%s: %jd total files, "
+msgstr[0] "%s: összesen %jd fájl, "
+msgstr[1] "%s: összesen %jd fájl, "
+
+#: src/kuzpkg/check.c:287
+#, c-format
+msgid "%jd missing file\n"
+msgid_plural "%jd missing files\n"
+msgstr[0] "%jd hiányzó fájl\n"
+msgstr[1] "%jd hiányzó fájl\n"
+
+#: src/kuzpkg/check.c:318
+#, c-format
+msgid "%s: no mtree file\n"
+msgstr "%s: nincs mtree fájl\n"
+
+#: src/kuzpkg/check.c:355
+#, c-format
+msgid "path too long: %slocal/%s-%s/%s\n"
+msgstr "túl hosszú útvonal: %slocal/%s-%s/%s\n"
+
+#: src/kuzpkg/check.c:382
+#, c-format
+msgid "file type not recognized: %s%s\n"
+msgstr "ismeretlen fájltípus: %s%s\n"
+
+#: src/kuzpkg/check.c:430
+#, c-format
+msgid "%jd altered file\n"
+msgid_plural "%jd altered files\n"
+msgstr[0] "%jd módosított fájl\n"
+msgstr[1] "%jd módosított fájl\n"
+
+#: src/kuzpkg/conf.c:102 src/kuzpkg/conf.c:325
+#, c-format
+msgid "malloc failure: could not allocate %zu byte\n"
+msgid_plural "malloc failure: could not allocate %zu bytes\n"
+msgstr[0] "malloc hiba: nem sikerült %zu byte-ot lefoglalni\n"
+msgstr[1] "malloc hiba: nem sikerült %zu byte-ot lefoglalni\n"
+
+#: src/kuzpkg/conf.c:250
+#, c-format
+msgid "switching to sandbox user '%s' failed!\n"
+msgstr "nem sikerült átváltani a(z) „%s” homokozó-felhasználóra!\n"
+
+#: src/kuzpkg/conf.c:348
+#, c-format
+msgid "could not get current working directory\n"
+msgstr "nem sikerült elérni a jelenlegi munkakönyvtárat\n"
+
+#: src/kuzpkg/conf.c:353
+#, c-format
+msgid "could not chdir to download directory %s\n"
+msgstr "nem sikerült belépni a(z) %s letöltési könyvtárba\n"
+
+#: src/kuzpkg/conf.c:368
+#, c-format
+msgid "running XferCommand: fork failed!\n"
+msgstr "az XferCommand futtatása: nem sikerült az elágaztatás!\n"
+
+#: src/kuzpkg/conf.c:380
+#, c-format
+msgid "could not rename %s to %s (%s)\n"
+msgstr "a(z) %s nem nevezhető át erre: %s (%s)\n"
+
+#: src/kuzpkg/conf.c:391
+#, c-format
+msgid "could not restore working directory (%s)\n"
+msgstr "nem sikerült visszaállítani a munkakönyvárat (%s)\n"
+
+#: src/kuzpkg/conf.c:529 src/kuzpkg/conf.c:578 src/kuzpkg/conf.c:722
+#: src/kuzpkg/conf.c:774
+#, c-format
+msgid "config file %s, line %d: invalid value for '%s' : '%s'\n"
+msgstr ""
+"%s konfigurációs fájl: %d. sor: érvénytelen érték a következőhöz: „%s” : "
+"„%s”\n"
+
+#: src/kuzpkg/conf.c:543
+#, c-format
+msgid "config file %s, line %d: '%s' option invalid, no signature support\n"
+msgstr ""
+"%s konfigurációs fájl: %d. sor: a(z) „%s” kapcsoló érvénytelen, nincs "
+"aláírás-támogatás\n"
+
+#: src/kuzpkg/conf.c:640 src/kuzpkg/conf.c:796 src/kuzpkg/conf.c:1092
+#, c-format
+msgid ""
+"config file %s, line %d: directive '%s' in section '%s' not recognized.\n"
+msgstr ""
+"%s konfigurációs fájl: %d. sor: ismeretlen „%s” direktíva a(z) „%s” "
+"szakaszban.\n"
+
+#: src/kuzpkg/conf.c:781
+#, c-format
+msgid "config file %s, line %d: value for '%s' has to be positive : '%s'\n"
+msgstr ""
+"%s konfigurációs fájl: %d. sor: a(z) „%s” értékének pozitívnak kell lennie: "
+"„%s”\n"
+
+#: src/kuzpkg/conf.c:788
+#, c-format
+msgid "config file %s, line %d: value for '%s' is too large : '%s'\n"
+msgstr "%s konfigurációs fájl: %d. sor: a(z) „%s” értéke túl nagy: „%s”\n"
+
+#: src/kuzpkg/conf.c:808
+#, c-format
+msgid "mirror '%s' contains the '%s' variable, but no '%s' is defined.\n"
+msgstr ""
+"a(z) „%s” tükör tartalmazza a(z) „%s” változót, de nincs meghatározva a(z) "
+"„%s”.\n"
+
+#: src/kuzpkg/conf.c:853
+#, c-format
+msgid "could not register '%s' database (%s)\n"
+msgstr "nem sikerült regisztrálni a(z) „%s” adatbázist (%s)\n"
+
+#: src/kuzpkg/conf.c:866
+#, c-format
+msgid "could not add cache server URL to database '%s': %s (%s)\n"
+msgstr ""
+"nem sikerült hozzáadni a gyorsítótár-kiszolgáló webcímét a(z) „%s” "
+"adatbázishoz: %s (%s)\n"
+
+#: src/kuzpkg/conf.c:875
+#, c-format
+msgid "could not add server URL to database '%s': %s (%s)\n"
+msgstr ""
+"nem sikerült a hozzáadni a kiszolgáló webcímét a(z) „%s” adatbázishoz: %s "
+"(%s)\n"
+
+#: src/kuzpkg/conf.c:902
+#, c-format
+msgid ""
+"failed to initialize klpm library:\n"
+"(root: %s, dbpath: %s)\n"
+"%s\n"
+msgstr ""
+"nem sikerült előkészíteni az klpm-programkönyvtárat:\n"
+"(gyökér: %s, adatbázis-útvonal: %s)\n"
+"%s\n"
+
+#: src/kuzpkg/conf.c:905
+#, c-format
+msgid "try running kuzpkg-db-upgrade\n"
+msgstr "próbálja meg a kuzpkg-db-upgrade futtatását\n"
+
+#: src/kuzpkg/conf.c:923
+#, c-format
+msgid "problem setting logfile '%s' (%s)\n"
+msgstr "probléma történt a(z) „%s” naplófájl beállításakor (%s)\n"
+
+#: src/kuzpkg/conf.c:932
+#, c-format
+msgid "problem setting gpgdir '%s' (%s)\n"
+msgstr "probléma történt a(z) „%s” gpgdir beállításakor (%s)\n"
+
+#: src/kuzpkg/conf.c:942
+#, c-format
+msgid "problem adding hookdir '%s' (%s)\n"
+msgstr "probléma történt a(z) „%s” hookdir hozzáadásakor (%s)\n"
+
+#: src/kuzpkg/conf.c:964
+#, c-format
+msgid "no '%s' configured\n"
+msgstr "a(z) „%s” nincs konfigurálva\n"
+
+#: src/kuzpkg/conf.c:972
+#, c-format
+msgid "problem setting DownloadUser '%s' (user does not exist)\n"
+msgstr ""
+"hiba történt a(z) „%s” nevű letöltési felhasználó beállításakor (a "
+"felhasználó nem létezik)\n"
+
+#: src/kuzpkg/conf.c:998
+#, c-format
+msgid "Failed to pass %s entry to libkuzpkg"
+msgstr "Nem sikerült %s bejegyzést átadni a következőnek: libkuzpkg"
+
+#: src/kuzpkg/conf.c:1038
+#, c-format
+msgid "config file %s, line %d: '%s' option '%s' not recognized\n"
+msgstr ""
+"%s konfigurációs fájl, %d. sor: „%s” „%s” kapcsoló értéke nem értelmezhető\n"
+
+#: src/kuzpkg/conf.c:1058 src/kuzpkg/conf.c:1216
+#, c-format
+msgid "config file %s, line %d: directive '%s' needs a value\n"
+msgstr ""
+"%s konfigurációs fájl, %d. sor: a(z) „%s” direktívának szüksége van egy "
+"értékre\n"
+
+#: src/kuzpkg/conf.c:1223
+#, c-format
+msgid "config parsing exceeded max recursion depth of %d.\n"
+msgstr ""
+"a konfiguráció értelmezése meghaladta a maximális %d rekurzív mélységet.\n"
+
+#: src/kuzpkg/conf.c:1271
+#, c-format
+msgid "config file %s could not be read: %s\n"
+msgstr "a(z) %s konfigurációs fájl nem olvasható: %s\n"
+
+#: src/kuzpkg/conf.c:1294
+#, c-format
+msgid "config file %s, line %d: All directives must belong to a section.\n"
+msgstr ""
+"%s konfigurációs fájl, %d. sor: minden direktívának egy szakaszhoz kell "
+"tartoznia.\n"
+
+#: src/kuzpkg/database.c:50 src/kuzpkg/files.c:335 src/kuzpkg/query.c:434
+#: src/kuzpkg/remove.c:85 src/kuzpkg/sync.c:972 src/kuzpkg/upgrade.c:76
+#, c-format
+msgid "no targets specified (use -h for help)\n"
+msgstr ""
+"nincs megadva egyetlen cél sem (használja a „-h” kapcsolót a súgóhoz)\n"
+
+#: src/kuzpkg/database.c:59
+#, c-format
+msgid "no install reason specified (use -h for help)\n"
+msgstr "nincs megadva a telepítés oka (használja a „-h” kapcsolót a súgóhoz)\n"
+
+#: src/kuzpkg/database.c:73
+#, c-format
+msgid "could not set install reason for package %s (%s)\n"
+msgstr ""
+"nem sikerült beállítani a telepítés okát a következő csomagnak: %s (%s)\n"
+
+#: src/kuzpkg/database.c:79
+#, c-format
+msgid "%s: install reason has been set to 'installed as dependency'\n"
+msgstr ""
+"%s: a telepítés oka be lett állítva a következőre: „függőségként "
+"telepített”\n"
+
+#: src/kuzpkg/database.c:81
+#, c-format
+msgid "%s: install reason has been set to 'explicitly installed'\n"
+msgstr ""
+"%s: a telepítés oka be lett állítva a következőre: „kifejezetten "
+"telepített”\n"
+
+#: src/kuzpkg/database.c:296
+#, c-format
+msgid "No database errors have been found!\n"
+msgstr "Nem található adatbázishiba!\n"
+
+#: src/kuzpkg/files.c:55
+#, c-format
+msgid "%s is owned by %s%s/%s%s %s%s%s\n"
+msgstr "a(z) %s tulajdonosa: %s%s/%s%s %s%s%s\n"
+
+#: src/kuzpkg/files.c:129
+#, c-format
+msgid "invalid regular expression '%s'\n"
+msgstr "érvénytelen reguláris kifejezés „%s”\n"
+
+#: src/kuzpkg/files.c:253
+#, c-format
+msgid "invalid package: '%s'\n"
+msgstr "érvénytelen csomag: „%s”\n"
+
+#: src/kuzpkg/files.c:285 src/kuzpkg/query.c:488 src/kuzpkg/sync.c:448
+#, c-format
+msgid "package '%s' was not found\n"
+msgstr "a(z) „%s” csomag nem található\n"
+
+#: src/kuzpkg/files.c:321 src/kuzpkg/sync.c:932
+#, c-format
+msgid "Synchronizing package databases...\n"
+msgstr "Csomag-adatbázisok szinkronizálása…\n"
+
+#: src/kuzpkg/package.c:99
+#, c-format
+msgid "Architecture"
+msgstr "Architektúra"
+
+#: src/kuzpkg/package.c:100
+#, c-format
+msgid "Backup Files"
+msgstr "Biztonsági mentési fájlok"
+
+#: src/kuzpkg/package.c:101
+#, c-format
+msgid "Build Date"
+msgstr "Összeállítás dátuma"
+
+#: src/kuzpkg/package.c:102
+#, c-format
+msgid "Compressed Size"
+msgstr "Tömörített méret"
+
+#: src/kuzpkg/package.c:103
+#, c-format
+msgid "Conflicts With"
+msgstr "Ütközik ezzel"
+
+#: src/kuzpkg/package.c:104
+#, c-format
+msgid "Depends On"
+msgstr "Függőségek"
+
+#: src/kuzpkg/package.c:105
+#, c-format
+msgid "Description"
+msgstr "Leírás"
+
+#: src/kuzpkg/package.c:106 src/kuzpkg/util.c:895
+#, c-format
+msgid "Download Size"
+msgstr "Letöltési méret"
+
+#: src/kuzpkg/package.c:107
+#, c-format
+msgid "Groups"
+msgstr "Csoportok"
+
+#: src/kuzpkg/package.c:108
+#, c-format
+msgid "Install Date"
+msgstr "Telepítés dátuma"
+
+#: src/kuzpkg/package.c:109
+#, c-format
+msgid "Install Reason"
+msgstr "Telepítés oka"
+
+#: src/kuzpkg/package.c:110
+#, c-format
+msgid "Install Script"
+msgstr "Telepítési parancsfájl"
+
+#: src/kuzpkg/package.c:111
+#, c-format
+msgid "Installed Size"
+msgstr "Telepített méret"
+
+#: src/kuzpkg/package.c:112
+#, c-format
+msgid "Licenses"
+msgstr "Licencek"
+
+#: src/kuzpkg/package.c:113 src/kuzpkg/package.c:239
+#, c-format
+msgid "MD5 Sum"
+msgstr "MD5-összeg"
+
+#: src/kuzpkg/package.c:114
+#, c-format
+msgid "Name"
+msgstr "Név"
+
+#: src/kuzpkg/package.c:115
+#, c-format
+msgid "Optional Deps"
+msgstr "Nem kötelező függőségek"
+
+#: src/kuzpkg/package.c:116
+#, c-format
+msgid "Optional For"
+msgstr "Nem kötelező függőségek a következőhöz"
+
+#: src/kuzpkg/package.c:117
+#, c-format
+msgid "Packager"
+msgstr "Csomagoló"
+
+#: src/kuzpkg/package.c:118
+#, c-format
+msgid "Provides"
+msgstr "Szolgáltatja"
+
+#: src/kuzpkg/package.c:119
+#, c-format
+msgid "Replaces"
+msgstr "Lecseréli"
+
+#: src/kuzpkg/package.c:120
+#, c-format
+msgid "Repository"
+msgstr "Tároló"
+
+#: src/kuzpkg/package.c:121
+#, c-format
+msgid "Required By"
+msgstr "Szükséges a következőhöz:"
+
+#: src/kuzpkg/package.c:122 src/kuzpkg/package.c:242
+#, c-format
+msgid "SHA-256 Sum"
+msgstr "SHA-256-összeg"
+
+#: src/kuzpkg/package.c:123
+#, c-format
+msgid "Signatures"
+msgstr "Aláírások"
+
+#: src/kuzpkg/package.c:124
+#, c-format
+msgid "URL"
+msgstr "Webcím"
+
+#: src/kuzpkg/package.c:125
+#, c-format
+msgid "Validated By"
+msgstr "Érvényesítette:"
+
+#: src/kuzpkg/package.c:126
+#, c-format
+msgid "Version"
+msgstr "Verzió"
+
+#: src/kuzpkg/package.c:174 src/kuzpkg/util.c:1350
+#, c-format
+msgid " [installed]"
+msgstr " [telepítve]"
+
+#: src/kuzpkg/package.c:223
+#, c-format
+msgid "Explicitly installed"
+msgstr "Kifejezetten telepített"
+
+#: src/kuzpkg/package.c:226
+#, c-format
+msgid "Installed as a dependency for another package"
+msgstr "Egy másik csomag függőségeként lett telepítve"
+
+#: src/kuzpkg/package.c:229 src/kuzpkg/package.c:249
+#, c-format
+msgid "Unknown"
+msgstr "Ismeretlen"
+
+#: src/kuzpkg/package.c:236 src/kuzpkg/package.c:321 src/kuzpkg/package.c:339
+#: src/kuzpkg/util.c:561 src/kuzpkg/util.c:749 src/kuzpkg/util.c:789
+#: src/kuzpkg/util.c:817
+#, c-format
+msgid "None"
+msgstr "Nincs"
+
+#: src/kuzpkg/package.c:245
+#, c-format
+msgid "Signature"
+msgstr "Aláírás"
+
+#: src/kuzpkg/package.c:307
+#, c-format
+msgid "Yes"
+msgstr "Igen"
+
+#: src/kuzpkg/package.c:307
+#, c-format
+msgid "No"
+msgstr "Nem"
+
+#: src/kuzpkg/package.c:389
+#, c-format
+msgid "could not calculate checksums for %s\n"
+msgstr "nem sikerült kiszámítani a(z) %s ellenőrzőösszegét\n"
+
+#: src/kuzpkg/package.c:479
+#, c-format
+msgid "no changelog available for '%s'.\n"
+msgstr "a(z) „%s” csomaghoz nem érhető el a változáslista.\n"
+
+#: src/kuzpkg/package.c:483
+#, c-format
+msgid "Changelog for %s:\n"
+msgstr "A(z) %s változáslistája:\n"
+
+#: src/kuzpkg/package.c:504 src/kuzpkg/package.c:506
+#, c-format
+msgid "installed"
+msgstr "telepítve"
+
+#: src/kuzpkg/kuzpkg.c:100
+#, c-format
+msgid "options"
+msgstr "kapcsolók"
+
+#: src/kuzpkg/kuzpkg.c:101
+#, c-format
+msgid "file(s)"
+msgstr "fájl(ok)"
+
+#: src/kuzpkg/kuzpkg.c:102
+#, c-format
+msgid "package(s)"
+msgstr "csomag(ok)"
+
+#: src/kuzpkg/kuzpkg.c:103
+#, c-format
+msgid "usage"
+msgstr "használat"
+
+#: src/kuzpkg/kuzpkg.c:104
+#, c-format
+msgid "operation"
+msgstr "művelet"
+
+#: src/kuzpkg/kuzpkg.c:109
+#, c-format
+msgid "operations:\n"
+msgstr "műveletek:\n"
+
+#: src/kuzpkg/kuzpkg.c:119
+#, c-format
+msgid ""
+"\n"
+"use '%s {-h --help}' with an operation for available options\n"
+msgstr ""
+"\n"
+"a '%s {-h --help}' után egy műveletet megadva a vonatkozó kapcsolókat "
+"kapjuk\n"
+
+#: src/kuzpkg/kuzpkg.c:125
+#, c-format
+msgid ""
+"  -c, --cascade        remove packages and all packages that depend on them\n"
+msgstr ""
+"  -c, --cascade        csomagok és az összes tőlük függő csomagok "
+"eltávolítása\n"
+
+#: src/kuzpkg/kuzpkg.c:126
+#, c-format
+msgid "  -n, --nosave         remove configuration files\n"
+msgstr "  -n, --nosave         konfigurációs fájlok eltávolítása\n"
+
+#: src/kuzpkg/kuzpkg.c:127
+#, c-format
+msgid ""
+"  -s, --recursive      remove unnecessary dependencies\n"
+"                       (-ss includes explicitly installed dependencies)\n"
+msgstr ""
+"  -s, --recursive      a felesleges függőségek eltávolítása\n"
+"                       (-ss beleértve a kifejezetten telepített függőségeket "
+"is)\n"
+
+#: src/kuzpkg/kuzpkg.c:129
+#, c-format
+msgid "  -u, --unneeded       remove unneeded packages\n"
+msgstr "  -u, --unneeded       nem szükséges csomagok eltávolítása\n"
+
+#: src/kuzpkg/kuzpkg.c:132 src/kuzpkg/kuzpkg.c:166
+#, c-format
+msgid "      --needed         do not reinstall up to date packages\n"
+msgstr "      --needed         a naprakész csomagokat ne telepítse újra\n"
+
+#: src/kuzpkg/kuzpkg.c:137
+#, c-format
+msgid "  -c, --changelog      view the changelog of a package\n"
+msgstr "  -c, --changelog      egy csomag változáslistájának megtekintése\n"
+
+#: src/kuzpkg/kuzpkg.c:138
+#, c-format
+msgid ""
+"  -d, --deps           list packages installed as dependencies [filter]\n"
+msgstr ""
+"  -d, --deps           a függőségként telepített csomagok listázása [szűrő]\n"
+
+#: src/kuzpkg/kuzpkg.c:139
+#, c-format
+msgid "  -e, --explicit       list packages explicitly installed [filter]\n"
+msgstr ""
+"  -e, --explicit       kifejezetten telepített csomagok listázása [szűrő]\n"
+
+#: src/kuzpkg/kuzpkg.c:140
+#, c-format
+msgid "  -g, --groups         view all members of a package group\n"
+msgstr "  -g, --groups         egy csoport összes tagjának megtekintése\n"
+
+#: src/kuzpkg/kuzpkg.c:141
+#, c-format
+msgid ""
+"  -i, --info           view package information (-ii for backup files)\n"
+msgstr ""
+"  -i, --info           csomaginformációk megtekintése (-ii: biztonsági "
+"mentési fájlok is)\n"
+
+#: src/kuzpkg/kuzpkg.c:142
+#, c-format
+msgid ""
+"  -k, --check          check that package files exist (-kk for file "
+"properties)\n"
+msgstr ""
+"  -k, --check          a csomagfájlok létezésének ellenőrzése\n"
+"                       (-kk: a fájltulajdonságokhoz)\n"
+
+#: src/kuzpkg/kuzpkg.c:143 src/kuzpkg/kuzpkg.c:180
+#, c-format
+msgid "  -l, --list           list the files owned by the queried package\n"
+msgstr ""
+"  -l, --list           a lekérdezett csomaghoz tartozó fájlok listája\n"
+
+#: src/kuzpkg/kuzpkg.c:144
+#, c-format
+msgid ""
+"  -m, --foreign        list installed packages not found in sync db(s) "
+"[filter]\n"
+msgstr ""
+"  -m, --foreign        a szinkronizálási adatbázis(ok)ban nem található\n"
+"                       telepített csomagok listázása [szűrő]\n"
+
+#: src/kuzpkg/kuzpkg.c:145
+#, c-format
+msgid ""
+"  -n, --native         list installed packages only found in sync db(s) "
+"[filter]\n"
+msgstr ""
+"  -n, --native         csak a szinkronizálási adatbázis(ok)ban található\n"
+"                       telepített csomagok listázása [szűrő]\n"
+
+#: src/kuzpkg/kuzpkg.c:146
+#, c-format
+msgid "  -o, --owns <file>    query the package that owns <file>\n"
+msgstr "  -o, --owns <file>    lekérdezi a <file> tulajdonosának csomagját\n"
+
+#: src/kuzpkg/kuzpkg.c:147
+#, c-format
+msgid "  -p, --file <package> query a package file instead of the database\n"
+msgstr ""
+"  -p, --file <package> egy csomagfájl lekérdezése az adatbázis helyett\n"
+
+#: src/kuzpkg/kuzpkg.c:148 src/kuzpkg/kuzpkg.c:161 src/kuzpkg/kuzpkg.c:181
+#, c-format
+msgid "  -q, --quiet          show less information for query and search\n"
+msgstr ""
+"  -q, --quiet          kevesebb információ megjelenítése\n"
+"                       lekérdezésnél és keresésnél\n"
+
+#: src/kuzpkg/kuzpkg.c:149
+#, c-format
+msgid ""
+"  -s, --search <regex> search locally-installed packages for matching "
+"strings\n"
+msgstr ""
+"  -s, --search <regex> helyileg telepített csomagok keresése\n"
+"                       egyező karakterláncok után\n"
+
+#: src/kuzpkg/kuzpkg.c:150
+#, c-format
+msgid ""
+"  -t, --unrequired     list packages not (optionally) required by any\n"
+"                       package (-tt to ignore optdepends) [filter]\n"
+msgstr ""
+" -t, --unrequired     olyan csomagok listázása, amelyeket egyetlen csomag "
+"sem\n"
+"                         igényel (még nem kötelezően sem)\n"
+"                         (-tt a nem kötelező függőségek mellőzéséhez) "
+"[szűrő]\n"
+
+#: src/kuzpkg/kuzpkg.c:152
+#, c-format
+msgid "  -u, --upgrades       list outdated packages [filter]\n"
+msgstr "  -u, --upgrades       az elavult csomagok listázása [szűrő]\n"
+
+#: src/kuzpkg/kuzpkg.c:156
+#, c-format
+msgid ""
+"  -c, --clean          remove old packages from cache directory (-cc for "
+"all)\n"
+msgstr ""
+"  -c, --clean          a régi csomagok törlése a gyorsítótár-könyvtárból\n"
+"                       (-cc az összeshez)\n"
+
+#: src/kuzpkg/kuzpkg.c:157
+#, c-format
+msgid ""
+"  -g, --groups         view all members of a package group\n"
+"                       (-gg to view all groups and members)\n"
+msgstr ""
+"  -g, --groups         egy csomagcsoport összes tagjának megtekintése\n"
+"                       (-gg az összes csoport és tagjainak megtekintéséhez)\n"
+
+#: src/kuzpkg/kuzpkg.c:159
+#, c-format
+msgid ""
+"  -i, --info           view package information (-ii for extended "
+"information)\n"
+msgstr ""
+"  -i, --info           csomaginformáció megtekintése (-ii kibővített\n"
+"                       információk)\n"
+
+#: src/kuzpkg/kuzpkg.c:160
+#, c-format
+msgid "  -l, --list <repo>    view a list of packages in a repo\n"
+msgstr "  -l, --list <repo>    egy tároló csomagjainak listázása\n"
+
+#: src/kuzpkg/kuzpkg.c:162
+#, c-format
+msgid ""
+"  -s, --search <regex> search remote repositories for matching strings\n"
+msgstr ""
+"  -s, --search <regex> távoli tárolók keresése megfelelő karakterláncok "
+"után\n"
+
+#: src/kuzpkg/kuzpkg.c:163
+#, c-format
+msgid ""
+"  -u, --sysupgrade     upgrade installed packages (-uu enables downgrades)\n"
+msgstr ""
+"  -u, --sysupgrade     telepített csomagok frissítése (-uu engedélyezi a\n"
+"                       visszafejlesztést)\n"
+
+#: src/kuzpkg/kuzpkg.c:164 src/kuzpkg/kuzpkg.c:183
+#, c-format
+msgid ""
+"  -y, --refresh        download fresh package databases from the server\n"
+"                       (-yy to force a refresh even if up to date)\n"
+msgstr ""
+"  -y, --refresh        friss csomagadatbázisok letöltése a kiszolgálóról\n"
+"                       (-yy frissítés kényszerítése akkor is, ha naprakész)\n"
+
+#: src/kuzpkg/kuzpkg.c:170
+#, c-format
+msgid "      --asdeps         mark packages as non-explicitly installed\n"
+msgstr ""
+"      --asdeps         csomagok megjelölése nem-kifejezetten\n"
+"                       telepítettként\n"
+
+#: src/kuzpkg/kuzpkg.c:171
+#, c-format
+msgid "      --asexplicit     mark packages as explicitly installed\n"
+msgstr ""
+"      --asexplicit     csomagok megjelölése kifejezetten\n"
+"                       telepítettként\n"
+
+#: src/kuzpkg/kuzpkg.c:172
+#, c-format
+msgid ""
+"  -k, --check          test local database for validity (-kk for sync "
+"databases)\n"
+msgstr ""
+"  -k, --check          a helyi adatbázis érvényességének tesztelése\n"
+"                       (-kk az adatbázisok szinkronizálásához)\n"
+
+#: src/kuzpkg/kuzpkg.c:173
+#, c-format
+msgid "  -q, --quiet          suppress output of success messages\n"
+msgstr "  -q, --quiet          elnyomja a „siker”-üzenetek kimenetét\n"
+
+#: src/kuzpkg/kuzpkg.c:182
+#, c-format
+msgid "  -x, --regex          enable searching using regular expressions\n"
+msgstr ""
+"  -x, --regex          keresés engedélyezése reguláris kifejezések "
+"használatával\n"
+
+#: src/kuzpkg/kuzpkg.c:185
+#, c-format
+msgid ""
+"      --machinereadable\n"
+"                       produce machine-readable output\n"
+msgstr ""
+"      --machinereadable\n"
+"                       gépek által olvasható kimenet előállítása\n"
+
+#: src/kuzpkg/kuzpkg.c:191
+#, c-format
+msgid ""
+"  -w, --downloadonly   download packages but do not install/upgrade "
+"anything\n"
+msgstr ""
+"  -w, --downloadonly   töltse le a csomagokat, de ne telepítsen/frissítsen "
+"semmit\n"
+
+#: src/kuzpkg/kuzpkg.c:192
+#, c-format
+msgid ""
+"      --overwrite <glob>\n"
+"                       overwrite conflicting files (can be used more than "
+"once)\n"
+msgstr ""
+"      --overwrite <glob>\n"
+"                       ütköző fájlok felülírása (többször is használható)\n"
+
+#: src/kuzpkg/kuzpkg.c:194
+#, c-format
+msgid "      --asdeps         install packages as non-explicitly installed\n"
+msgstr ""
+"      --asdeps         csomagok telepítése mint nem-kifejezetten telepített\n"
+
+#: src/kuzpkg/kuzpkg.c:195
+#, c-format
+msgid "      --asexplicit     install packages as explicitly installed\n"
+msgstr ""
+"      --asexplicit     csomagok telepítése mint kifejezetten telepített\n"
+
+#: src/kuzpkg/kuzpkg.c:196
+#, c-format
+msgid ""
+"      --ignore <pkg>   ignore a package upgrade (can be used more than "
+"once)\n"
+msgstr ""
+"      --ignore <pkg>\n"
+"                       csomagfrissítés mellőzése (többször is használható)\n"
+
+#: src/kuzpkg/kuzpkg.c:197
+#, c-format
+msgid ""
+"      --ignoregroup <grp>\n"
+"                       ignore a group upgrade (can be used more than once)\n"
+msgstr ""
+"      --ignoregroup <grp>\n"
+"                       egy csoportfrissítés mellőzése (többször is "
+"használható)\n"
+
+#: src/kuzpkg/kuzpkg.c:201
+#, c-format
+msgid ""
+"  -d, --nodeps         skip dependency version checks (-dd to skip all "
+"checks)\n"
+msgstr ""
+"  -d, --nodeps         függőségi verzió-ellenőrzések kihagyása\n"
+"                       (-dd az összes ellenőrzés kihagyása)\n"
+
+#: src/kuzpkg/kuzpkg.c:202
+#, c-format
+msgid ""
+"      --assume-installed <package=version>\n"
+"                       add a virtual package to satisfy dependencies\n"
+msgstr ""
+"      --assume-installed <package=version>\n"
+"                       egy virtuális csomag hozzáadása a függőségek "
+"teljesítéséhez\n"
+
+#: src/kuzpkg/kuzpkg.c:204
+#, c-format
+msgid ""
+"      --dbonly         only modify database entries, not package files\n"
+msgstr ""
+"      --dbonly         csak adatbázis-bejegyzést módosítson, csomagfájlt ne\n"
+
+#: src/kuzpkg/kuzpkg.c:205
+#, c-format
+msgid ""
+"      --noprogressbar  do not show a progress bar when downloading files\n"
+msgstr ""
+"      --noprogressbar  ne jelenítse meg a folyamatsávot a fájlok "
+"letöltésekor\n"
+
+#: src/kuzpkg/kuzpkg.c:206
+#, c-format
+msgid ""
+"      --noscriptlet    do not execute the install scriptlet if one exists\n"
+msgstr ""
+"      --noscriptlet    ne futtassa a telepítési parancsfájlt, ha létezik\n"
+
+#: src/kuzpkg/kuzpkg.c:207
+#, c-format
+msgid ""
+"  -p, --print          print the targets instead of performing the "
+"operation\n"
+msgstr ""
+"  -p, --print          célok kiírása a műveletek végrehajtása helyett\n"
+
+#: src/kuzpkg/kuzpkg.c:208
+#, c-format
+msgid ""
+"      --print-format <string>\n"
+"                       specify how the targets should be printed\n"
+msgstr ""
+"      --print-format <string>\n"
+"                       meghatározza, hogyan íródjanak ki a célok\n"
+
+#: src/kuzpkg/kuzpkg.c:213
+#, c-format
+msgid "  -b, --dbpath <path>  set an alternate database location\n"
+msgstr ""
+"  -b, --dbpath <path>\n"
+"                       alternatív adatbázis helyének beállítása\n"
+
+#: src/kuzpkg/kuzpkg.c:214
+#, c-format
+msgid "  -r, --root <path>    set an alternate installation root\n"
+msgstr "  -r, --root <path> alternatív telepítési gyökérkönyvtár beállítása\n"
+
+#: src/kuzpkg/kuzpkg.c:215
+#, c-format
+msgid "  -v, --verbose        be verbose\n"
+msgstr "  -v, --verbose        több részlet megjelenítése\n"
+
+#: src/kuzpkg/kuzpkg.c:216
+#, c-format
+msgid "      --arch <arch>    set an alternate architecture\n"
+msgstr "      --arch <arch>    alternatív architektúra beállítása\n"
+
+#: src/kuzpkg/kuzpkg.c:217
+#, c-format
+msgid "      --sysroot        operate on a mounted guest system (root-only)\n"
+msgstr ""
+"      --sysroot        egy csatolt vendégrendszeren való működés\n"
+"                       (csak rendszergazdaként)\n"
+
+#: src/kuzpkg/kuzpkg.c:218
+#, c-format
+msgid "      --cachedir <dir> set an alternate package cache location\n"
+msgstr ""
+"      --cachedir <dir> \n"
+"                       alternatív csomaggyorsítótár helyének beállítása\n"
+
+#: src/kuzpkg/kuzpkg.c:219
+#, c-format
+msgid "      --hookdir <dir>  set an alternate hook location\n"
+msgstr "      --hookdir <dir>  egy alternatív horoghely beállítása\n"
+
+#: src/kuzpkg/kuzpkg.c:220
+#, c-format
+msgid "      --color <when>   colorize the output\n"
+msgstr "      --color <when>   kimenet színezése\n"
+
+#: src/kuzpkg/kuzpkg.c:221
+#, c-format
+msgid "      --config <path>  set an alternate configuration file\n"
+msgstr ""
+"      --config <path>\n"
+"                       alternatív konfigurációs fájl beállítása\n"
+
+#: src/kuzpkg/kuzpkg.c:222
+#, c-format
+msgid "      --debug          display debug messages\n"
+msgstr "      --debug          hibakeresési üzenetek megjelenítése\n"
+
+#: src/kuzpkg/kuzpkg.c:223
+#, c-format
+msgid "      --gpgdir <path>  set an alternate home directory for GnuPG\n"
+msgstr ""
+"      --gpgdir <path>\n"
+"                       alternatív „home” könyvtár beállítása\n"
+"                       a következőhöz: GnuPG\n"
+
+#: src/kuzpkg/kuzpkg.c:224
+#, c-format
+msgid "      --logfile <path> set an alternate log file\n"
+msgstr ""
+"      --logfile <path>\n"
+"                       alternatív naplófájl beállítása\n"
+
+#: src/kuzpkg/kuzpkg.c:225
+#, c-format
+msgid "      --noconfirm      do not ask for any confirmation\n"
+msgstr "      --noconfirm      ne kérjen soha megerősítést\n"
+
+#: src/kuzpkg/kuzpkg.c:226
+#, c-format
+msgid "      --confirm        always ask for confirmation\n"
+msgstr "      --confirm        mindig kérjen megerősítést\n"
+
+#: src/kuzpkg/kuzpkg.c:227
+#, c-format
+msgid ""
+"      --disable-download-timeout\n"
+"                       use relaxed timeouts for download\n"
+msgstr ""
+"      --disable-download-timeout\n"
+"                       időkorlát letiltása a letöltéshez\n"
+
+#: src/kuzpkg/kuzpkg.c:229
+#, c-format
+msgid ""
+"      --disable-sandbox\n"
+"                       disables all sandbox features used for the downloader "
+"process\n"
+msgstr ""
+"      --disable-sandbox\n"
+"                       letiltja a letöltőfolyamat összes homokozófunkcióját\n"
+
+#: src/kuzpkg/kuzpkg.c:231
+#, c-format
+msgid ""
+"      --disable-sandbox-filesystem\n"
+"                       disables the filesystem part of the downloader "
+"process sandbox\n"
+msgstr ""
+"      --disable-sandbox-filesystem\n"
+"                       letiltja a letöltőfolyamat homokozójának fájlrendszer "
+"részét\n"
+
+#: src/kuzpkg/kuzpkg.c:233
+#, c-format
+msgid ""
+"      --disable-sandbox-syscalls\n"
+"                       disables the syscalls part of the downloader process "
+"sandbox\n"
+msgstr ""
+"      --disable-sandbox-syscalls\n"
+"                       letiltja a letöltőfolyamat homokozójának "
+"rendszerhívási részét\n"
+
+#: src/kuzpkg/kuzpkg.c:253
+#, c-format
+msgid ""
+"                       This program may be freely redistributed under\n"
+"                       the terms of the GNU General Public License.\n"
+msgstr ""
+"                       Ez a program szabadon terjeszthető a GNU\n"
+"                       General Public License feltételei szerint.\n"
+
+#: src/kuzpkg/kuzpkg.c:286
+#, c-format
+msgid "HTTP_USER_AGENT truncated\n"
+msgstr "HTTP_USER_AGENT meg lett csonkítva\n"
+
+#: src/kuzpkg/kuzpkg.c:319
+#, c-format
+msgid "invalid option: '%s' and '%s' may not be used together\n"
+msgstr "érvénytelen kapcsoló: a(z) „%s” és a(z) „%s” nem használható együtt\n"
+
+#: src/kuzpkg/kuzpkg.c:427
+#, c-format
+msgid "invalid argument '%s' for %s\n"
+msgstr "érvénytelen a(z) „%s” argumentum a következőhöz %s\n"
+
+#: src/kuzpkg/kuzpkg.c:449 src/kuzpkg/kuzpkg.c:462
+#, c-format
+msgid "'%s' is not a valid debug level\n"
+msgstr "a(z) „%s” nem érvényes hibakeresési szint\n"
+
+#: src/kuzpkg/kuzpkg.c:1053
+#, c-format
+msgid "only one operation may be used at a time\n"
+msgstr "csak egy művelet hajtható végre egyszerre\n"
+
+#: src/kuzpkg/kuzpkg.c:1112
+#, c-format
+msgid "invalid option '-%c'\n"
+msgstr "érvénytelen kapcsoló: „-%c”\n"
+
+#: src/kuzpkg/kuzpkg.c:1114
+#, c-format
+msgid "invalid option '--%s'\n"
+msgstr "érvénytelen kapcsoló „--%s”\n"
+
+#: src/kuzpkg/kuzpkg.c:1225
+#, c-format
+msgid "you cannot perform this operation unless you are root.\n"
+msgstr "ez a művelet csak rendszergazdaként hajtható végre.\n"
+
+#: src/kuzpkg/kuzpkg.c:1259
+#, c-format
+msgid "failed to read arguments from stdin: (%s)\n"
+msgstr "nem lehetett beolvasni az argumentumot az stdin-ből: (%s)\n"
+
+#: src/kuzpkg/kuzpkg.c:1264
+#, c-format
+msgid "failed to reopen stdin for reading: (%s)\n"
+msgstr "nem sikerült újramegnyitni olvasásra az stdin-t: (%s)\n"
+
+#: src/kuzpkg/kuzpkg.c:1269
+#, c-format
+msgid "argument '-' specified with empty stdin\n"
+msgstr "a „-” argumentum üres stdin-nel lett megadva\n"
+
+#: src/kuzpkg/kuzpkg.c:1274
+#, c-format
+msgid "argument '-' specified without input on stdin\n"
+msgstr "a „-” argumentum bemenet nélkül lett megadva az stdin-en\n"
+
+#: src/kuzpkg/kuzpkg.c:1351
+#, c-format
+msgid "no operation specified (use -h for help)\n"
+msgstr "nincs megadva művelet (használja a „-h” kapcsolót a súgóhoz)\n"
+
+#: src/kuzpkg/query.c:87
+#, c-format
+msgid "%s is owned by %s%s %s%s%s\n"
+msgstr ""
+"a(z) %s tulajdonosa: %s%s %s%s%s\n"
+"\n"
+
+#: src/kuzpkg/query.c:149
+#, c-format
+msgid "no file was specified for --owns\n"
+msgstr "nincs megadva fájl az --owns számára\n"
+
+#: src/kuzpkg/query.c:170
+#, c-format
+msgid "empty string passed to file owner query\n"
+msgstr "üres karakterlánc lett átadva a fájl tulajdonosának lekérdezéséhez\n"
+
+#: src/kuzpkg/query.c:197 src/kuzpkg/query.c:219
+#, c-format
+msgid "No package owns %s\n"
+msgstr "Egyik csomag sem tartalmazza a következőt: %s\n"
+
+#: src/kuzpkg/query.c:206
+#, c-format
+msgid "path too long: %s/\n"
+msgstr "túl hosszú útvonal: %s/\n"
+
+#: src/kuzpkg/query.c:340
+#, c-format
+msgid "[ignored]"
+msgstr "[mellőzve]"
+
+#: src/kuzpkg/query.c:391
+#, c-format
+msgid "group '%s' was not found\n"
+msgstr "a(z) „%s” csoport nem található\n"
+
+#: src/kuzpkg/query.c:472
+#, c-format
+msgid "could not load package '%s': %s\n"
+msgstr "a(z) „%s” csomag nem tölthető be: %s\n"
+
+#: src/kuzpkg/query.c:491
+#, c-format
+msgid "'%s' is a file, you might want to use %s.\n"
+msgstr ""
+"a(z) „%s” egy fájl, valószínűleg a(z) %s kapcsolót szeretné használni.\n"
+
+#: src/kuzpkg/remove.c:57 src/kuzpkg/sync.c:576
+#, c-format
+msgid "target not found: %s\n"
+msgstr "nem található a cél: %s\n"
+
+#: src/kuzpkg/remove.c:112 src/kuzpkg/sync.c:772
+#, c-format
+msgid "failed to prepare transaction (%s)\n"
+msgstr "nem sikerült felkészülni a tranzakcióra (%s)\n"
+
+#: src/kuzpkg/remove.c:119 src/kuzpkg/sync.c:758
+#, c-format
+msgid "removing %s breaks dependency '%s' required by %s\n"
+msgstr ""
+"a(z) %s eltávolítása megtöri a(z) „%s” függőséget, amely szükséges a "
+"következőhöz: %s\n"
+
+#: src/kuzpkg/remove.c:138
+#, c-format
+msgid "%s is designated as a HoldPkg.\n"
+msgstr "A(z) %s meg lett jelölve mint HoldPkg.\n"
+
+#: src/kuzpkg/remove.c:143
+#, c-format
+msgid "HoldPkg was found in target list. Do you want to continue?"
+msgstr "HoldPkg található a céllistában. Szeretné folytatni?"
+
+#: src/kuzpkg/remove.c:151 src/kuzpkg/sync.c:822
+#, c-format
+msgid " there is nothing to do\n"
+msgstr " nincs teendő\n"
+
+#: src/kuzpkg/remove.c:163
+#, c-format
+msgid "Do you want to remove these packages?"
+msgstr "Eltávolítja ezeket a csomagokat?"
+
+#: src/kuzpkg/remove.c:169 src/kuzpkg/sync.c:850
+#, c-format
+msgid "failed to commit transaction (%s)\n"
+msgstr "nem sikerült végrehajtani a tranzakciót (%s)\n"
+
+#: src/kuzpkg/sync.c:48 src/kuzpkg/sync.c:94 src/kuzpkg/sync.c:99
+#, c-format
+msgid "could not remove %s: %s\n"
+msgstr "nem sikerült eltávolítani a következőt: %s: %s\n"
+
+#: src/kuzpkg/sync.c:64
+#, c-format
+msgid "could not access database directory\n"
+msgstr "nem sikerült elérni az adatbázis-könyvtárat\n"
+
+#: src/kuzpkg/sync.c:88
+#, c-format
+msgid "could not remove %s%s: path exceeds PATH_MAX\n"
+msgstr ""
+"nem sikerült eltávolítani a következőt: %s%s: az elérési út meghaladja a "
+"PATH_MAX értéket\n"
+
+#: src/kuzpkg/sync.c:142
+#, c-format
+msgid "Database directory: %s\n"
+msgstr "Adatbázis-könyvtár: %s\n"
+
+#: src/kuzpkg/sync.c:143
+#, c-format
+msgid "Do you want to remove unused repositories?"
+msgstr "Eltávolítja a nem használt tárolókat?"
+
+#: src/kuzpkg/sync.c:146
+#, c-format
+msgid "removing unused sync repositories...\n"
+msgstr "használaton kívüli szinkrontárolók eltávolítása…\n"
+
+#: src/kuzpkg/sync.c:172
+#, c-format
+msgid "Packages to keep:\n"
+msgstr "Megtartandó csomagok:\n"
+
+#: src/kuzpkg/sync.c:174
+#, c-format
+msgid "  All locally installed packages\n"
+msgstr "  Összes helyileg telepített csomag\n"
+
+#: src/kuzpkg/sync.c:177
+#, c-format
+msgid "  All current sync database packages\n"
+msgstr "  Összes jelenlegi szinkronizálási adatbázis-csomag\n"
+
+#: src/kuzpkg/sync.c:187
+#, c-format
+msgid "Cache directory: %s\n"
+msgstr "Gyorsítótár könyvtára: %s\n"
+
+#: src/kuzpkg/sync.c:190
+#, c-format
+msgid "Do you want to remove all other packages from cache?"
+msgstr "Eltávolítja az összes többi csomagot a gyorsítótárból?"
+
+#: src/kuzpkg/sync.c:194
+#, c-format
+msgid "removing old packages from cache...\n"
+msgstr "régi csomagok eltávolítása a gyorsítótárból…\n"
+
+#: src/kuzpkg/sync.c:196
+#, c-format
+msgid "Do you want to remove ALL files from cache?"
+msgstr "Eltávolítja az ÖSSZES fájlt a gyorsítótárból?"
+
+#: src/kuzpkg/sync.c:200
+#, c-format
+msgid "removing all files from cache...\n"
+msgstr "az összes fájl eltávolítása a gyorsítótárból…\n"
+
+#: src/kuzpkg/sync.c:206
+#, c-format
+msgid "could not access cache directory %s\n"
+msgstr "nem sikerült elérni a(z) %s gyorsítótár-könyvtárat\n"
+
+#: src/kuzpkg/sync.c:249
+#, c-format
+msgid "skipping %s%s: path exceeds PATH_MAX\n"
+msgstr "kihagyás: %s%s: az elérési út meghaladja a PATH_MAX értéket\n"
+
+#: src/kuzpkg/sync.c:368
+#, c-format
+msgid "package group '%s' was not found\n"
+msgstr "nem található a(z) „%s” nevű csomagcsoport\n"
+
+#: src/kuzpkg/sync.c:443
+#, c-format
+msgid "repository '%s' does not exist\n"
+msgstr "nem létezik a(z) „%s-tároló”\n"
+
+#: src/kuzpkg/sync.c:489
+#, c-format
+msgid "repository \"%s\" was not found.\n"
+msgstr "nem található a(z) „%s-tároló”.\n"
+
+#: src/kuzpkg/sync.c:591
+#, c-format
+msgid "There is %d member in group %s%s%s:\n"
+msgid_plural "There are %d members in group %s%s%s:\n"
+msgstr[0] "%d tag van a(z) %s%s%s csoportban:\n"
+msgstr[1] "%d tag van a(z) %s%s%s csoportban:\n"
+
+#: src/kuzpkg/sync.c:641
+#, c-format
+msgid "skipping target: %s\n"
+msgstr "cél kihagyása: %s\n"
+
+#: src/kuzpkg/sync.c:670
+#, c-format
+msgid "database not found: %s\n"
+msgstr "nem található az adatbázis: %s\n"
+
+#: src/kuzpkg/sync.c:698
+#, c-format
+msgid "'%s' is a file, did you mean %s instead of %s?\n"
+msgstr ""
+"a(z) „%s” egy fájl. Lehet, hogy a(z) %s kapcsolóra gondolt a(z) %s helyett?\n"
+
+#: src/kuzpkg/sync.c:729
+#, c-format
+msgid "Starting full system upgrade...\n"
+msgstr "Teljes rendszerfrissítés indítása…\n"
+
+#: src/kuzpkg/sync.c:750
+#, c-format
+msgid "unable to satisfy dependency '%s' required by %s\n"
+msgstr ""
+"a(z) „%s” függőség nem teljesíthető, ami szükséges a következőhöz: %s\n"
+
+#: src/kuzpkg/sync.c:754
+#, c-format
+msgid "installing %s (%s) breaks dependency '%s' required by %s\n"
+msgstr ""
+"a(z) %s (%s) telepítése megtöri a(z) „%s” függőséget, amely szükséges a "
+"következőhöz: %s\n"
+
+#: src/kuzpkg/sync.c:778
+#, c-format
+msgid "package %s does not have a valid architecture\n"
+msgstr "a(z) %s csomagnak nincs érvényes architektúrája\n"
+
+#: src/kuzpkg/sync.c:793
+#, c-format
+msgid "%s-%s and %s-%s are in conflict\n"
+msgstr "a(z) %s-%s és a(z) %s-%s ütközik egymással\n"
+
+#: src/kuzpkg/sync.c:800
+#, c-format
+msgid "%s-%s and %s-%s are in conflict (%s)\n"
+msgstr "a(z) %s-%s és a(z) %s-%s ütközik egymással (%s)\n"
+
+#: src/kuzpkg/sync.c:838
+#, c-format
+msgid "Proceed with download?"
+msgstr "Folytatja a letöltést?"
+
+#: src/kuzpkg/sync.c:840
+#, c-format
+msgid "Proceed with installation?"
+msgstr "Folytatja a telepítést?"
+
+#: src/kuzpkg/sync.c:858
+#, c-format
+msgid "%s exists in both '%s' and '%s'\n"
+msgstr "a(z) %s létezik a(z) „%s” és a(z) „%s” csomagban is\n"
+
+#: src/kuzpkg/sync.c:863
+#, c-format
+msgid "%s: %s exists in filesystem (owned by %s)\n"
+msgstr "a(z) %s: %s létezik a fájlrendszerben (tulajdonos: %s)\n"
+
+#: src/kuzpkg/sync.c:866
+#, c-format
+msgid "%s: %s exists in filesystem\n"
+msgstr "a(z) %s: %s már létezik a fájlrendszerben\n"
+
+#: src/kuzpkg/sync.c:879
+#, c-format
+msgid "%s is invalid or corrupted\n"
+msgstr "a(z) %s hibás vagy sérült\n"
+
+#: src/kuzpkg/sync.c:887
+#, c-format
+msgid "Errors occurred, no packages were upgraded.\n"
+msgstr "Hibák léptek fel, nem frissültek a csomagok.\n"
+
+#: src/kuzpkg/upgrade.c:103
+#, c-format
+msgid "loading packages...\n"
+msgstr "csomagok betöltése…\n"
+
+#: src/kuzpkg/util.c:100
+#, c-format
+msgid "failed to init transaction (%s)\n"
+msgstr "nem sikerült előkészíteni a tranzakciót (%s)\n"
+
+#: src/kuzpkg/util.c:104
+#, c-format
+msgid "could not lock database: %s\n"
+msgstr "nem zárolható az adatbázis: %s\n"
+
+#: src/kuzpkg/util.c:107
+#, c-format
+msgid ""
+"  if you're sure a package manager is not already\n"
+"  running, you can remove %s\n"
+msgstr ""
+"  ha biztos benne, hogy nem fut másik csomagkezelő,\n"
+"  akkor eltávolíthatja a(z) %s fájlt\n"
+
+#: src/kuzpkg/util.c:116
+#, c-format
+msgid "failed to release transaction (%s)\n"
+msgstr "nem sikerült lezárni a tranzakciót (%s)\n"
+
+#: src/kuzpkg/util.c:149
+#, c-format
+msgid "no usable package repositories configured.\n"
+msgstr "nincsenek használható csomagtárolók konfigurálva.\n"
+
+#: src/kuzpkg/util.c:158
+#, c-format
+msgid "database '%s' is not valid (%s)\n"
+msgstr "érvénytelen a(z) „%s” adatbázis (%s)\n"
+
+#: src/kuzpkg/util.c:175
+#, c-format
+msgid "failed to synchronize all databases (%s)\n"
+msgstr "nem sikerült az összes adatbázist szinkronizálni (%s)\n"
+
+#: src/kuzpkg/util.c:713
+#, c-format
+msgid "insufficient columns available for table display\n"
+msgstr "nem áll rendelkezésre elegendő oszlop a táblázat megjelenítéséhez\n"
+
+#: src/kuzpkg/util.c:834
+#, c-format
+msgid "Valid"
+msgstr "Érvényes"
+
+#: src/kuzpkg/util.c:837
+#, c-format
+msgid "Key expired"
+msgstr "A kulcs lejárt"
+
+#: src/kuzpkg/util.c:840
+#, c-format
+msgid "Expired"
+msgstr "Lejárt"
+
+#: src/kuzpkg/util.c:843
+#, c-format
+msgid "Invalid"
+msgstr "Érvénytelen"
+
+#: src/kuzpkg/util.c:846
+#, c-format
+msgid "Key unknown"
+msgstr "Ismeretlen kulcs"
+
+#: src/kuzpkg/util.c:849
+#, c-format
+msgid "Key disabled"
+msgstr "Kulcs letiltva"
+
+#: src/kuzpkg/util.c:852
+#, c-format
+msgid "Signature error"
+msgstr "Aláíráshiba"
+
+#: src/kuzpkg/util.c:857
+#, c-format
+msgid "full trust"
+msgstr "teljesen megbízható"
+
+#: src/kuzpkg/util.c:860
+#, c-format
+msgid "marginal trust"
+msgstr "kis mértékben megbízható"
+
+#: src/kuzpkg/util.c:863
+#, c-format
+msgid "never trust"
+msgstr "nem megbízható"
+
+#: src/kuzpkg/util.c:867
+#, c-format
+msgid "unknown trust"
+msgstr "ismeretlen megbízhatóság"
+
+#: src/kuzpkg/util.c:871
+#, c-format
+msgid "%s, %s from \"%s\""
+msgstr "%s, %s innen: „%s”"
+
+#: src/kuzpkg/util.c:889
+#, c-format
+msgid "Package"
+msgstr "Csomag"
+
+#: src/kuzpkg/util.c:892
+#, c-format
+msgid "Old Version"
+msgstr "Régi verzió"
+
+#: src/kuzpkg/util.c:893
+#, c-format
+msgid "New Version"
+msgstr "Új verzió"
+
+#: src/kuzpkg/util.c:894
+#, c-format
+msgid "Net Change"
+msgstr "Tiszta változás"
+
+#: src/kuzpkg/util.c:992
+#, c-format
+msgid "removal"
+msgstr "eltávolítása"
+
+#: src/kuzpkg/util.c:998
+#, c-format
+msgid "Packages"
+msgstr "Csomagok"
+
+#: src/kuzpkg/util.c:1019
+#, c-format
+msgid "Total Download Size:"
+msgstr "Teljes letöltési méret:"
+
+#: src/kuzpkg/util.c:1023
+#, c-format
+msgid "Total Installed Size:"
+msgstr "Teljes telepített méret:"
+
+#: src/kuzpkg/util.c:1026
+#, c-format
+msgid "Total Removed Size:"
+msgstr "Teljes eltávolított méret:"
+
+#: src/kuzpkg/util.c:1030
+#, c-format
+msgid "Net Upgrade Size:"
+msgstr "Tiszta frissítési méret:"
+
+#: src/kuzpkg/util.c:1352
+#, c-format
+msgid " [pending]"
+msgstr " [folyamatban]"
+
+#: src/kuzpkg/util.c:1376
+#, c-format
+msgid "New optional dependencies for %s\n"
+msgstr "Új, nem kötelező függőségek a következőhöz: %s\n"
+
+#: src/kuzpkg/util.c:1398
+#, c-format
+msgid "Optional dependencies for %s\n"
+msgstr "Nem kötelező függőségek a következőhöz: %s\n"
+
+#: src/kuzpkg/util.c:1412
+#, c-format
+msgid "Repository %s%s\n"
+msgstr "%s%s-tároló\n"
+
+#: src/kuzpkg/util.c:1453
+#, c-format
+msgid "invalid value: %d is not between %d and %d\n"
+msgstr "érvénytelen érték: a(z) %d nincs %d és %d között\n"
+
+#: src/kuzpkg/util.c:1460
+#, c-format
+msgid "invalid number: %s\n"
+msgstr "érvénytelen szám: %s\n"
+
+#: src/kuzpkg/util.c:1577
+#, c-format
+msgid "Enter a selection (default=all)"
+msgstr "Adjon meg egy kiválasztást (alapértelmezett=összes)"
+
+#: src/kuzpkg/util.c:1644
+#, c-format
+msgid "Enter a number (default=%d)"
+msgstr "Adjon meg egy számot (alapértelmezett=%d)"
+
+#: src/kuzpkg/util.c:1728
+#, c-format
+msgid "[Y/n]"
+msgstr "[I/n]"
+
+#: src/kuzpkg/util.c:1730
+#, c-format
+msgid "[y/N]"
+msgstr "[i/N]"
+
+#: src/kuzpkg/util.c:1755
+#, c-format
+msgid "Y"
+msgstr "I"
+
+#: src/kuzpkg/util.c:1755
+#, c-format
+msgid "YES"
+msgstr "IGEN"
+
+#: src/kuzpkg/util.c:1757
+#, c-format
+msgid "N"
+msgstr "N"
+
+#: src/kuzpkg/util.c:1757
+#, c-format
+msgid "NO"
+msgstr "NEM"
+
+#: src/kuzpkg/util.c:1824
+#, c-format
+msgid "failed to allocate string\n"
+msgstr "nem sikerült lefoglalni a karakterláncot\n"
+
+#: src/kuzpkg/util.c:1861 src/kuzpkg/util.c:1911 src/util/testpkg.c:35
+#, c-format
+msgid "error: "
+msgstr "hiba: "
+
+#: src/kuzpkg/util.c:1865 src/kuzpkg/util.c:1915 src/util/testpkg.c:36
+#, c-format
+msgid "warning: "
+msgstr "figyelmeztetés: "
+
+#: src/kuzpkg/kuzpkg-conf.c:41
+#, c-format
+msgid "kuzpkg-conf - query kuzpkg's configuration file\n"
+msgstr "kuzpkg-conf - lekérdezi a Kuzpkg konfigurációs fájlját\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:42
+#, c-format
+msgid "usage:  kuzpkg-conf [options] [<directive>...]\n"
+msgstr "használat:  kuzpkg-conf [kapcsolók] [<directive>…]\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:43
+#, c-format
+msgid "        kuzpkg-conf (--repo-list|--help|--version)\n"
+msgstr "        kuzpkg-conf (--repo-list|--help|--version)\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:44
+#, c-format
+msgid "options:\n"
+msgstr "kapcsolók:\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:45
+#, c-format
+msgid "  -c, --config=<path>  set an alternate configuration file\n"
+msgstr ""
+"  -c, --config=<path>   egy alternatív konfigurációs fájlt beállítása\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:46
+#, c-format
+msgid "  -R, --rootdir=<path> set an alternate installation root\n"
+msgstr ""
+"  -R, --rootdir=<path> egy alternatív telepítési főkönyvtár beállítása\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:47
+#, c-format
+msgid "  -S, --sysroot=<path> set an alternate system root\n"
+msgstr "  -S, --sysroot=<path> egy alternatív rendszergyökér beállítása\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:48
+#, c-format
+msgid "  -r, --repo=<remote>  query options for a specific repo\n"
+msgstr "  -r, --repo=<remote>  beállítások lekérdezése egy adott tárolóhoz\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:49
+#, c-format
+msgid "  -v, --verbose        always show directive names\n"
+msgstr "  -v, --verbose        mindig megjeleníti az utasításneveket\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:50
+#, c-format
+msgid "  -l, --repo-list      list configured repositories\n"
+msgstr "  -l, --repo-list      konfigurált tárolók listázása\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:51
+#, c-format
+msgid "  -h, --help           display this help information\n"
+msgstr "  -h, --help           megjeleníti ezt a súgót\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:52
+#, c-format
+msgid "  -V, --version        display version information\n"
+msgstr "  -V, --version        verzióinformáció megjelenítése\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:83
+#, c-format
+msgid "error setting rootdir '%s': out of memory\n"
+msgstr "hiba történt a(z) „%s” rootdir beállításakor: nincs elég memória\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:91
+#, c-format
+msgid "error setting sysroot '%s': out of memory\n"
+msgstr "hiba történt a(z) „%s” sysroot beállításakor: nincs elég memória\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:121
+#, c-format
+msgid "error parsing '%s'\n"
+msgstr "hiba történt a(z) „%s” feldolgozásakor\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:315
+#, c-format
+msgid "error: repo '%s' not configured\n"
+msgstr "hiba: nincs konfigurálva a(z) „%s-tároló”\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:334 src/kuzpkg/kuzpkg-conf.c:424
+#, c-format
+msgid "warning: '%s' directives cannot be queried\n"
+msgstr "figyelmeztetés: a(z) „%s” utasítások nem kérdezhetők le\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:337 src/kuzpkg/kuzpkg-conf.c:427
+#, c-format
+msgid "warning: unknown directive '%s'\n"
+msgstr "figyelmeztetés: Ismeretlen a(z) „%s” utasítás\n"
+
+#: src/kuzpkg/kuzpkg-conf.c:464
+#, c-format
+msgid "error: directives may not be specified with %s\n"
+msgstr "hiba: az utasításokat nem lehet meghatározni a következővel: %s \n"
+
+#: src/util/testpkg.c:56
+#, c-format
+msgid ""
+"Test a kuzpkg package for validity.\n"
+"\n"
+msgstr ""
+"Egy Kuzpkg csomag érvényességének tesztelése.\n"
+"\n"
+
+#: src/util/testpkg.c:57
+#, c-format
+msgid "Usage: testpkg <package file>\n"
+msgstr "Használat: testpkg <package file>\n"
+
+#: src/util/testpkg.c:63
+#, c-format
+msgid "cannot initialize klpm: %s\n"
+msgstr "nem lehet előkészíteni a következőt: klpm: %s\n"
+
+#: src/util/testpkg.c:78
+#, c-format
+msgid "Cannot find the given file.\n"
+msgstr "Nem található a megadott fájl.\n"
+
+#: src/util/testpkg.c:81
+#, c-format
+msgid "Cannot open the given file.\n"
+msgstr "Nem nyitható meg a megadott fájl.\n"
+
+#: src/util/testpkg.c:85
+#, c-format
+msgid "Package is invalid.\n"
+msgstr "A csomag érvényes.\n"
+
+#: src/util/testpkg.c:88
+#, c-format
+msgid "libkuzpkg error: %s\n"
+msgstr "libkuzpkg hiba: %s\n"
+
+#: src/util/testpkg.c:94
+#, c-format
+msgid "Package is valid.\n"
+msgstr "A csomag érvényes.\n"
+
+#: src/util/testpkg.c:99
+#, c-format
+msgid "error releasing klpm\n"
+msgstr "hiba történt az klpm felszabadításakor\n"

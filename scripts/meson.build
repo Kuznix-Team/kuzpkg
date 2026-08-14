@@ -1,7 +1,7 @@
 wrapped_scripts = [
   'makepkg.sh.in',
-  'pacman-db-upgrade.sh.in',
-  'pacman-key.sh.in',
+  'kuzpkg-db-upgrade.sh.in',
+  'kuzpkg-key.sh.in',
   'repo-add.sh.in'
 ]
 
@@ -72,13 +72,13 @@ custom_target(
   'bash_completion',
   command : [ SCRIPT_EDITOR, '@INPUT@', '@OUTPUT@' ],
   input : 'completion/bash_completion.in',
-  output : 'pacman',
+  output : 'kuzpkg',
   install : true,
   install_dir : BASHCOMPDIR)
 
-foreach symlink : ['pacman-key', 'makepkg']
+foreach symlink : ['kuzpkg-key', 'makepkg']
   meson.add_install_script(MESON_MAKE_SYMLINK,
-                           'pacman',
+                           'kuzpkg',
                            join_paths(BASHCOMPDIR, symlink))
 endforeach
 
@@ -87,6 +87,6 @@ custom_target(
   'zsh_completion',
   command : [ SCRIPT_EDITOR, '@INPUT@', '@OUTPUT@' ],
   input : 'completion/zsh_completion.in',
-  output : '_pacman',
+  output : '_kuzpkg',
   install : true,
   install_dir : zsh_completion_dir)

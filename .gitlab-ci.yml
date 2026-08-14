@@ -10,7 +10,7 @@ default:
   image: archlinux:base-devel
   before_script:
     - >
-      pacman -Syu --needed --noconfirm
+      kuzpkg -Syu --needed --noconfirm
       git
       gpgme libarchive curl
       python
@@ -38,14 +38,14 @@ arch-debug:
 arch-docs:
   extends: .arch-test
   script:
-    - pacman -Syu --needed --noconfirm asciidoc
+    - kuzpkg -Syu --needed --noconfirm asciidoc
     - meson setup -Ddoc=enabled build
     - ninja -C build
 
 arch-clang:
   extends: .arch-test
   script:
-    - pacman -Syu --needed --noconfirm clang
+    - kuzpkg -Syu --needed --noconfirm clang
     - CC=clang meson setup build
     - ninja -C build
     - fakechroot meson test -C build
@@ -53,8 +53,8 @@ arch-clang:
 #arch-valgrind:
 #  extends: .arch-test
 #  script:
-#    - pacman -Syu --needed --noconfirm valgrind
-#    - pacman -U --noconfirm https://geo.mirror.pkgbuild.com/core-debug/os/x86_64/glibc-debug-$(pacman -S --print-format %v glibc)-x86_64.pkg.tar.zst
+#    - kuzpkg -Syu --needed --noconfirm valgrind
+#    - kuzpkg -U --noconfirm https://geo.mirror.pkgbuild.com/core-debug/os/x86_64/glibc-debug-$(kuzpkg -S --print-format %v glibc)-x86_64.kuzpkg.tar.zst
 #    - meson setup build
 #    - ninja -C build
 #    - PACTEST_VALGRIND=1 fakechroot meson test -C build
@@ -121,7 +121,7 @@ fedora:
 pages:
   extends: .arch-test
   script:
-    - pacman -Syu --needed --noconfirm asciidoc
+    - kuzpkg -Syu --needed --noconfirm asciidoc
     - meson setup -Ddoc=enabled build
     - ninja -C build html
   artifacts:

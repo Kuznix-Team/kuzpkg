@@ -1,18 +1,18 @@
 manpages = [
-  { 'name': 'alpm-hooks.5' },
-  { 'name': 'pacman.8' },
+  { 'name': 'klpm-hooks.5' },
+  { 'name': 'kuzpkg.8' },
   { 'name': 'makepkg.8' },
   { 'name': 'makepkg-template.1' },
   { 'name': 'repo-add.8' },
   { 'name': 'vercmp.8' },
   { 'name': 'testpkg.8' },
-  { 'name': 'pacman-key.8' },
-  { 'name': 'pacman-db-upgrade.8' },
+  { 'name': 'kuzpkg-key.8' },
+  { 'name': 'kuzpkg-db-upgrade.8' },
   { 'name': 'PKGBUILD.5', 'extra_depends' : [ 'PKGBUILD-example.txt' ] },
   { 'name': 'makepkg.conf.5' },
-  { 'name': 'pacman.conf.5' },
+  { 'name': 'kuzpkg.conf.5' },
   { 'name': 'BUILDINFO.5' },
-  { 'name': 'pacman-conf.8' },
+  { 'name': 'kuzpkg-conf.8' },
 ]
 
 sitepages = [
@@ -26,7 +26,7 @@ asciidoc_conf = join_paths(meson.current_source_dir(), 'asciidoc.conf')
 
 asciidoc_opts = [
  '-f', asciidoc_conf,
- '-a', 'pacman_version="@0@"'.format(PACKAGE_VERSION),
+ '-a', 'kuzpkg_version="@0@"'.format(PACKAGE_VERSION),
  '-a', 'srcext=@0@'.format(get_option('src-ext')),
  '-a', 'pkgext=@0@'.format(get_option('pkg-ext')),
  '-a', 'pkgdatadir=@0@'.format(PKGDATADIR),
@@ -109,8 +109,8 @@ meson.add_install_script(MESON_MAKE_SYMLINK,
                          join_paths(MANDIR, 'man8/repo-remove.8'))
 
 meson.add_install_script(MESON_MAKE_SYMLINK,
-                         'alpm-hooks.5',
-                         join_paths(MANDIR, 'man5/pacman-hooks.5'))
+                         'klpm-hooks.5',
+                         join_paths(MANDIR, 'man5/kuzpkg-hooks.5'))
 
 doxygen = find_program('doxygen', required : get_option('doxygen'))
 if doxygen.found() and not get_option('doxygen').disabled()

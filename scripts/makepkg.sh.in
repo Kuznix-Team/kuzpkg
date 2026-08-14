@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-#   makepkg - make packages compatible for use with pacman
+#   makepkg - make packages compatible for use with kuzpkg
 #
-#   Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
+#   Copyright (C) 2026 Kuznix
 #   Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
 #   Copyright (c) 2005 by Aurelien Foret <orelien@chez.com>
 #   Copyright (c) 2006 by Miklos Vajna <vmiklos@frugalware.org>
@@ -30,7 +30,7 @@
 #   gettext, gpg, grep, gzip, sed, tput (ncurses), xz
 
 # gettext initialization
-export TEXTDOMAIN='pacman-scripts'
+export TEXTDOMAIN='kuzpkg-scripts'
 export TEXTDOMAINDIR='@localedir@'
 
 # file -i does not work on Mac OSX unless legacy mode is set
@@ -82,7 +82,7 @@ VERIFYSOURCE=0
 
 MAKEPKG_LINT_PKGBUILD=${MAKEPKG_LINT_PKGBUILD:-1}
 
-PACMAN_OPTS=()
+KUZPKG_OPTS=()
 
 shopt -s extglob
 
@@ -225,28 +225,28 @@ missing_source_file() {
 	exit $E_MISSING_FILE
 }
 
-run_pacman() {
+run_kuzpkg() {
 	local cmd cmdescape
 	if [[ $1 = -@(T|Q)*([[:alpha:]]) ]]; then
-		cmd=("$PACMAN_PATH" "$@")
+		cmd=("$KUZPKG_PATH" "$@")
 	else
-		cmd=("$PACMAN_PATH" "${PACMAN_OPTS[@]}" "$@")
+		cmd=("$KUZPKG_PATH" "${KUZPKG_OPTS[@]}" "$@")
 		cmdescape="$(printf '%q ' "${cmd[@]}")"
-		if (( ${#PACMAN_AUTH[@]} )); then
-			if in_array '%c' "${PACMAN_AUTH[@]}"; then
-				cmd=("${PACMAN_AUTH[@]/\%c/$cmdescape}")
+		if (( ${#KUZPKG_AUTH[@]} )); then
+			if in_array '%c' "${KUZPKG_AUTH[@]}"; then
+				cmd=("${KUZPKG_AUTH[@]/\%c/$cmdescape}")
 			else
-				cmd=("${PACMAN_AUTH[@]}" "${cmd[@]}")
+				cmd=("${KUZPKG_AUTH[@]}" "${cmd[@]}")
 			fi
 		elif type -p sudo >/dev/null; then
 			cmd=(sudo -k "${cmd[@]}")
 		else
 			cmd=(su root -c "$cmdescape")
 		fi
-		local lockfile="$(pacman-conf DBPath)/db.lck"
+		local lockfile="$(kuzpkg-conf DBPath)/db.lck"
 		while [[ -f $lockfile ]]; do
 			local timer=0
-			msg "$(gettext "Pacman is currently in use, please wait...")"
+			msg "$(gettext "Kuzpkg is currently in use, please wait...")"
 			while [[ -f $lockfile ]] && (( timer < 10 )); do
 				(( ++timer ))
 				sleep 3
@@ -261,13 +261,13 @@ check_deps() {
 
 	local ret=0
 	local pmout
-	pmout=$(run_pacman -T "$@")
+	pmout=$(run_kuzpkg -T "$@")
 	ret=$?
 
 	if (( ret == 127 )); then #unresolved deps
 		printf "%s\n" "$pmout"
 	elif (( ret )); then
-		error "$(gettext "'%s' returned a fatal error (%i): %s")" "$PACMAN" "$ret" "$pmout"
+		error "$(gettext "'%s' returned a fatal error (%i): %s")" "$KUZPKG" "$ret" "$pmout"
 		return "$ret"
 	fi
 }
@@ -285,11 +285,11 @@ handle_deps() {
 	fi
 
 	if (( DEP_BIN )); then
-		# install missing deps from binary packages (using pacman -S)
+		# install missing deps from binary packages (using kuzpkg -S)
 		msg "$(gettext "Installing missing dependencies...")"
 
-		if ! run_pacman -S --asdeps "${deplist[@]}"; then
-			error "$(gettext "'%s' failed to install missing dependencies.")" "$PACMAN"
+		if ! run_kuzpkg -S --asdeps "${deplist[@]}"; then
+			error "$(gettext "'%s' failed to install missing dependencies.")" "$KUZPKG"
 			return $R_DEPS_MISSING
 		fi
 	fi
@@ -353,7 +353,7 @@ remove_deps() {
 
 	msg "Removing installed dependencies..."
 	# exit cleanly on failure to remove deps as package has been built successfully
-	if ! run_pacman -Rnu ${deplist[@]}; then
+	if ! run_kuzpkg -Rnu ${deplist[@]}; then
 		warning "$(gettext "Failed to remove installed dependencies.")"
 		return $E_REMOVE_DEPS_FAILED
 	fi
@@ -546,7 +546,7 @@ write_buildinfo() {
 	write_kv_pair "buildenv" "${BUILDENV[@]}"
 	write_kv_pair "options" "${OPTIONS[@]}"
 
-	local pkginfos_parsed=($(LC_ALL=C run_pacman -Qi | awk -F': ' '\
+	local pkginfos_parsed=($(LC_ALL=C run_kuzpkg -Qi | awk -F': ' '\
 		/^Name .*/ {printf "%s", $2} \
 		/^Version .*/ {printf "-%s", $2} \
 		/^Architecture .*/ {print "-"$2} \
@@ -755,9 +755,9 @@ install_package() {
 	RMDEPS=0
 
 	if (( ! SPLITPKG )); then
-		msg "$(gettext "Installing package %s with %s...")" "$pkgname" "$PACMAN -U"
+		msg "$(gettext "Installing package %s with %s...")" "$pkgname" "$KUZPKG -U"
 	else
-		msg "$(gettext "Installing %s package group with %s...")" "$pkgbase" "$PACMAN -U"
+		msg "$(gettext "Installing %s package group with %s...")" "$pkgbase" "$KUZPKG -U"
 	fi
 
 	local fullver pkgarch pkg pkglist
@@ -777,7 +777,7 @@ install_package() {
 		fi
 	done
 
-	if ! run_pacman -U "${pkglist[@]}"; then
+	if ! run_kuzpkg -U "${pkglist[@]}"; then
 		warning "$(gettext "Failed to install built package(s).")"
 		return $E_INSTALL_FAILED
 	fi
@@ -882,9 +882,9 @@ run_split_packaging() {
 }
 
 usage() {
-	printf "makepkg (pacman) %s\n" "$makepkg_version"
+	printf "makepkg (kuzpkg) %s\n" "$makepkg_version"
 	echo
-	printf -- "$(gettext "Make packages compatible for use with pacman")\n"
+	printf -- "$(gettext "Make packages compatible for use with kuzpkg")\n"
 	echo
 	printf -- "$(gettext "Usage: %s [options]")\n" "$0"
 	echo
@@ -905,7 +905,7 @@ usage() {
 	printf -- "$(gettext "  -p <file>        Use an alternate build script (instead of '%s')")\n" "$BUILDSCRIPT"
 	printf -- "$(gettext "  -r, --rmdeps     Remove installed dependencies after a successful build")\n"
 	printf -- "$(gettext "  -R, --repackage  Repackage contents of the package without rebuilding")\n"
-	printf -- "$(gettext "  -s, --syncdeps   Install missing dependencies with %s")\n" "pacman"
+	printf -- "$(gettext "  -s, --syncdeps   Install missing dependencies with %s")\n" "kuzpkg"
 	printf -- "$(gettext "  -S, --source     Generate a source-only tarball without downloaded sources")\n"
 	printf -- "$(gettext "  -V, --version    Show version information and exit")\n"
 	printf -- "$(gettext "  --allsource      Generate a source-only tarball including downloaded sources")\n"
@@ -925,7 +925,7 @@ usage() {
 	printf -- "$(gettext "  --skippgpcheck   Do not verify source files with PGP signatures")\n"
 	printf -- "$(gettext "  --verifysource   Download source files (if needed) and perform integrity checks")\n"
 	echo
-	printf -- "$(gettext "These options can be passed to %s:")\n" "pacman"
+	printf -- "$(gettext "These options can be passed to %s:")\n" "kuzpkg"
 	echo
 	printf -- "$(gettext "  --asdeps         Install packages as non-explicitly installed")\n"
 	printf -- "$(gettext "  --needed         Do not reinstall the targets that are already up to date")\n"
@@ -937,8 +937,8 @@ usage() {
 }
 
 version() {
-	printf "makepkg (pacman) %s\n" "$makepkg_version"
-	printf -- "Copyright (c) 2006-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>.\n"
+	printf "makepkg (kuzpkg) %s\n" "$makepkg_version"
+	printf -- "Copyright (C) 2026 Kuznix"
 	printf -- "Copyright (C) 2002-2006 Judd Vinet <jvinet@zeroflux.org>.\n"
 	printf '\n'
 	printf -- "$(gettext "\
@@ -968,7 +968,7 @@ OPT_LONG=('allsource' 'check' 'clean' 'cleanbuild' 'config:' 'dir:' 'force' 'gen
           'printsrcinfo' 'repackage' 'rmdeps' 'sign' 'skipchecksums' 'skipinteg'
           'skippgpcheck' 'source' 'syncdeps' 'verifysource' 'version')
 
-# Pacman Options
+# Kuzpkg Options
 OPT_LONG+=('asdeps' 'noconfirm' 'needed' 'noprogressbar')
 
 if ! parseopts "$OPT_SHORT" "${OPT_LONG[@]}" -- "$@"; then
@@ -979,11 +979,11 @@ unset OPT_SHORT OPT_LONG OPTRET
 
 while true; do
 	case "$1" in
-		# Pacman Options
+		# Kuzpkg Options
 		--asdeps)         ASDEPS=1;;
 		--needed)         NEEDED=1;;
-		--noconfirm)      PACMAN_OPTS+=("--noconfirm") ;;
-		--noprogressbar)  PACMAN_OPTS+=("--noprogressbar") ;;
+		--noconfirm)      KUZPKG_OPTS+=("--noconfirm") ;;
+		--noprogressbar)  KUZPKG_OPTS+=("--noprogressbar") ;;
 
 		# Makepkg Options
 		--allsource)      BUILDPKG=0 SOURCEONLY=2 ;;
@@ -1003,7 +1003,7 @@ while true; do
 		-i|--install)     INSTALL=1 ;;
 		--key)            shift; GPGKEY=$1 ;;
 		-L|--log)         LOGGING=1 ;;
-		-m|--nocolor)     USE_COLOR='n'; PACMAN_OPTS+=("--color" "never") ;;
+		-m|--nocolor)     USE_COLOR='n'; KUZPKG_OPTS+=("--color" "never") ;;
 		--noarchive)      NOARCHIVE=1 ;;
 		--nocheck)        RUN_CHECK='n' ;;
 		--noverify)       RUN_VERIFY='n' ;;
@@ -1069,10 +1069,10 @@ done
 unset var
 PACKAGER=${PACKAGER:-"Unknown Packager"}
 
-# set pacman command if not already defined
-PACMAN=${PACMAN:-pacman}
+# set kuzpkg command if not already defined
+KUZPKG=${KUZPKG:-kuzpkg}
 # save full path to command as PATH may change when sourcing /etc/profile
-PACMAN_PATH=$(type -P $PACMAN)
+KUZPKG_PATH=$(type -P $KUZPKG)
 
 # check if messages are to be printed using color
 if [[ -t 2 && $USE_COLOR != "n" ]] && check_buildenv "color" "y"; then
@@ -1322,7 +1322,7 @@ if (( NODEPS || ( VERIFYSOURCE && !DEP_BIN ) )); then
 	fi
 else
 	if (( RMDEPS && ! INSTALL )); then
-		original_pkglist=($(run_pacman -Qq))    # required by remove_dep
+		original_pkglist=($(run_kuzpkg -Qq))    # required by remove_dep
 	fi
 	deperr=0
 
@@ -1330,7 +1330,7 @@ else
 	resolve_deps ${depends[@]} || deperr=1
 
 	if (( RMDEPS && INSTALL )); then
-		original_pkglist=($(run_pacman -Qq))    # required by remove_dep
+		original_pkglist=($(run_kuzpkg -Qq))    # required by remove_dep
 	fi
 
 	if (( ! deperr )); then
@@ -1343,7 +1343,7 @@ else
 	fi
 
 	if (( RMDEPS )); then
-		current_pkglist=($(run_pacman -Qq))    # required by remove_deps
+		current_pkglist=($(run_kuzpkg -Qq))    # required by remove_deps
 	fi
 
 	if (( deperr )); then

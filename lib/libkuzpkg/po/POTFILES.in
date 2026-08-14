@@ -1,0 +1,37 @@
+# List of source files with translatable strings
+# If a file is commented out, it is because it shouldn't have any
+# translatable strings
+
+lib/libkuzpkg/add.c
+lib/libkuzpkg/klpm.c
+#lib/libkuzpkg/klpm_list.c
+lib/libkuzpkg/backup.c
+#lib/libaplm/base64.c
+lib/libkuzpkg/be_local.c
+lib/libkuzpkg/be_package.c
+lib/libkuzpkg/be_sync.c
+lib/libkuzpkg/conflict.c
+lib/libkuzpkg/db.c
+lib/libkuzpkg/deps.c
+lib/libkuzpkg/diskspace.c
+lib/libkuzpkg/dload.c
+lib/libkuzpkg/error.c
+lib/libkuzpkg/filelist.c
+lib/libkuzpkg/graph.c
+lib/libkuzpkg/group.c
+lib/libkuzpkg/handle.c
+lib/libkuzpkg/hook.c
+lib/libkuzpkg/log.c
+lib/libkuzpkg/package.c
+lib/libkuzpkg/pkghash.c
+#lib/libkuzpkg/rawstr.c
+lib/libkuzpkg/remove.c
+lib/libkuzpkg/sandbox.c
+lib/libkuzpkg/sandbox_fs.c
+lib/libkuzpkg/sandbox_syscalls.c
+lib/libkuzpkg/signing.c
+lib/libkuzpkg/sync.c
+lib/libkuzpkg/trans.c
+lib/libkuzpkg/util.c
+#lib/libkuzpkg/util-common.c
+#lib/libkuzpkg/version.c

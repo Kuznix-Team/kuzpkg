@@ -1,15 +1,16 @@
-
-See the pacman website at https://archlinux.org/pacman/[] for current
-information on pacman and its related tools.
+See the Kuznix Linux website at
+https://kuznix-linux.github.io/[] for current information on Kuzpkg and
+related Kuznix Linux projects.
 
 
 Bugs
 ----
+
 Bugs? You must be kidding; there are no bugs in this software. But if we
-happen to be wrong, please report them to the issue tracker at
-link:https://gitlab.archlinux.org/pacman/pacman/-/issues[] with specific
-information such as your command-line, the nature of the bug, and even
-the package database if it helps.
+happen to be wrong, please report them to the Kuzpkg issue tracker at
+https://github.com/Kuznix-Linux/kuzpkg/issues[] with specific information
+such as your command line, the nature of the bug, and relevant package
+database information if it helps.
 
 
 Authors
@@ -17,20 +18,22 @@ Authors
 
 Current maintainers:
 
-* Allan McRae <allan@archlinux.org>
-* Andrew Gregory <andrew.gregory.8@gmail.com>
-* Morgan Adamiec <morganamilo@archlinux.org>
+* Kuznix Linux Development Team
 
-Past major contributors:
+Kuzpkg is a fork of Pacman 7.1.0. The following contributors are credited
+for their work on the upstream Pacman project:
 
-* Judd Vinet <jvinet@zeroflux.org>
-* Aurelien Foret <aurelien@archlinux.org>
-* Aaron Griffin <aaron@archlinux.org>
-* Dan McGee <dan@archlinux.org>
-* Xavier Chantry <shiningxc@gmail.com>
-* Nagy Gabor <ngaba@bibl.u-szeged.hu>
-* Dave Reisner <dreisner@archlinux.org>
-* Eli Schwartz <eschwartz@archlinux.org>
+* Judd Vinet
+* Aurelien Foret
+* Aaron Griffin
+* Dan McGee
+* Xavier Chantry
+* Nagy Gabor
+* Dave Reisner
+* Eli Schwartz
 
-For additional contributors, use `git shortlog -s` on the pacman.git
-repository.
+For additional contributors inherited from the upstream project, use
+`git shortlog -s` on the Kuzpkg repository.
+
+Kuzpkg development and maintenance is performed by the Kuznix Linux
+development team.

@@ -2,7 +2,7 @@
 #
 #   ext.sh - Check that source/package extensions have valid prefixes
 #
-#   Copyright (c) 2019-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
+#   Copyright (C) 2026 Kuznix
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ lint_config_functions+=('lint_ext')
 lint_ext() {
 	local i var val ret=0
 
-	for i in 'SRCEXT/.src.tar' 'PKGEXT/.pkg.tar';  do
+	for i in 'SRCEXT/.src.tar' 'PKGEXT/.kuzpkg.tar';  do
 		IFS='/' read -r var val < <(printf '%s\n' "$i")
 
 		if [[ ${!var} != ${val}* ]]; then

@@ -2,7 +2,7 @@
 #
 #   file_names.sh - check package file names
 #
-#   Copyright (c) 2016-2025 Pacman Development Team <pacman-dev@lists.archlinux.org>
+#   Copyright (C) 2026 Kuznix
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ lint_package_functions+=('lint_file_names')
 lint_file_names() {
 	local ret=0 paths
 
-	# alpm's local database format does not support newlines in paths
+	# klpm's local database format does not support newlines in paths
 	mapfile -t paths < <(find "$pkgdir" -name \*$'\n'\*)
 	if  (( ${#paths} > 0 )); then
 		error "$(gettext 'Package contains paths with newlines')"

@@ -1,18 +1,18 @@
 [main]
 host = https://www.transifex.com
 
-[o:toofishes:p:archlinux-pacman:r:libalpm-pot]
-file_filter = lib/libalpm/po/<lang>.po
-source_file = lib/libalpm/po/libalpm.pot
+[o:toofishes:p:archlinux-kuzpkg:r:libkuzpkg-pot]
+file_filter = lib/libkuzpkg/po/<lang>.po
+source_file = lib/libkuzpkg/po/libkuzpkg.pot
 source_lang = en
 
-[o:toofishes:p:archlinux-pacman:r:pacman-pot]
-file_filter = src/pacman/po/<lang>.po
-source_file = src/pacman/po/pacman.pot
+[o:toofishes:p:archlinux-kuzpkg:r:kuzpkg-pot]
+file_filter = src/kuzpkg/po/<lang>.po
+source_file = src/kuzpkg/po/kuzpkg.pot
 source_lang = en
 
-[o:toofishes:p:archlinux-pacman:r:pacman-scripts-pot]
+[o:toofishes:p:archlinux-kuzpkg:r:kuzpkg-scripts-pot]
 file_filter = scripts/po/<lang>.po
-source_file = scripts/po/pacman-scripts.pot
+source_file = scripts/po/kuzpkg-scripts.pot
 source_lang = en
 

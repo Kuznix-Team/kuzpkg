@@ -1,9 +1,9 @@
 i18n.gettext(
-  'pacman-scripts',
+  'kuzpkg-scripts',
   args : [
     '--directory=@0@'.format(meson.current_source_dir()),
-    '--msgid-bugs-address=https://gitlab.archlinux.org/pacman/pacman/-/issues',
-    '--copyright-holder="Pacman Development Team <pacman-dev@lists.archlinux.org>"',
+    '--msgid-bugs-address=https://gitlab.archlinux.org/kuzpkg/kuzpkg/-/issues',
+    '--copyright-holder="Kuznix"',
     '--language', 'shell',
 
     '--keyword=_',
