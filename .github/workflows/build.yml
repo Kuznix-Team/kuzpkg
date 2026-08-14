@@ -1,0 +1,156 @@
+name: Build kuzpkg daily snapshots
+
+on:
+  schedule:
+    # Every day at 00:00 UTC
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build on ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: x86_64
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-26.04
+            arch: x86_64
+
+          - runner: ubuntu-22.04-arm
+            arch: aarch64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+          - runner: ubuntu-26.04-arm
+            arch: aarch64
+
+    steps:
+      - name: Checkout kuzpkg
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            meson \
+            ninja-build \
+            pkg-config \
+            zstd
+
+      - name: Detect build information
+        id: info
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Get the newest reachable Git tag.
+          LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="0.0.0"
+          fi
+
+          # Make the tag safe for use in a filename.
+          SAFE_TAG="$(printf '%s' "$LATEST_TAG" | sed 's#[/[:space:]]#-#g')"
+
+          # Use UTC so every runner produces the same snapshot date.
+          DATE="$(date -u +%Y%m%d)"
+
+          # Verify the architecture expected by the matrix.
+          MACHINE="$(uname -m)"
+
+          case "$MACHINE" in
+            x86_64|amd64)
+              ACTUAL_ARCH="x86_64"
+              ;;
+            aarch64|arm64)
+              ACTUAL_ARCH="aarch64"
+              ;;
+            *)
+              echo "Unsupported architecture: $MACHINE"
+              exit 1
+              ;;
+          esac
+
+          if [ "$ACTUAL_ARCH" != "${{ matrix.arch }}" ]; then
+            echo "Architecture mismatch:"
+            echo "  expected: ${{ matrix.arch }}"
+            echo "  actual:   $ACTUAL_ARCH"
+            exit 1
+          fi
+
+          FILENAME="kuzpkg-${SAFE_TAG}-${DATE}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zst"
+
+          echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "Latest tag: $LATEST_TAG"
+            echo "Date:       $DATE"
+            echo "Runner:     ${{ matrix.runner }}"
+            echo "Arch:       ${{ matrix.arch }}"
+            echo "Filename:   $FILENAME"
+          }
+
+      - name: Configure Meson
+        run: |
+          meson setup build \
+            --buildtype=release \
+            --prefix=/usr
+
+      - name: Build kuzpkg
+        run: |
+          meson compile -C build
+
+      - name: Install kuzpkg into staging directory
+        run: |
+          rm -rf staging
+          mkdir -p staging
+
+          meson install \
+            -C build \
+            --destdir "$PWD/staging" \
+            --no-rebuild \
+            --strip
+
+      - name: Create snapshot archive
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          tar \
+            --zstd \
+            -cf "dist/${{ steps.info.outputs.filename }}" \
+            -C staging \
+            .
+
+      - name: Show snapshot information
+        run: |
+          ls -lh "dist/${{ steps.info.outputs.filename }}"
+          echo
+          echo "Archive:"
+          echo "dist/${{ steps.info.outputs.filename }}"
+
+      - name: Upload daily snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}
+          path: dist/${{ steps.info.outputs.filename }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
