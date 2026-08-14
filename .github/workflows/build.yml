@@ -419,9 +419,6 @@ jobs:
             ALPINE_PLATFORM="linux/arm64"
           fi
 
-          echo "Alpine platform: $ALPINE_PLATFORM"
-          echo "Alpine architecture: ${{ matrix.apk_arch }}"
-
           docker pull --platform "$ALPINE_PLATFORM" alpine:edge
 
           docker run --rm \
@@ -436,46 +433,42 @@ jobs:
                 alpine-sdk \
                 abuild \
                 fakeroot \
-                sudo \
                 zstd
 
               adduser -D builder
-
               addgroup builder abuild
 
-              mkdir -p /home/builder/.abuild
-              mkdir -p /home/builder/packages
-              mkdir -p /var/cache/distfiles
+              mkdir -p \
+                /home/builder/.abuild \
+                /home/builder/packages \
+                /var/cache/distfiles
 
               chown -R builder:builder \
                 /workspace/alpine-build \
                 /home/builder \
                 /var/cache/distfiles
 
-              # Generate the signing key AS builder.
+              # Generate the signing key for the builder user.
+              # Do NOT use -i because that requires sudo/doas.
               su builder -c "
                 export HOME=/home/builder
-                mkdir -p \"\$HOME/.abuild\"
-                abuild-keygen -a -i -n
+                abuild-keygen -a -n
               "
 
-              # Verify the key/config exists for builder.
+              # Confirm the private key was configured.
               su builder -c "
                 export HOME=/home/builder
-                test -f \"\$HOME/.abuild/abuild.conf\"
-                grep -E \"PACKAGER_PRIVKEY|PACKAGER\" \"\$HOME/.abuild/abuild.conf\" || true
-                find \"\$HOME/.abuild\" -maxdepth 1 -type f -print
+                test -n \"\$PACKAGER_PRIVKEY\" || true
+                grep '^PACKAGER_PRIVKEY=' /home/builder/.abuild/abuild.conf
               "
 
-              # Build as the same user that owns the signing key.
+              # Build using the same user that owns the private key.
               su builder -c "
                 export HOME=/home/builder
                 cd /workspace/alpine-build
                 abuild -r
               "
 
-              # Copy generated APKs from builder's package repository
-              # back into the mounted workspace.
               find /home/builder/packages \
                 -type f \
                 -name "*.apk" \
@@ -492,10 +485,7 @@ jobs:
 
           if [ -z "$APK_FILE" ]; then
             echo "ERROR: Alpine APK was not produced"
-
-            echo "APK files found:"
             find alpine-build -type f -name '*.apk' -print || true
-
             exit 1
           fi
 
@@ -505,7 +495,7 @@ jobs:
             "$APK_FILE" \
             "dist/${BASE_NAME}.apk"
 
-          echo "Alpine package:"
+          echo "Alpine APK:"
           ls -lh "dist/${BASE_NAME}.apk"
 
       # ============================================================
