@@ -9,10 +9,6 @@ permissions:
   contents: read
 
 jobs:
-  # ==============================================================
-  # LINUX BUILDS
-  # ==============================================================
-
   build-linux:
     name: Build on ${{ matrix.runner }}
     runs-on: ${{ matrix.runner }}
@@ -25,28 +21,18 @@ jobs:
             arch: x86_64
             deb_arch: amd64
             rpm_arch: x86_64
-            apk_arch: x86_64
 
           - runner: ubuntu-26.04-arm
             arch: aarch64
             deb_arch: arm64
             rpm_arch: aarch64
-            apk_arch: aarch64
 
     steps:
-      # ============================================================
-      # SOURCE
-      # ============================================================
-
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
-
-      # ============================================================
-      # HOST DEPENDENCIES
-      # ============================================================
 
       - name: Install build dependencies
         run: |
@@ -66,10 +52,6 @@ jobs:
             gnupg2 \
             dpkg-dev \
             docker.io
-
-      # ============================================================
-      # VERSION / ARCH
-      # ============================================================
 
       - name: Detect build information
         id: info
@@ -103,11 +85,6 @@ jobs:
               sed 's/^v//; s/[^A-Za-z0-9._+]/./g'
           )"
 
-          APK_PKGVER="$(
-            printf '%s' "$LATEST_TAG" |
-              sed 's/^v//; s/[^A-Za-z0-9._+-]/./g'
-          )"
-
           DATE="$(date -u +%Y%m%d)"
           MACHINE="$(uname -m)"
 
@@ -138,7 +115,6 @@ jobs:
           echo "deb_version=$DEB_VERSION" >> "$GITHUB_OUTPUT"
           echo "rpm_version=$RPM_VERSION" >> "$GITHUB_OUTPUT"
           echo "arch_pkgver=$ARCH_PKGVER" >> "$GITHUB_OUTPUT"
-          echo "apk_pkgver=$APK_PKGVER" >> "$GITHUB_OUTPUT"
           echo "date=$DATE" >> "$GITHUB_OUTPUT"
 
           echo "Latest tag: $LATEST_TAG"
@@ -149,7 +125,7 @@ jobs:
 
       # ============================================================
       # MESON BUILD
-      # ==============================================================
+      # ============================================================
 
       - name: Configure Meson
         run: |
@@ -225,7 +201,7 @@ jobs:
 
       # ============================================================
       # FEDORA RAWIDE RPM
-      # ============================================================
+      # ==============================================================
 
       - name: Build .rpm package with Fedora Rawhide
         shell: bash
@@ -379,127 +355,7 @@ jobs:
             "dist/${BASE_NAME}.kuzpkg.tar.zst"
 
       # ============================================================
-      # ALPINE EDGE APK
-      #
-      # Native Alpine Edge userspace/container.
-      # abuild key is generated AS THE BUILD USER.
-      # ============================================================
-
-      - name: Build .apk package with Alpine Linux Edge
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          rm -rf alpine-build
-          mkdir -p alpine-build
-
-          cp -a staging alpine-build/staging
-
-          cat > alpine-build/APKBUILD <<EOF
-          # Maintainer: Kuznix Team
-
-          pkgname=kuzpkg
-          pkgver=${{ steps.info.outputs.apk_pkgver }}
-          pkgrel=0
-          pkgdesc="kuzpkg package manager"
-          url="https://github.com/KuznixTeam/kuzpkg"
-          arch="${{ matrix.apk_arch }}"
-          license="GPL-3.0-or-later"
-
-          options="!check !strip"
-
-          package() {
-              cp -a /workspace/alpine-build/staging/. "\$pkgdir/"
-          }
-          EOF
-
-          if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            ALPINE_PLATFORM="linux/amd64"
-          else
-            ALPINE_PLATFORM="linux/arm64"
-          fi
-
-          docker pull --platform "$ALPINE_PLATFORM" alpine:edge
-
-          docker run --rm \
-            --platform "$ALPINE_PLATFORM" \
-            -v "$PWD:/workspace" \
-            -w /workspace/alpine-build \
-            alpine:edge \
-            sh -euxc '
-              apk update
-
-              apk add --no-cache \
-                alpine-sdk \
-                abuild \
-                fakeroot \
-                zstd
-
-              adduser -D builder
-              addgroup builder abuild
-
-              mkdir -p \
-                /home/builder/.abuild \
-                /home/builder/packages \
-                /var/cache/distfiles
-
-              chown -R builder:builder \
-                /workspace/alpine-build \
-                /home/builder \
-                /var/cache/distfiles
-
-              # Generate the signing key for the builder user.
-              # Do NOT use -i because that requires sudo/doas.
-              su builder -c "
-                export HOME=/home/builder
-                abuild-keygen -a -n
-              "
-
-              # Confirm the private key was configured.
-              su builder -c "
-                export HOME=/home/builder
-                test -n \"\$PACKAGER_PRIVKEY\" || true
-                grep '^PACKAGER_PRIVKEY=' /home/builder/.abuild/abuild.conf
-              "
-
-              # Build using the same user that owns the private key.
-              su builder -c "
-                export HOME=/home/builder
-                cd /workspace/alpine-build
-                abuild -r
-              "
-
-              find /home/builder/packages \
-                -type f \
-                -name "*.apk" \
-                -exec cp {} /workspace/alpine-build/ \;
-
-              find /workspace/alpine-build \
-                -maxdepth 1 \
-                -type f \
-                -name "*.apk" \
-                -print
-            '
-
-          APK_FILE="$(find alpine-build -maxdepth 1 -type f -name 'kuzpkg-*.apk' | head -n 1)"
-
-          if [ -z "$APK_FILE" ]; then
-            echo "ERROR: Alpine APK was not produced"
-            find alpine-build -type f -name '*.apk' -print || true
-            exit 1
-          fi
-
-          BASE_NAME="kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}"
-
-          cp \
-            "$APK_FILE" \
-            "dist/${BASE_NAME}.apk"
-
-          echo "Alpine APK:"
-          ls -lh "dist/${BASE_NAME}.apk"
-
-      # ============================================================
-      # GENERIC .tar.zst INSTALL TREE
+      # GENERIC .tar.zst ARCHIVE
       # ============================================================
 
       - name: Create .tar.zst archive
@@ -532,7 +388,6 @@ jobs:
           test -f "dist/${BASE_NAME}.tar.zst"
           test -f "dist/${BASE_NAME}.deb"
           test -f "dist/${BASE_NAME}.rpm"
-          test -f "dist/${BASE_NAME}.apk"
 
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
             test -f "dist/${BASE_NAME}.pkg.tar.zst"
@@ -542,7 +397,7 @@ jobs:
               "dist/${BASE_NAME}.pkg.tar.zst" \
               "dist/${BASE_NAME}.kuzpkg.tar.zst"
 
-            echo "Arch package aliases are identical."
+            echo "Arch packages verified."
           fi
 
           echo
