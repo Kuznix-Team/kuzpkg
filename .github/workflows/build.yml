@@ -25,7 +25,6 @@ jobs:
             arch: x86_64
             deb_arch: amd64
             rpm_arch: x86_64
-            pkg_arch: x86_64
             apk_arch: x86_64
 
           - runner: ubuntu-26.04-arm
@@ -84,20 +83,30 @@ jobs:
             LATEST_TAG="0.0.0"
           fi
 
-          SAFE_TAG="$(printf '%s' "$LATEST_TAG" \
-            | sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g')"
+          SAFE_TAG="$(
+            printf '%s' "$LATEST_TAG" |
+              sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+          )"
 
-          DEB_VERSION="$(printf '%s' "$LATEST_TAG" \
-            | sed 's/^v//; s/[^A-Za-z0-9.+~-]/./g')"
+          DEB_VERSION="$(
+            printf '%s' "$LATEST_TAG" |
+              sed 's/^v//; s/[^A-Za-z0-9.+~-]/./g'
+          )"
 
-          RPM_VERSION="$(printf '%s' "$LATEST_TAG" \
-            | sed 's/^v//; s/[^A-Za-z0-9._+]/./g')"
+          RPM_VERSION="$(
+            printf '%s' "$LATEST_TAG" |
+              sed 's/^v//; s/[^A-Za-z0-9._+]/./g'
+          )"
 
-          ARCH_PKGVER="$(printf '%s' "$LATEST_TAG" \
-            | sed 's/^v//; s/[^A-Za-z0-9._+]/./g')"
+          ARCH_PKGVER="$(
+            printf '%s' "$LATEST_TAG" |
+              sed 's/^v//; s/[^A-Za-z0-9._+]/./g'
+          )"
 
-          APK_PKGVER="$(printf '%s' "$LATEST_TAG" \
-            | sed 's/^v//; s/[^A-Za-z0-9._+-]/./g')"
+          APK_PKGVER="$(
+            printf '%s' "$LATEST_TAG" |
+              sed 's/^v//; s/[^A-Za-z0-9._+-]/./g'
+          )"
 
           DATE="$(date -u +%Y%m%d)"
           MACHINE="$(uname -m)"
@@ -140,22 +149,27 @@ jobs:
 
       # ============================================================
       # MESON BUILD
-      # ============================================================
+      # ==============================================================
 
       - name: Configure Meson
         run: |
+          set -euo pipefail
+
           meson setup build \
             --buildtype=release \
             --prefix=/usr
 
       - name: Build kuzpkg
         run: |
+          set -euo pipefail
+
           meson compile -C build
 
       - name: Install kuzpkg into staging directory
         run: |
-          rm -rf staging
+          set -euo pipefail
 
+          rm -rf staging
           mkdir -p staging
 
           meson install \
@@ -293,7 +307,7 @@ jobs:
       # ARCH LINUX PACKAGE
       #
       # ONLY x86_64.
-      # There is deliberately NO Arch build on aarch64.
+      # NO Arch build on aarch64.
       # ============================================================
 
       - name: Build .pkg.tar.zst and .kuzpkg.tar.zst with Arch Linux
@@ -303,7 +317,6 @@ jobs:
           set -euo pipefail
 
           rm -rf arch-build
-
           mkdir -p arch-build
 
           cp -a staging arch-build/staging
@@ -368,7 +381,8 @@ jobs:
       # ============================================================
       # ALPINE EDGE APK
       #
-      # Native Alpine userspace inside the Edge container.
+      # Native Alpine Edge userspace/container.
+      # abuild key is generated AS THE BUILD USER.
       # ============================================================
 
       - name: Build .apk package with Alpine Linux Edge
@@ -377,10 +391,9 @@ jobs:
           set -euo pipefail
 
           rm -rf alpine-build
+          mkdir -p alpine-build
 
-          mkdir -p alpine-build/staging
-
-          cp -a staging/. alpine-build/staging/
+          cp -a staging alpine-build/staging
 
           cat > alpine-build/APKBUILD <<EOF
           # Maintainer: Kuznix Team
@@ -406,10 +419,8 @@ jobs:
             ALPINE_PLATFORM="linux/arm64"
           fi
 
-          echo "Building Alpine package for:"
-          echo "  Alpine: Edge"
-          echo "  Platform: $ALPINE_PLATFORM"
-          echo "  Architecture: ${{ matrix.apk_arch }}"
+          echo "Alpine platform: $ALPINE_PLATFORM"
+          echo "Alpine architecture: ${{ matrix.apk_arch }}"
 
           docker pull --platform "$ALPINE_PLATFORM" alpine:edge
 
@@ -429,42 +440,61 @@ jobs:
                 zstd
 
               adduser -D builder
+
               addgroup builder abuild
 
-              mkdir -p /var/cache/distfiles
-              mkdir -p /home/builder/packages
-
-              cp /etc/abuild.conf /etc/abuild.conf.backup
-
-              sed -i \
-                "s|^PACKAGER=.*|PACKAGER=\"Kuznix Team <kuznix@users.noreply.github.com>\"|" \
-                /etc/abuild.conf
-
               mkdir -p /home/builder/.abuild
+              mkdir -p /home/builder/packages
+              mkdir -p /var/cache/distfiles
 
-              abuild-keygen -a -i -n
+              chown -R builder:builder \
+                /workspace/alpine-build \
+                /home/builder \
+                /var/cache/distfiles
 
-              chown -R builder:builder /workspace/alpine-build
-              chown -R builder:builder /home/builder
-
+              # Generate the signing key AS builder.
               su builder -c "
+                export HOME=/home/builder
+                mkdir -p \"\$HOME/.abuild\"
+                abuild-keygen -a -i -n
+              "
+
+              # Verify the key/config exists for builder.
+              su builder -c "
+                export HOME=/home/builder
+                test -f \"\$HOME/.abuild/abuild.conf\"
+                grep -E \"PACKAGER_PRIVKEY|PACKAGER\" \"\$HOME/.abuild/abuild.conf\" || true
+                find \"\$HOME/.abuild\" -maxdepth 1 -type f -print
+              "
+
+              # Build as the same user that owns the signing key.
+              su builder -c "
+                export HOME=/home/builder
                 cd /workspace/alpine-build
                 abuild -r
               "
 
-              find /home/builder/packages -type f -name "*.apk" -print || true
+              # Copy generated APKs from builder's package repository
+              # back into the mounted workspace.
+              find /home/builder/packages \
+                -type f \
+                -name "*.apk" \
+                -exec cp {} /workspace/alpine-build/ \;
+
+              find /workspace/alpine-build \
+                -maxdepth 1 \
+                -type f \
+                -name "*.apk" \
+                -print
             '
 
-          APK_FILE="$(find alpine-build -type f -name 'kuzpkg-*.apk' | head -n 1)"
+          APK_FILE="$(find alpine-build -maxdepth 1 -type f -name 'kuzpkg-*.apk' | head -n 1)"
 
           if [ -z "$APK_FILE" ]; then
             echo "ERROR: Alpine APK was not produced"
 
-            echo "Searching workspace:"
+            echo "APK files found:"
             find alpine-build -type f -name '*.apk' -print || true
-
-            echo "Searching Docker output:"
-            find . -type f -name 'kuzpkg-*.apk' -print || true
 
             exit 1
           fi
@@ -479,10 +509,10 @@ jobs:
           ls -lh "dist/${BASE_NAME}.apk"
 
       # ============================================================
-      # GENERIC INSTALL TREE
+      # GENERIC .tar.zst INSTALL TREE
       # ============================================================
 
-      - name: Create install-tree snapshot
+      - name: Create .tar.zst archive
         shell: bash
         run: |
           set -euo pipefail
@@ -495,8 +525,11 @@ jobs:
             -C staging \
             .
 
+          echo "Install-tree archive:"
+          ls -lh "dist/${BASE_NAME}.tar.zst"
+
       # ============================================================
-      # VALIDATE
+      # VALIDATION
       # ============================================================
 
       - name: Validate generated packages
@@ -518,11 +551,13 @@ jobs:
             cmp \
               "dist/${BASE_NAME}.pkg.tar.zst" \
               "dist/${BASE_NAME}.kuzpkg.tar.zst"
+
+            echo "Arch package aliases are identical."
           fi
 
           echo
           echo "============================================================"
-          echo "Generated kuzpkg packages"
+          echo "Generated kuzpkg daily snapshot"
           echo "============================================================"
 
           ls -lh dist/
