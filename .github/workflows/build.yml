@@ -19,12 +19,27 @@ jobs:
         include:
           - runner: ubuntu-24.04
             arch: x86_64
+            deb_arch: amd64
+            rpm_arch: x86_64
+            pkg_arch: x86_64
+
           - runner: ubuntu-26.04
             arch: x86_64
+            deb_arch: amd64
+            rpm_arch: x86_64
+            pkg_arch: x86_64
+
           - runner: ubuntu-24.04-arm
             arch: aarch64
+            deb_arch: arm64
+            rpm_arch: aarch64
+            pkg_arch: aarch64
+
           - runner: ubuntu-26.04-arm
             arch: aarch64
+            deb_arch: arm64
+            rpm_arch: aarch64
+            pkg_arch: aarch64
 
     steps:
       - name: Checkout kuzpkg
@@ -45,7 +60,9 @@ jobs:
             libarchive-dev \
             libcurl4-gnutls-dev \
             gnupg-utils \
-            gnupg2
+            gnupg2 \
+            dpkg-dev \
+            docker.io
 
       - name: Detect build information
         id: info
@@ -59,9 +76,23 @@ jobs:
             LATEST_TAG="0.0.0"
           fi
 
-          SAFE_TAG="$(printf '%s' "$LATEST_TAG" | sed 's#[/[:space:]]#-#g')"
-          DATE="$(date -u +%Y%m%d)"
+          # Filename-safe version/tag.
+          SAFE_TAG="$(printf '%s' "$LATEST_TAG" \
+            | sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g')"
 
+          # Debian-compatible version.
+          DEB_VERSION="$(printf '%s' "$LATEST_TAG" \
+            | sed 's/^v//; s/[^A-Za-z0-9.+~-]/./g')"
+
+          # RPM-compatible version.
+          RPM_VERSION="$(printf '%s' "$LATEST_TAG" \
+            | sed 's/^v//; s/[^A-Za-z0-9._+]/./g')"
+
+          # Arch-compatible pkgver.
+          ARCH_PKGVER="$(printf '%s' "$LATEST_TAG" \
+            | sed 's/^v//; s/[^A-Za-z0-9._+]/./g')"
+
+          DATE="$(date -u +%Y%m%d)"
           MACHINE="$(uname -m)"
 
           case "$MACHINE" in
@@ -84,12 +115,12 @@ jobs:
             exit 1
           fi
 
-          FILENAME="kuzpkg-${SAFE_TAG}-${DATE}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zst"
-
           echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
           echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
+          echo "deb_version=$DEB_VERSION" >> "$GITHUB_OUTPUT"
+          echo "rpm_version=$RPM_VERSION" >> "$GITHUB_OUTPUT"
+          echo "arch_pkgver=$ARCH_PKGVER" >> "$GITHUB_OUTPUT"
           echo "date=$DATE" >> "$GITHUB_OUTPUT"
-          echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
 
       - name: Configure Meson
         run: |
@@ -112,7 +143,166 @@ jobs:
             --no-rebuild \
             --strip
 
-      - name: Create snapshot archive
+      # ------------------------------------------------------------
+      # Debian package
+      # ------------------------------------------------------------
+      - name: Build .deb package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PKGROOT="$PWD/deb-root"
+
+          rm -rf "$PKGROOT"
+          mkdir -p \
+            "$PKGROOT/DEBIAN" \
+            "$PKGROOT/usr"
+
+          cp -a staging/usr/. "$PKGROOT/usr/"
+
+          cat > "$PKGROOT/DEBIAN/control" <<EOF
+          Package: kuzpkg
+          Version: ${{ steps.info.outputs.deb_version }}
+          Section: admin
+          Priority: optional
+          Architecture: ${{ matrix.deb_arch }}
+          Maintainer: Kuznix Team
+          Description: kuzpkg package manager
+           Package manager for Kuznix Linux.
+          EOF
+
+          dpkg-deb \
+            --build \
+            --root-owner-group \
+            "$PKGROOT" \
+            "kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.deb"
+
+          mkdir -p dist
+          mv \
+            "kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.deb" \
+            dist/
+
+      # ------------------------------------------------------------
+      # Fedora Rawhide RPM
+      # ------------------------------------------------------------
+      - name: Build .rpm package with Fedora Rawhide
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p rpm-build/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+
+          cat > rpm-build/SPECS/kuzpkg.spec <<EOF
+          Name:           kuzpkg
+          Version:        ${{ steps.info.outputs.rpm_version }}
+          Release:        1
+          Summary:        kuzpkg package manager
+          License:        GPL-3.0-or-later
+          BuildArch:      ${{ matrix.rpm_arch }}
+
+          %description
+          Package manager for Kuznix Linux.
+
+          %prep
+
+          %build
+
+          %install
+          rm -rf %{buildroot}
+          mkdir -p %{buildroot}
+          cp -a /workspace/staging/. %{buildroot}/
+
+          %files
+          /usr/*
+
+          %changelog
+          * Thu Aug 14 2026 Kuznix Team - ${{ steps.info.outputs.rpm_version }}-1
+          - Daily kuzpkg snapshot
+          EOF
+
+          docker run --rm \
+            --platform "linux/${{ matrix.arch == 'x86_64' && 'amd64' || 'arm64' }}" \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            fedora:rawhide \
+            bash -euxo pipefail -c '
+              dnf -y install rpm-build
+              rpmbuild \
+                --define "_topdir /workspace/rpm-build" \
+                -bb \
+                /workspace/rpm-build/SPECS/kuzpkg.spec
+            '
+
+          RPM_FILE="$(find rpm-build/RPMS -type f -name '*.rpm' | head -n 1)"
+
+          test -n "$RPM_FILE"
+
+          cp \
+            "$RPM_FILE" \
+            "dist/kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.rpm"
+
+      # ------------------------------------------------------------
+      # Arch Linux .pkg.tar.zst
+      # ------------------------------------------------------------
+      - name: Build .pkg.tar.zst and .kuzpkg.tar.zst with Arch Linux
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf arch-build
+          mkdir -p arch-build
+
+          cp -a staging arch-build/staging
+
+          cat > arch-build/PKGBUILD <<EOF
+          pkgname=kuzpkg
+          pkgver=${{ steps.info.outputs.arch_pkgver }}
+          pkgrel=1
+          pkgdesc="kuzpkg package manager"
+          arch=('${{ matrix.pkg_arch }}')
+          license=('GPL-3.0-or-later')
+          options=('!strip')
+
+          package() {
+              cp -a "\$srcdir/staging/." "\$pkgdir/"
+          }
+          EOF
+
+          docker run --rm \
+            --platform "linux/${{ matrix.arch == 'x86_64' && 'amd64' || 'arm64' }}" \
+            -v "$PWD:/workspace" \
+            -w /workspace/arch-build \
+            archlinux:latest \
+            bash -euxo pipefail -c '
+              pacman -Sy --noconfirm --needed \
+                base-devel \
+                sudo \
+                zstd
+
+              useradd -m builder
+              chown -R builder:builder /workspace/arch-build
+
+              su builder -c "makepkg --syncdeps --noconfirm --cleanbuild"
+
+              chown -R root:root /workspace/arch-build
+            '
+
+          PKG_FILE="$(find arch-build -maxdepth 1 -type f -name 'kuzpkg-*.pkg.tar.zst' | head -n 1)"
+
+          test -n "$PKG_FILE"
+
+          BASE_NAME="kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}"
+
+          cp \
+            "$PKG_FILE" \
+            "dist/${BASE_NAME}.pkg.tar.zst"
+
+          cp \
+            "$PKG_FILE" \
+            "dist/${BASE_NAME}.kuzpkg.tar.zst"
+
+      - name: Create source/install snapshot tar.zst
+        shell: bash
         run: |
           set -euo pipefail
 
@@ -120,19 +310,20 @@ jobs:
 
           tar \
             --zstd \
-            -cf "dist/${{ steps.info.outputs.filename }}" \
+            -cf "dist/kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zst" \
             -C staging \
             .
 
-      - name: Show snapshot information
+      - name: Show generated packages
         run: |
-          ls -lh "dist/${{ steps.info.outputs.filename }}"
+          echo "Generated packages:"
+          ls -lh dist/
 
       - name: Upload daily snapshot
         uses: actions/upload-artifact@v4
         with:
           name: kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}
-          path: dist/${{ steps.info.outputs.filename }}
+          path: dist/*
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
