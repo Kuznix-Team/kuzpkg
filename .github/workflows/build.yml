@@ -47,7 +47,11 @@ jobs:
             meson \
             ninja-build \
             pkg-config \
-            zstd
+            zstd \
+            libarchive-dev \
+            libcurl4-gnutls-dev \
+            gnupg-utils \
+            gnupg2
 
       - name: Detect build information
         id: info
