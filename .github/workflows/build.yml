@@ -9,7 +9,11 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  # ==============================================================
+  # LINUX BUILDS
+  # ==============================================================
+
+  build-linux:
     name: Build on ${{ matrix.runner }}
     runs-on: ${{ matrix.runner }}
 
@@ -27,7 +31,6 @@ jobs:
             arch: aarch64
             deb_arch: arm64
             rpm_arch: aarch64
-            pkg_arch: aarch64
 
     steps:
       - name: Checkout kuzpkg
@@ -39,6 +42,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
+
           sudo apt-get install -y \
             build-essential \
             meson \
@@ -77,6 +81,7 @@ jobs:
             | sed 's/^v//; s/[^A-Za-z0-9._+]/./g')"
 
           DATE="$(date -u +%Y%m%d)"
+
           MACHINE="$(uname -m)"
 
           case "$MACHINE" in
@@ -99,6 +104,8 @@ jobs:
             exit 1
           fi
 
+          mkdir -p dist
+
           echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
           echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
           echo "deb_version=$DEB_VERSION" >> "$GITHUB_OUTPUT"
@@ -111,6 +118,10 @@ jobs:
           echo "Date:       $DATE"
           echo "Runner:     ${{ matrix.runner }}"
           echo "Arch:       ${{ matrix.arch }}"
+
+      # ------------------------------------------------------------
+      # Meson build
+      # ------------------------------------------------------------
 
       - name: Configure Meson
         run: |
@@ -133,9 +144,9 @@ jobs:
             --no-rebuild \
             --strip
 
-      # ============================================================
-      # DEBIAN PACKAGE
-      # ============================================================
+      # ------------------------------------------------------------
+      # Debian
+      # ------------------------------------------------------------
 
       - name: Build .deb package
         shell: bash
@@ -168,20 +179,19 @@ jobs:
            Package manager for Kuznix Linux.
           EOF
 
-          mkdir -p dist
+          DEB_FILE="dist/kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.deb"
 
           dpkg-deb \
             --build \
             --root-owner-group \
             "$PKGROOT" \
-            "dist/kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.deb"
+            "$DEB_FILE"
 
-          dpkg-deb --info \
-            "dist/kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.deb"
+          dpkg-deb --info "$DEB_FILE"
 
-      # ============================================================
-      # FEDORA RAWIDE RPM
-      # ============================================================
+      # ------------------------------------------------------------
+      # Fedora Rawhide RPM
+      # ------------------------------------------------------------
 
       - name: Build .rpm package with Fedora Rawhide
         shell: bash
@@ -197,6 +207,8 @@ jobs:
             rpm-build/SOURCES \
             rpm-build/SPECS \
             rpm-build/SRPMS
+
+          CHANGELOG_DATE="$(date -u '+%a %b %d %Y')"
 
           cat > rpm-build/SPECS/kuzpkg.spec <<EOF
           Name:           kuzpkg
@@ -227,7 +239,7 @@ jobs:
           %config(noreplace) /etc/makepkg.conf.d/rust.conf
 
           %changelog
-          * Fri Aug 14 2026 Kuznix Team - ${{ steps.info.outputs.rpm_version }}-1
+          * ${CHANGELOG_DATE} Kuznix Team - ${{ steps.info.outputs.rpm_version }}-1
           - Daily kuzpkg snapshot
           EOF
 
@@ -257,13 +269,16 @@ jobs:
             "$RPM_FILE" \
             "dist/kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}.rpm"
 
-          rpm -qip "$RPM_FILE"
-
-      # ============================================================
-      # ARCH PACKAGE
-      # ============================================================
+      # ------------------------------------------------------------
+      # Arch Linux
+      #
+      # IMPORTANT:
+      # Arch is intentionally built ONLY on x86_64.
+      # The ARM64 job does not execute this step.
+      # ------------------------------------------------------------
 
       - name: Build .pkg.tar.zst and .kuzpkg.tar.zst with Arch Linux
+        if: matrix.arch == 'x86_64'
         shell: bash
         run: |
           set -euo pipefail
@@ -279,7 +294,7 @@ jobs:
           pkgver=${{ steps.info.outputs.arch_pkgver }}
           pkgrel=1
           pkgdesc="kuzpkg package manager"
-          arch=('${{ matrix.pkg_arch }}')
+          arch=('x86_64')
           license=('GPL-3.0-or-later')
           options=('!strip')
 
@@ -288,8 +303,10 @@ jobs:
           }
           EOF
 
+          docker pull archlinux:latest
+
           docker run --rm \
-            --platform "linux/${{ matrix.arch == 'x86_64' && 'amd64' || 'arm64' }}" \
+            --platform linux/amd64 \
             -v "$PWD:/workspace" \
             -w /workspace/arch-build \
             archlinux:latest \
@@ -325,12 +342,13 @@ jobs:
             "$PKG_FILE" \
             "dist/${BASE_NAME}.kuzpkg.tar.zst"
 
-          echo "Arch package:"
-          ls -lh "$PKG_FILE"
+          cmp \
+            "dist/${BASE_NAME}.pkg.tar.zst" \
+            "dist/${BASE_NAME}.kuzpkg.tar.zst"
 
-      # ============================================================
-      # INSTALL TREE SNAPSHOT
-      # ============================================================
+      # ------------------------------------------------------------
+      # Generic install-tree snapshot
+      # ------------------------------------------------------------
 
       - name: Create install-tree snapshot
         shell: bash
@@ -345,11 +363,11 @@ jobs:
             -C staging \
             .
 
-      # ============================================================
-      # VALIDATE OUTPUTS
-      # ============================================================
+      # ------------------------------------------------------------
+      # Validate Linux outputs
+      # ------------------------------------------------------------
 
-      - name: Validate generated packages
+      - name: Validate Linux outputs
         shell: bash
         run: |
           set -euo pipefail
@@ -359,56 +377,160 @@ jobs:
           test -f "dist/${BASE_NAME}.tar.zst"
           test -f "dist/${BASE_NAME}.deb"
           test -f "dist/${BASE_NAME}.rpm"
-          test -f "dist/${BASE_NAME}.pkg.tar.zst"
-          test -f "dist/${BASE_NAME}.kuzpkg.tar.zst"
 
-          echo
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            test -f "dist/${BASE_NAME}.pkg.tar.zst"
+            test -f "dist/${BASE_NAME}.kuzpkg.tar.zst"
+          fi
+
           echo "Generated files:"
           ls -lh dist/
 
-      - name: Verify .kuzpkg.tar.zst is identical to .pkg.tar.zst
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          BASE_NAME="kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}"
-
-          cmp \
-            "dist/${BASE_NAME}.pkg.tar.zst" \
-            "dist/${BASE_NAME}.kuzpkg.tar.zst"
-
-          echo ".kuzpkg.tar.zst is byte-for-byte identical to .pkg.tar.zst"
-
-      # ============================================================
-      # DISPLAY BUILD INFORMATION
-      # ============================================================
-
-      - name: Display package metadata
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          BASE_NAME="kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}"
-
-          echo "============================================================"
-          echo "kuzpkg daily snapshot"
-          echo "============================================================"
-          echo "Tag:       ${{ steps.info.outputs.latest_tag }}"
-          echo "Date:      ${{ steps.info.outputs.date }}"
-          echo "Runner:    ${{ matrix.runner }}"
-          echo "Arch:      ${{ matrix.arch }}"
-          echo
-          echo "Files:"
-          ls -lh "dist/${BASE_NAME}"*
-
-      # ============================================================
-      # UPLOAD ARTIFACT
-      # ============================================================
-
-      - name: Upload daily snapshot
+      - name: Upload Linux daily snapshot
         uses: actions/upload-artifact@v4
         with:
           name: kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-${{ matrix.runner }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+  # ==============================================================
+  # FREEBSD 15.0-RELEASE
+  #
+  # This is a separate native FreeBSD build.
+  # The source is compiled INSIDE a FreeBSD 15.0 VM.
+  # ==============================================================
+
+  build-freebsd:
+    name: Build on FreeBSD 15.0-RELEASE
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout kuzpkg
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Detect build information
+        id: info
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LATEST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="0.0.0"
+          fi
+
+          SAFE_TAG="$(printf '%s' "$LATEST_TAG" \
+            | sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g')"
+
+          DATE="$(date -u +%Y%m%d)"
+
+          echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+
+          mkdir -p dist
+
+      - name: Build kuzpkg on FreeBSD 15.0-RELEASE
+        uses: vmactions/freebsd-vm@v1.4.8
+        with:
+          release: "15.0"
+          usesh: true
+          copyback: true
+          sync: sshfs
+
+          prepare: |
+            set -e
+
+            pkg update -f
+
+            pkg install -y \
+              meson \
+              ninja \
+              pkgconf \
+              zstd \
+              curl \
+              gnutls \
+              gnupg2
+
+          run: |
+            set -euo pipefail
+
+            echo "FreeBSD version:"
+            freebsd-version
+
+            echo "Architecture:"
+            uname -m
+
+            echo "Compiler:"
+            cc --version
+
+            echo "Meson:"
+            meson --version
+
+            rm -rf freebsd-stage
+            mkdir -p freebsd-stage
+
+            meson setup \
+              freebsd-build \
+              --buildtype=release \
+              --prefix=/usr/local
+
+            meson compile -C freebsd-build
+
+            meson install \
+              -C freebsd-build \
+              --destdir "$PWD/freebsd-stage" \
+              --no-rebuild \
+              --strip
+
+            BASE_NAME="kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-freebsd-15.0-amd64"
+
+            mkdir -p "dist"
+
+            tar \
+              --zstd \
+              -cf "dist/${BASE_NAME}.tar.zst" \
+              -C freebsd-stage \
+              .
+
+            cp \
+              "dist/${BASE_NAME}.tar.zst" \
+              "dist/${BASE_NAME}.txz"
+
+            # Replace the .txz copy with a real gzip-free tar.xz archive.
+            rm -f "dist/${BASE_NAME}.txz"
+
+            tar \
+              -cJf "dist/${BASE_NAME}.txz" \
+              -C freebsd-stage \
+              .
+
+            echo "FreeBSD build complete:"
+            ls -lh dist/
+
+      - name: Validate FreeBSD output
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_NAME="kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-freebsd-15.0-amd64"
+
+          test -f "dist/${BASE_NAME}.tar.zst"
+          test -f "dist/${BASE_NAME}.txz"
+
+          echo "FreeBSD packages:"
+          ls -lh dist/
+
+      - name: Upload FreeBSD daily snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuzpkg-${{ steps.info.outputs.safe_tag }}-${{ steps.info.outputs.date }}-freebsd-15.0-amd64
           path: dist/*
           if-no-files-found: error
           compression-level: 0
