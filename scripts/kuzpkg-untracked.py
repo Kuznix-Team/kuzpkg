@@ -34,56 +34,38 @@ PC_DIRS = (
 )
 FIREFOX_DIRS = ("/lib/firefox", "/usr/lib/firefox")
 
-# Filesystems that must never be recursively scanned. These are intentionally
-# excluded even when --root points at /. /tmp is not excluded because users
-# explicitly asked for every other directory to be considered.
-EXCLUDED_TOPLEVEL = {"home", "root", "proc", "run", "sys", "dev"}
+# Filesystems that must never be recursively scanned. Temporary files,
+# removable mounts, and service data are not package installation locations
+# for this discovery mode.
+EXCLUDED_TOPLEVEL = {"home", "root", "proc", "run", "sys", "dev", "tmp", "mnt", "srv"}
 
-# Common language/module file types. These are evidence, not hard-coded package
-# manager assumptions; module metadata and parent directories provide context.
 MODULE_EXTENSIONS = {
-    ".py", ".pyc", ".pyo", ".so", ".pyd",                 # Python/native
-    ".rs", ".rlib", ".rmeta", ".crate",                  # Rust/Cargo
-    ".rb", ".rake", ".gem",                               # Ruby
-    ".pm", ".pod",                                         # Perl
-    ".js", ".mjs", ".cjs", ".node",                     # Node.js
-    ".go", ".a",                                          # Go
-    ".jar", ".class", ".war", ".ear",                   # Java/JVM
-    ".php", ".phar",                                       # PHP
-    ".lua", ".luac",                                      # Lua
-    ".tcl", ".tm",                                        # Tcl
-    ".wasm",                                                # WebAssembly
-    ".dll", ".dylib", ".so",                              # generic native modules
+    ".py", ".pyc", ".pyo", ".so", ".pyd",
+    ".rs", ".rlib", ".rmeta", ".crate",
+    ".rb", ".rake", ".gem",
+    ".pm", ".pod",
+    ".js", ".mjs", ".cjs", ".node",
+    ".go", ".a",
+    ".jar", ".class", ".war", ".ear",
+    ".php", ".phar",
+    ".lua", ".luac",
+    ".tcl", ".tm",
+    ".wasm",
+    ".dll", ".dylib", ".so",
 }
 
 MODULE_METADATA = {
-    "pyproject.toml": "python",
-    "setup.py": "python",
-    "setup.cfg": "python",
-    "PKG-INFO": "python",
-    "METADATA": "python",
-    "Cargo.toml": "rust-cargo",
-    "Cargo.lock": "rust-cargo",
-    "gemfile": "ruby",
-    "gemspec": "ruby",
-    ".bundle": "ruby",
-    "package.json": "nodejs",
-    "package-lock.json": "nodejs",
-    "yarn.lock": "nodejs",
-    "pnpm-lock.yaml": "nodejs",
-    "go.mod": "go",
-    "go.sum": "go",
-    "pom.xml": "java",
-    "build.gradle": "java",
-    "build.gradle.kts": "java",
-    "composer.json": "php",
-    "DESCRIPTION": "r",
+    "pyproject.toml": "python", "setup.py": "python", "setup.cfg": "python",
+    "PKG-INFO": "python", "METADATA": "python", "Cargo.toml": "rust-cargo",
+    "Cargo.lock": "rust-cargo", "gemfile": "ruby", "gemspec": "ruby",
+    ".bundle": "ruby", "package.json": "nodejs", "package-lock.json": "nodejs",
+    "yarn.lock": "nodejs", "pnpm-lock.yaml": "nodejs", "go.mod": "go",
+    "go.sum": "go", "pom.xml": "java", "build.gradle": "java",
+    "build.gradle.kts": "java", "composer.json": "php", "DESCRIPTION": "r",
     "NAMESPACE": "r",
 }
 
-VERSION_RE = re.compile(
-    r"(?:version|release|v)?\s*([0-9]+(?:\.[0-9A-Za-z]+)+(?:[-+._][0-9A-Za-z.-]+)?)", re.I
-)
+VERSION_RE = re.compile(r"(?:version|release|v)?\s*([0-9]+(?:\.[0-9A-Za-z]+)+(?:[-+._][0-9A-Za-z.-]+)?)", re.I)
 
 
 def run_kuzpkg(root, args):
@@ -127,17 +109,14 @@ def excluded_dir(path, root):
 
 
 def scan_tree(root, predicate=lambda p: True):
-    """Scan every directory below root except the explicit excluded trees."""
+    """Scan every directory below root except explicit non-package trees."""
     result = []
     for current, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
         current_path = Path(current)
         if excluded_dir(current_path, root):
             dirnames[:] = []
             continue
-        dirnames[:] = [
-            d for d in dirnames
-            if d not in EXCLUDED_TOPLEVEL and not (current_path / d).is_symlink()
-        ]
+        dirnames[:] = [d for d in dirnames if d not in EXCLUDED_TOPLEVEL and not (current_path / d).is_symlink()]
         for filename in filenames:
             p = current_path / filename
             if (p.is_file() or p.is_symlink()) and predicate(p):
@@ -186,17 +165,13 @@ def package_guess(path):
     lower = name.lower()
     if name.endswith(".pc"):
         return name[:-3]
-    # Installed language module files often have a package directory as their
-    # meaningful name. Prefer the closest module root when recognizable.
     for parent in (path.parent, *path.parents):
         p = parent.name
-        if p.lower() in {"site-packages", "dist-packages", "vendor", "vendor_ruby",
-                         "gems", "node_modules", "vendor_modules", "lib", "modules"}:
+        if p.lower() in {"site-packages", "dist-packages", "vendor", "vendor_ruby", "gems", "node_modules", "vendor_modules", "lib", "modules"}:
             break
         if p and p not in {"python", "python3", "ruby", "perl", "node", "nodejs"}:
             if lower.endswith((".py", ".rb", ".pm", ".lua", ".tcl", ".php")):
                 return p
-
     so = re.sub(r"\.so(?:\.[0-9A-Za-z._-]+)*$", "", name)
     if so != name:
         return so[3:] if so.startswith("lib") and len(so) > 3 else so
@@ -224,7 +199,7 @@ def module_kind(path):
         return "nodejs"
     if suffix in {".pm", ".pod"} or "perl" in lower_parts:
         return "perl"
-    if suffix in {".go"} or "gopath" in lower_parts:
+    if suffix == ".go" or "gopath" in lower_parts:
         return "go"
     if suffix in {".jar", ".class", ".war", ".ear"} or "java" in lower_parts:
         return "java-jvm"
@@ -242,7 +217,6 @@ def module_kind(path):
 
 
 def scan_modules(root):
-    """Discover modules from any language without assuming one package manager."""
     return [(p, module_kind(p)) for p in scan_tree(root, lambda p: module_kind(p) is not None)]
 
 
@@ -259,8 +233,7 @@ def probe_version(path):
         return None
     for option in (("--version",), ("-version",)):
         try:
-            p = subprocess.run([str(path), *option], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               text=True, timeout=3, check=False)
+            p = subprocess.run([str(path), *option], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=3, check=False)
             v = version_from_text(p.stdout)
             if v:
                 return v
@@ -275,6 +248,7 @@ def detect_version(name, evidence, root):
     candidates += evidence
     seen = set()
     for p in candidates:
+        p = Path(p)
         if str(p) in seen:
             continue
         seen.add(str(p))
@@ -291,6 +265,7 @@ def detect_version(name, evidence, root):
             except OSError:
                 pass
     for p in evidence:
+        p = Path(p)
         for parent in (p.parent, *p.parents):
             for metadata in ("VERSION", "version", "VERSION.txt", "PKG-INFO", "METADATA", "pyproject.toml", "Cargo.toml", "gemspec", "package.json"):
                 m = parent / metadata
@@ -330,20 +305,12 @@ def discover(root, minimum):
     candidates = defaultdict(lambda: {"count": 0, "types": set(), "evidence": []})
     artifacts = []
     artifacts += [(p, "library", pre) for p, pre in scan_files(root, LIB_DIRS, lambda p: ".so" in p.name)]
-    artifacts += [(p, "binary", "") for p in scan_files(root, tuple((d, "") for d in BIN_DIRS),
-                         lambda p: os.access(p, os.X_OK) and "." not in p.name)]
+    artifacts += [(p, "binary", "") for p in scan_files(root, tuple((d, "") for d in BIN_DIRS), lambda p: os.access(p, os.X_OK) and "." not in p.name)]
     artifacts += [(p, "pkgconfig", pre) for p, pre in scan_files(root, PC_DIRS, lambda p: p.name.endswith(".pc"))]
     artifacts += [(p, "include", "") for p in scan_include_dirs(root)]
     artifacts += [(p, "firefox", "") for p in scan_firefox(root)]
     artifacts += [(p, kind, "") for p, kind in scan_modules(root)]
-
-    # Generic full-tree discovery catches software that does not use a known
-    # language extension. We only add package-looking files here so the scan
-    # remains useful on arbitrary systems without treating every text file as
-    # a package.
-    generic_predicate = lambda p: (
-        os.access(p, os.X_OK) or p.suffix.lower() in {".dll", ".dylib", ".so", ".a", ".jar", ".wasm"}
-    )
+    generic_predicate = lambda p: os.access(p, os.X_OK) or p.suffix.lower() in {".dll", ".dylib", ".so", ".a", ".jar", ".wasm"}
     artifacts += [(p, "generic", "") for p in scan_tree(root, generic_predicate)]
 
     seen = set()
@@ -366,9 +333,7 @@ def discover(root, minimum):
         item["types"].add(kind)
         if len(item["evidence"]) < 25:
             item["evidence"].append(path)
-
-    return sorted(((n, x["count"], x["types"], x["evidence"]) for n, x in candidates.items()
-                   if x["count"] >= minimum), key=lambda x: (-x[1], x[0]))
+    return sorted(((n, x["count"], x["types"], x["evidence"]) for n, x in candidates.items() if x["count"] >= minimum), key=lambda x: (-x[1], x[0]))
 
 
 def safe(s):
@@ -385,12 +350,7 @@ def make_archive(name, count, types, evidence, root, outdir, pkgrel, arch, overw
     if not zstd:
         raise RuntimeError("zstd is required to create .kuzpkg.tar.zst archives")
     outdir.mkdir(parents=True, exist_ok=True)
-    metadata = {
-        "format": "kuzpkg-detected-v3", "name": name, "version": version,
-        "version_verified": source != "unverified", "version_source": source,
-        "pkgrel": pkgrel, "arch": arch, "artifact_types": sorted(types),
-        "artifact_count": count, "origin": "filesystem-discovery"
-    }
+    metadata = {"format": "kuzpkg-detected-v3", "name": name, "version": version, "version_verified": source != "unverified", "version_source": source, "pkgrel": pkgrel, "arch": arch, "artifact_types": sorted(types), "artifact_count": count, "origin": "filesystem-discovery"}
     with tempfile.TemporaryDirectory(prefix="kuzpkg-untracked-") as tmp:
         tarpath = Path(tmp) / "package.kuzpkg.tar"
         meta = Path(tmp) / ".KUZPKG-METADATA.json"
@@ -443,9 +403,7 @@ def main():
                 print(f"      ... and {len(evidence)-5} more")
         if args.package:
             try:
-                output, _, _, created = make_archive(name, count, types, evidence, root,
-                                                      Path(args.output_dir).resolve(), args.pkgrel,
-                                                      arch, args.overwrite)
+                output, _, _, created = make_archive(name, count, types, evidence, root, Path(args.output_dir).resolve(), args.pkgrel, arch, args.overwrite)
                 print(f"      package: {output} ({'created' if created else 'exists; skipped'})")
             except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
                 print(f"      package: FAILED: {exc}", file=sys.stderr)
