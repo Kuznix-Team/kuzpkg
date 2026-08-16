@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 # Generic filesystem adoption/discovery helper for kuzpkg.
-# Archives use: name-pkgver-pkgrel-arch.kuzpkg.tar.zst
+# Archives use: name-pkgver-pkgrel-arch.kuzpkg.tar.zst.
+#
+# The scanner is package-manager/language agnostic. It can discover native
+# files, multilib files, Firefox, and language modules installed by Python,
+# Rust/Cargo, Ruby, Perl, Node.js, Go, Java/JVM, PHP, Lua, Tcl, and other
+# ecosystems. Unknown language ecosystems are handled generically by module
+# metadata, module file extensions, and conventional module directories.
 
 import argparse
 import json
@@ -27,7 +33,57 @@ PC_DIRS = (
     ("/usr/libx32/pkgconfig", "libx32-"), ("/libx32/pkgconfig", "libx32-"),
 )
 FIREFOX_DIRS = ("/lib/firefox", "/usr/lib/firefox")
-VERSION_RE = re.compile(r"(?:version|release|v)?\s*([0-9]+(?:\.[0-9A-Za-z]+)+(?:[-+._][0-9A-Za-z.-]+)?)", re.I)
+
+# Filesystems that must never be recursively scanned. These are intentionally
+# excluded even when --root points at /. /tmp is not excluded because users
+# explicitly asked for every other directory to be considered.
+EXCLUDED_TOPLEVEL = {"home", "root", "proc", "run", "sys", "dev"}
+
+# Common language/module file types. These are evidence, not hard-coded package
+# manager assumptions; module metadata and parent directories provide context.
+MODULE_EXTENSIONS = {
+    ".py", ".pyc", ".pyo", ".so", ".pyd",                 # Python/native
+    ".rs", ".rlib", ".rmeta", ".crate",                  # Rust/Cargo
+    ".rb", ".rake", ".gem",                               # Ruby
+    ".pm", ".pod",                                         # Perl
+    ".js", ".mjs", ".cjs", ".node",                     # Node.js
+    ".go", ".a",                                          # Go
+    ".jar", ".class", ".war", ".ear",                   # Java/JVM
+    ".php", ".phar",                                       # PHP
+    ".lua", ".luac",                                      # Lua
+    ".tcl", ".tm",                                        # Tcl
+    ".wasm",                                                # WebAssembly
+    ".dll", ".dylib", ".so",                              # generic native modules
+}
+
+MODULE_METADATA = {
+    "pyproject.toml": "python",
+    "setup.py": "python",
+    "setup.cfg": "python",
+    "PKG-INFO": "python",
+    "METADATA": "python",
+    "Cargo.toml": "rust-cargo",
+    "Cargo.lock": "rust-cargo",
+    "gemfile": "ruby",
+    "gemspec": "ruby",
+    ".bundle": "ruby",
+    "package.json": "nodejs",
+    "package-lock.json": "nodejs",
+    "yarn.lock": "nodejs",
+    "pnpm-lock.yaml": "nodejs",
+    "go.mod": "go",
+    "go.sum": "go",
+    "pom.xml": "java",
+    "build.gradle": "java",
+    "build.gradle.kts": "java",
+    "composer.json": "php",
+    "DESCRIPTION": "r",
+    "NAMESPACE": "r",
+}
+
+VERSION_RE = re.compile(
+    r"(?:version|release|v)?\s*([0-9]+(?:\.[0-9A-Za-z]+)+(?:[-+._][0-9A-Za-z.-]+)?)", re.I
+)
 
 
 def run_kuzpkg(root, args):
@@ -62,16 +118,44 @@ def load_local_db(root):
     return packages, owned
 
 
+def excluded_dir(path, root):
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return True
+    return bool(relative.parts and relative.parts[0] in EXCLUDED_TOPLEVEL)
+
+
+def scan_tree(root, predicate=lambda p: True):
+    """Scan every directory below root except the explicit excluded trees."""
+    result = []
+    for current, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
+        current_path = Path(current)
+        if excluded_dir(current_path, root):
+            dirnames[:] = []
+            continue
+        dirnames[:] = [
+            d for d in dirnames
+            if d not in EXCLUDED_TOPLEVEL and not (current_path / d).is_symlink()
+        ]
+        for filename in filenames:
+            p = current_path / filename
+            if (p.is_file() or p.is_symlink()) and predicate(p):
+                result.append(p)
+    return result
+
+
 def scan_files(root, dirs, predicate):
     result = []
     for directory, prefix in dirs:
         base = root_path(str(root), directory)
-        if not base.exists():
+        if not base.exists() or excluded_dir(base, root):
             continue
         for current, dirnames, filenames in os.walk(base, followlinks=False):
-            dirnames[:] = [d for d in dirnames if not (Path(current) / d).is_symlink()]
+            current_path = Path(current)
+            dirnames[:] = [d for d in dirnames if not (current_path / d).is_symlink()]
             for filename in filenames:
-                p = Path(current) / filename
+                p = current_path / filename
                 if (p.is_file() or p.is_symlink()) and predicate(p):
                     result.append((p, prefix))
     return result
@@ -79,7 +163,7 @@ def scan_files(root, dirs, predicate):
 
 def scan_include_dirs(root):
     base = root_path(str(root), "/usr/include")
-    if not base.exists():
+    if not base.exists() or excluded_dir(base, root):
         return []
     return [p for p in base.iterdir() if p.is_dir() and not p.is_symlink()]
 
@@ -88,28 +172,82 @@ def scan_firefox(root):
     result = []
     for directory in FIREFOX_DIRS:
         base = root_path(str(root), directory)
-        if not base.is_dir():
+        if not base.is_dir() or excluded_dir(base, root):
             continue
         for current, dirnames, filenames in os.walk(base, followlinks=False):
-            dirnames[:] = [d for d in dirnames if not (Path(current) / d).is_symlink()]
-            result.extend(Path(current) / f for f in filenames)
+            current_path = Path(current)
+            dirnames[:] = [d for d in dirnames if not (current_path / d).is_symlink()]
+            result.extend(current_path / f for f in filenames)
     return result
 
 
 def package_guess(path):
     name = path.name
+    lower = name.lower()
     if name.endswith(".pc"):
         return name[:-3]
+    # Installed language module files often have a package directory as their
+    # meaningful name. Prefer the closest module root when recognizable.
+    for parent in (path.parent, *path.parents):
+        p = parent.name
+        if p.lower() in {"site-packages", "dist-packages", "vendor", "vendor_ruby",
+                         "gems", "node_modules", "vendor_modules", "lib", "modules"}:
+            break
+        if p and p not in {"python", "python3", "ruby", "perl", "node", "nodejs"}:
+            if lower.endswith((".py", ".rb", ".pm", ".lua", ".tcl", ".php")):
+                return p
+
     so = re.sub(r"\.so(?:\.[0-9A-Za-z._-]+)*$", "", name)
     if so != name:
         return so[3:] if so.startswith("lib") and len(so) > 3 else so
     if "." in name and name.startswith("lib"):
         return name.split(".", 1)[0][3:]
+    for suffix in (".rlib", ".rmeta", ".crate", ".gem", ".node", ".jar", ".wasm"):
+        if name.endswith(suffix):
+            return name[:-len(suffix)]
     return name
 
 
+def module_kind(path):
+    lower_parts = {p.lower() for p in path.parts}
+    suffix = path.suffix.lower()
+    name = path.name
+    if name in MODULE_METADATA:
+        return MODULE_METADATA[name]
+    if "site-packages" in lower_parts or "dist-packages" in lower_parts or suffix in {".py", ".pyc", ".pyo", ".pyd"}:
+        return "python"
+    if "cargo" in lower_parts or "rustlib" in lower_parts or suffix in {".rlib", ".rmeta", ".crate"}:
+        return "rust-cargo"
+    if "gems" in lower_parts or "vendor_ruby" in lower_parts or suffix in {".rb", ".gem"}:
+        return "ruby"
+    if "node_modules" in lower_parts or suffix in {".js", ".mjs", ".cjs", ".node"}:
+        return "nodejs"
+    if suffix in {".pm", ".pod"} or "perl" in lower_parts:
+        return "perl"
+    if suffix in {".go"} or "gopath" in lower_parts:
+        return "go"
+    if suffix in {".jar", ".class", ".war", ".ear"} or "java" in lower_parts:
+        return "java-jvm"
+    if suffix in {".php", ".phar"} or "composer" in lower_parts:
+        return "php"
+    if suffix in {".lua", ".luac"} or "lua" in lower_parts:
+        return "lua"
+    if suffix in {".tcl", ".tm"} or "tcl" in lower_parts:
+        return "tcl"
+    if suffix == ".wasm":
+        return "wasm"
+    if suffix in MODULE_EXTENSIONS:
+        return "generic-module"
+    return None
+
+
+def scan_modules(root):
+    """Discover modules from any language without assuming one package manager."""
+    return [(p, module_kind(p)) for p in scan_tree(root, lambda p: module_kind(p) is not None)]
+
+
 def version_from_text(text):
-    for line in text.splitlines()[:40]:
+    for line in text.splitlines()[:80]:
         m = VERSION_RE.search(line)
         if m:
             return m.group(1)
@@ -154,11 +292,19 @@ def detect_version(name, evidence, root):
                 pass
     for p in evidence:
         for parent in (p.parent, *p.parents):
-            for metadata in ("VERSION", "version", "VERSION.txt", "PKG-INFO"):
+            for metadata in ("VERSION", "version", "VERSION.txt", "PKG-INFO", "METADATA", "pyproject.toml", "Cargo.toml", "gemspec", "package.json"):
                 m = parent / metadata
                 try:
                     if m.is_file():
-                        v = version_from_text(m.read_text(errors="replace"))
+                        text = m.read_text(errors="replace")
+                        if metadata == "package.json":
+                            try:
+                                value = json.loads(text).get("version")
+                                if value:
+                                    return str(value), "package.json"
+                            except json.JSONDecodeError:
+                                pass
+                        v = version_from_text(text)
                         if v:
                             return v, "metadata"
                 except OSError:
@@ -175,9 +321,7 @@ def detect_arch(explicit=None):
         arch = os.uname().machine
     except AttributeError:
         arch = platform.machine()
-    if arch:
-        return arch, "uname"
-    return "unknown", "unknown"
+    return (arch, "uname") if arch else ("unknown", "unknown")
 
 
 def discover(root, minimum):
@@ -191,10 +335,23 @@ def discover(root, minimum):
     artifacts += [(p, "pkgconfig", pre) for p, pre in scan_files(root, PC_DIRS, lambda p: p.name.endswith(".pc"))]
     artifacts += [(p, "include", "") for p in scan_include_dirs(root)]
     artifacts += [(p, "firefox", "") for p in scan_firefox(root)]
+    artifacts += [(p, kind, "") for p, kind in scan_modules(root)]
+
+    # Generic full-tree discovery catches software that does not use a known
+    # language extension. We only add package-looking files here so the scan
+    # remains useful on arbitrary systems without treating every text file as
+    # a package.
+    generic_predicate = lambda p: (
+        os.access(p, os.X_OK) or p.suffix.lower() in {".dll", ".dylib", ".so", ".a", ".jar", ".wasm"}
+    )
+    artifacts += [(p, "generic", "") for p in scan_tree(root, generic_predicate)]
 
     seen = set()
     for path, kind, prefix in artifacts:
-        key = rel(path, root)
+        try:
+            key = rel(path, root)
+        except ValueError:
+            continue
         if key in seen or key in owned:
             continue
         seen.add(key)
@@ -229,7 +386,7 @@ def make_archive(name, count, types, evidence, root, outdir, pkgrel, arch, overw
         raise RuntimeError("zstd is required to create .kuzpkg.tar.zst archives")
     outdir.mkdir(parents=True, exist_ok=True)
     metadata = {
-        "format": "kuzpkg-detected-v2", "name": name, "version": version,
+        "format": "kuzpkg-detected-v3", "name": name, "version": version,
         "version_verified": source != "unverified", "version_source": source,
         "pkgrel": pkgrel, "arch": arch, "artifact_types": sorted(types),
         "artifact_count": count, "origin": "filesystem-discovery"
