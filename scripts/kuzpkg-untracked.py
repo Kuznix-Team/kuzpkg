@@ -57,8 +57,6 @@ def run_kuzpkg(root: str, args: list[str]) -> list[str]:
         )
     except OSError as exc:
         raise RuntimeError(f"cannot execute kuzpkg: {exc}") from exc
-    if proc.returncode != 0 and not proc.stdout:
-        return []
     return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
@@ -69,11 +67,11 @@ def norm_rel(path: str) -> str:
     return path.rstrip("/")
 
 
-def load_owned_files(root: str) -> set[str]:
-    packages = run_kuzpkg(root, ["-Qq"])
+def load_local_db(root: str) -> tuple[set[str], set[str]]:
+    packages = set(run_kuzpkg(root, ["-Qq"]))
     owned: set[str] = set()
 
-    for pkg in packages:
+    for pkg in sorted(packages):
         for line in run_kuzpkg(root, ["-Qql", pkg]):
             # -Qql is expected to print one path per line. Be liberal with
             # older output that may prefix the package name.
@@ -81,20 +79,12 @@ def load_owned_files(root: str) -> set[str]:
                 line = line.split(None, 1)[1]
             owned.add(norm_rel(line))
 
-    return owned
+    return packages, owned
 
 
 def under_root(root: Path, path: str) -> Path:
     relative = path.lstrip("/")
     return root / relative if str(root) != "/" else Path("/") / relative
-
-
-def is_owned(path: Path, root: Path, owned: set[str]) -> bool:
-    try:
-        rel = path.relative_to(root if str(root) != "/" else Path("/"))
-    except ValueError:
-        return False
-    return norm_rel(str(rel)) in owned
 
 
 def scan_files(root: Path, dirs: tuple[str, ...], predicate) -> list[Path]:
@@ -158,7 +148,7 @@ def relative_display(path: Path, root: Path) -> str:
 
 def discover(root: str, minimum: int) -> list[tuple[str, int, set[str], list[str]]]:
     root_path = Path(root).resolve()
-    owned = load_owned_files(root)
+    local_packages, owned = load_local_db(root)
     candidates: dict[str, dict] = defaultdict(lambda: {
         "count": 0,
         "types": set(),
@@ -182,13 +172,13 @@ def discover(root: str, minimum: int) -> list[tuple[str, int, set[str], list[str
             continue
         seen.add(rel)
 
-        guess, guessed_type = package_guess(path)
-        if not guess:
+        guess, _ = package_guess(path)
+        if not guess or guess in local_packages:
             continue
 
         item = candidates[guess]
         item["count"] += 1
-        item["types"].add(category if category != "include" else guessed_type)
+        item["types"].add(category)
         if len(item["evidence"]) < 5:
             item["evidence"].append(relative_display(path, root_path))
 
