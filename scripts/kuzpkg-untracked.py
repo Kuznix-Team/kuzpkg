@@ -13,17 +13,17 @@
 #
 #   gnome-unstable
 #   kde-unstable
-#   core
-#   extra
-#   multilib
 #   core-testing
 #   extra-testing
 #   multilib-testing
 #   core-staging
 #   extra-staging
 #   multilib-staging
+#   core
+#   extra
+#   multilib
 #
-# .files fields used:
+# Arch .files fields used:
 #
 #   %NAME%
 #   %BASE%
@@ -33,7 +33,7 @@
 #   %MAKEDEPENDS%
 #   %FILES%
 #
-# .db fields used:
+# Arch .db fields used:
 #
 #   %NAME%
 #   %BASE%
@@ -52,7 +52,6 @@
 import argparse
 import bz2
 import gzip
-import html.parser
 import json
 import lzma
 import os
@@ -63,7 +62,6 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import time
 from collections import defaultdict
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -74,9 +72,6 @@ from urllib.request import Request, urlopen
 # Configuration
 # ============================================================================
 
-# Keep unstable repositories first so that when the same package name occurs
-# in multiple enabled repositories, the more specific unstable repository
-# remains the preferred metadata source.
 ARCH_REPOSITORIES = (
     "gnome-unstable",
     "kde-unstable",
@@ -230,15 +225,6 @@ SONAME_RE = re.compile(
     re.IGNORECASE,
 )
 
-ARCH_PACKAGE_RE = re.compile(
-    r"^(.+)-"
-    r"([0-9][A-Za-z0-9:+._]*?)-"
-    r"([0-9]+)-"
-    r"([A-Za-z0-9_]+)"
-    r"\.pkg\.tar"
-    r"(?:\.[A-Za-z0-9]+)+$"
-)
-
 SUPPORTED_FILES_FIELDS = {
     "NAME",
     "BASE",
@@ -281,23 +267,9 @@ def detect_unicode_support():
 
 USE_UNICODE = detect_unicode_support()
 
-BOLD = (
-    "\033[1m"
-    if sys.stdout.isatty()
-    else ""
-)
-
-DIM = (
-    "\033[2m"
-    if sys.stdout.isatty()
-    else ""
-)
-
-RESET = (
-    "\033[0m"
-    if sys.stdout.isatty()
-    else ""
-)
+BOLD = "\033[1m" if sys.stdout.isatty() else ""
+DIM = "\033[2m" if sys.stdout.isatty() else ""
+RESET = "\033[0m" if sys.stdout.isatty() else ""
 
 FILL = "█" if USE_UNICODE else "#"
 EMPTY = "░" if USE_UNICODE else "-"
@@ -348,8 +320,7 @@ def fetch_url(url, timeout=30):
     request = Request(
         url,
         headers={
-            "User-Agent":
-                "kuzpkg-untracked/4.0",
+            "User-Agent": "kuzpkg-untracked/4.0",
         },
     )
 
@@ -380,10 +351,7 @@ def fetch_url(url, timeout=30):
 # ALPM parsing
 # ============================================================================
 
-def parse_alpm_fields(
-    text,
-    allowed_fields,
-):
+def parse_alpm_fields(text, allowed_fields):
     result = {}
     current = None
 
@@ -413,10 +381,7 @@ def parse_alpm_fields(
     return result
 
 
-def decompress_database(
-    data,
-    filename,
-):
+def decompress_database(data, filename):
     lower = filename.lower()
 
     if lower.endswith(".gz"):
@@ -479,47 +444,19 @@ def arch_repo_urls(repository):
 
 
 def arch_files_repo_urls(repository):
-    for base in arch_repo_urls(
-        repository
-    ):
-        yield (
-            base
-            + f"{repository}.files"
-        )
-        yield (
-            base
-            + f"{repository}.files.tar.gz"
-        )
-        yield (
-            base
-            + f"{repository}.files.tar.xz"
-        )
-        yield (
-            base
-            + f"{repository}.files.tar.zst"
-        )
+    for base in arch_repo_urls(repository):
+        yield base + f"{repository}.files"
+        yield base + f"{repository}.files.tar.gz"
+        yield base + f"{repository}.files.tar.xz"
+        yield base + f"{repository}.files.tar.zst"
 
 
 def arch_db_repo_urls(repository):
-    for base in arch_repo_urls(
-        repository
-    ):
-        yield (
-            base
-            + f"{repository}.db"
-        )
-        yield (
-            base
-            + f"{repository}.db.tar.gz"
-        )
-        yield (
-            base
-            + f"{repository}.db.tar.xz"
-        )
-        yield (
-            base
-            + f"{repository}.db.tar.zst"
-        )
+    for base in arch_repo_urls(repository):
+        yield base + f"{repository}.db"
+        yield base + f"{repository}.db.tar.gz"
+        yield base + f"{repository}.db.tar.xz"
+        yield base + f"{repository}.db.tar.zst"
 
 
 # ============================================================================
@@ -542,6 +479,7 @@ def parse_arch_files_database(
         prefix="kuzpkg-arch-files-",
     ) as temp_dir:
         temp_dir = Path(temp_dir)
+
         tar_path = temp_dir / "files.tar"
         tar_path.write_bytes(tar_data)
 
@@ -553,17 +491,13 @@ def parse_arch_files_database(
                 if not member.isdir():
                     continue
 
-                package_dir = (
-                    member.name.rstrip("/")
-                )
+                package_dir = member.name.rstrip("/")
 
                 if not package_dir:
                     continue
 
-                desc_member = (
-                    archive.extractfile(
-                        f"{package_dir}/desc"
-                    )
+                desc_member = archive.extractfile(
+                    f"{package_dir}/desc"
                 )
 
                 if desc_member is None:
@@ -620,10 +554,8 @@ def parse_arch_files_database(
 
                 file_list = []
 
-                files_member = (
-                    archive.extractfile(
-                        f"{package_dir}/files"
-                    )
+                files_member = archive.extractfile(
+                    f"{package_dir}/files"
                 )
 
                 if files_member is not None:
@@ -638,9 +570,7 @@ def parse_arch_files_database(
 
                     in_files = False
 
-                    for line in (
-                        files_text.splitlines()
-                    ):
+                    for line in files_text.splitlines():
                         if line == "%FILES%":
                             in_files = True
                             continue
@@ -710,10 +640,7 @@ def download_arch_files_database(
                 )
             )
 
-            if isinstance(
-                cached,
-                dict,
-            ):
+            if isinstance(cached, dict):
                 return cached
 
         except (
@@ -724,9 +651,7 @@ def download_arch_files_database(
 
     errors = []
 
-    for url in arch_files_repo_urls(
-        repository
-    ):
+    for url in arch_files_repo_urls(repository):
         filename = (
             url.rstrip("/")
             .split("/")[-1]
@@ -746,24 +671,17 @@ def download_arch_files_database(
             else:
                 data = fetch_url(url)
 
-                temporary = (
-                    cache_file.with_suffix(
-                        cache_file.suffix
-                        + ".tmp"
-                    )
+                temporary = cache_file.with_suffix(
+                    cache_file.suffix + ".tmp"
                 )
 
                 temporary.write_bytes(data)
-                temporary.replace(
-                    cache_file
-                )
+                temporary.replace(cache_file)
 
-            packages = (
-                parse_arch_files_database(
-                    data,
-                    filename,
-                    repository,
-                )
+            packages = parse_arch_files_database(
+                data,
+                filename,
+                repository,
             )
 
             if not packages:
@@ -772,10 +690,8 @@ def download_arch_files_database(
                 )
 
             try:
-                temporary_json = (
-                    json_cache.with_suffix(
-                        ".json.tmp"
-                    )
+                temporary_json = json_cache.with_suffix(
+                    ".json.tmp"
                 )
 
                 temporary_json.write_text(
@@ -805,11 +721,8 @@ def download_arch_files_database(
             )
 
     raise RuntimeError(
-        f"cannot obtain "
-        f"{repository}.files: "
-        + "; ".join(
-            errors[-3:]
-        )
+        f"cannot obtain {repository}.files: "
+        + "; ".join(errors[-3:])
     )
 
 
@@ -828,19 +741,13 @@ def load_arch_files_databases(
                     f"Arch [{repository}].files..."
                 )
 
-            packages = (
-                download_arch_files_database(
-                    repository,
-                    cache_dir,
-                    refresh=refresh,
-                )
+            packages = download_arch_files_database(
+                repository,
+                cache_dir,
+                refresh=refresh,
             )
 
-            for name, info in (
-                packages.items()
-            ):
-                # Do not replace a package from a
-                # higher-priority repository.
+            for name, info in packages.items():
                 if name not in combined:
                     info = dict(info)
                     info["repo"] = repository
@@ -883,6 +790,7 @@ def parse_arch_db_database(
         prefix="kuzpkg-arch-db-",
     ) as temp_dir:
         temp_dir = Path(temp_dir)
+
         tar_path = temp_dir / "db.tar"
         tar_path.write_bytes(tar_data)
 
@@ -894,17 +802,13 @@ def parse_arch_db_database(
                 if not member.isdir():
                     continue
 
-                package_dir = (
-                    member.name.rstrip("/")
-                )
+                package_dir = member.name.rstrip("/")
 
                 if not package_dir:
                     continue
 
-                desc_member = (
-                    archive.extractfile(
-                        f"{package_dir}/desc"
-                    )
+                desc_member = archive.extractfile(
+                    f"{package_dir}/desc"
                 )
 
                 if desc_member is None:
@@ -991,10 +895,7 @@ def download_arch_db_database(
                 )
             )
 
-            if isinstance(
-                cached,
-                dict,
-            ):
+            if isinstance(cached, dict):
                 return cached
 
         except (
@@ -1005,9 +906,7 @@ def download_arch_db_database(
 
     errors = []
 
-    for url in arch_db_repo_urls(
-        repository
-    ):
+    for url in arch_db_repo_urls(repository):
         filename = (
             url.rstrip("/")
             .split("/")[-1]
@@ -1027,24 +926,17 @@ def download_arch_db_database(
             else:
                 data = fetch_url(url)
 
-                temporary = (
-                    cache_file.with_suffix(
-                        cache_file.suffix
-                        + ".tmp"
-                    )
+                temporary = cache_file.with_suffix(
+                    cache_file.suffix + ".tmp"
                 )
 
                 temporary.write_bytes(data)
-                temporary.replace(
-                    cache_file
-                )
+                temporary.replace(cache_file)
 
-            packages = (
-                parse_arch_db_database(
-                    data,
-                    filename,
-                    repository,
-                )
+            packages = parse_arch_db_database(
+                data,
+                filename,
+                repository,
             )
 
             if not packages:
@@ -1053,10 +945,8 @@ def download_arch_db_database(
                 )
 
             try:
-                temporary_json = (
-                    json_cache.with_suffix(
-                        ".json.tmp"
-                    )
+                temporary_json = json_cache.with_suffix(
+                    ".json.tmp"
                 )
 
                 temporary_json.write_text(
@@ -1086,11 +976,8 @@ def download_arch_db_database(
             )
 
     raise RuntimeError(
-        f"cannot obtain "
-        f"{repository}.db: "
-        + "; ".join(
-            errors[-3:]
-        )
+        f"cannot obtain {repository}.db: "
+        + "; ".join(errors[-3:])
     )
 
 
@@ -1109,18 +996,13 @@ def load_arch_db_databases(
                     f"Arch [{repository}].db..."
                 )
 
-            packages = (
-                download_arch_db_database(
-                    repository,
-                    cache_dir,
-                    refresh=refresh,
-                )
+            packages = download_arch_db_database(
+                repository,
+                cache_dir,
+                refresh=refresh,
             )
 
-            for name, info in (
-                packages.items()
-            ):
-                # Preserve repository priority.
+            for name, info in packages.items():
                 if name not in combined:
                     info = dict(info)
                     info["repo"] = repository
@@ -1153,39 +1035,26 @@ def load_arch_packages(
     refresh=False,
     quiet=False,
 ):
-    files_packages = (
-        load_arch_files_databases(
-            files_cache,
-            refresh=refresh,
-            quiet=quiet,
-        )
+    files_packages = load_arch_files_databases(
+        files_cache,
+        refresh=refresh,
+        quiet=quiet,
     )
 
-    db_packages = (
-        load_arch_db_databases(
-            db_cache,
-            refresh=refresh,
-            quiet=quiet,
-        )
+    db_packages = load_arch_db_databases(
+        db_cache,
+        refresh=refresh,
+        quiet=quiet,
     )
 
     combined = {}
 
-    # Start with .db metadata.
+    # .db provides name/base/version/repository.
     for name, info in db_packages.items():
         combined[name] = dict(info)
 
-    # .files provides:
-    #
-    # NAME
-    # BASE
-    # DESC
-    # LICENSE
-    # DEPENDS
-    # MAKEDEPENDS
-    # FILES
-    #
-    # It deliberately takes precedence for these fields.
+    # .files provides name/base/desc/license/depends/makedepends/files.
+    # Repository order is preserved.
     for name, info in files_packages.items():
         if name not in combined:
             combined[name] = {}
@@ -1251,10 +1120,7 @@ def load_arch_packages(
 # kuzpkg LocalDB
 # ============================================================================
 
-def run_kuzpkg(
-    root,
-    args,
-):
+def run_kuzpkg(root, args):
     command = (
         ["kuzpkg"]
         + (
@@ -1304,15 +1170,6 @@ def rel(path, root):
 
 
 def load_local_db(root):
-    """
-    Read installed kuzpkg package names and
-    owned files.
-
-    This is intentionally tolerant: if kuzpkg
-    itself is unavailable, filesystem/Arch/dpkg
-    detection can still continue.
-    """
-
     packages = set()
 
     try:
@@ -1353,31 +1210,23 @@ def load_local_db(root):
 
 
 # ============================================================================
-# Arch file ownership index
+# Arch file ownership
 # ============================================================================
 
-def build_arch_file_index(
-    arch_packages,
-):
+def build_arch_file_index(arch_packages):
     index = defaultdict(set)
 
-    for package_name, info in (
-        arch_packages.items()
-    ):
+    for package_name, info in arch_packages.items():
         for filename in info.get(
             "files",
             [],
         ):
             filename = str(filename).strip()
 
-            if not filename:
-                continue
-
-            index[
-                filename.lstrip("/")
-            ].add(
-                package_name
-            )
+            if filename:
+                index[
+                    filename.lstrip("/")
+                ].add(package_name)
 
     return index
 
@@ -1411,10 +1260,7 @@ def find_arch_package_for_file(
 # Filesystem scanning
 # ============================================================================
 
-def excluded_dir(
-    path,
-    root,
-):
+def excluded_dir(path, root):
     path = Path(path)
     root = Path(root)
 
@@ -1449,10 +1295,7 @@ def scan_files(
         if (
             not base.exists()
             or not base.is_dir()
-            or excluded_dir(
-                base,
-                root,
-            )
+            or excluded_dir(base, root)
         ):
             continue
 
@@ -1472,10 +1315,7 @@ def scan_files(
             ]
 
             for filename in filenames:
-                path = (
-                    current_path
-                    / filename
-                )
+                path = current_path / filename
 
                 try:
                     valid = (
@@ -1487,10 +1327,7 @@ def scan_files(
 
                 if valid and predicate(path):
                     result.append(
-                        (
-                            path,
-                            prefix,
-                        )
+                        (path, prefix)
                     )
 
     return result
@@ -1521,8 +1358,7 @@ def scan_tree(
             dirname
             for dirname in dirnames
             if (
-                dirname
-                not in EXCLUDED_TOPLEVEL
+                dirname not in EXCLUDED_TOPLEVEL
                 and not (
                     current_path / dirname
                 ).is_symlink()
@@ -1530,10 +1366,7 @@ def scan_tree(
         ]
 
         for filename in filenames:
-            path = (
-                current_path
-                / filename
-            )
+            path = current_path / filename
 
             try:
                 valid = (
@@ -1561,10 +1394,7 @@ def scan_firefox(root):
         if (
             not base.exists()
             or not base.is_dir()
-            or excluded_dir(
-                base,
-                root,
-            )
+            or excluded_dir(base, root)
         ):
             continue
 
@@ -1583,11 +1413,10 @@ def scan_firefox(root):
                 ).is_symlink()
             ]
 
-            for filename in filenames:
-                result.append(
-                    current_path
-                    / filename
-                )
+            result.extend(
+                current_path / filename
+                for filename in filenames
+            )
 
     return result
 
@@ -1604,10 +1433,7 @@ def scan_module_roots(root):
         if (
             not base.exists()
             or not base.is_dir()
-            or excluded_dir(
-                base,
-                root,
-            )
+            or excluded_dir(base, root)
         ):
             continue
 
@@ -1627,10 +1453,7 @@ def scan_module_roots(root):
             ]
 
             for filename in filenames:
-                path = (
-                    current_path
-                    / filename
-                )
+                path = current_path / filename
 
                 try:
                     valid = (
@@ -1647,7 +1470,7 @@ def scan_module_roots(root):
 
 
 # ============================================================================
-# Package guessing
+# Package-name heuristics
 # ============================================================================
 
 def normalize_python_name(name):
@@ -1691,9 +1514,7 @@ def package_guess(path):
         return name[:-3]
 
     if suffix in PYTHON_SUFFIXES:
-        return normalize_python_name(
-            name
-        )
+        return normalize_python_name(name)
 
     if lower.endswith(".egg-info"):
         return name[:-9]
@@ -1850,28 +1671,6 @@ def detect_version(
                 "version-probe",
             )
 
-    root = Path(root)
-
-    for directory in (
-        *BIN_DIRS,
-        *FIREFOX_DIRS,
-    ):
-        candidate = (
-            root
-            / directory.lstrip("/")
-            / name
-        )
-
-        version = probe_version(
-            candidate
-        )
-
-        if version:
-            return (
-                version,
-                "version-probe",
-            )
-
     return (
         "0.0.0+detected",
         "unverified",
@@ -1970,7 +1769,7 @@ def dpkg_package_files(
             line.strip()
             for line in (
                 list_path.read_text(
-                    errors="replace",
+                    errors="replace"
                 ).splitlines()
             )
             if line.strip()
@@ -1985,26 +1784,20 @@ def load_dpkg_packages(root):
 
     for name, info in packages.items():
         info = dict(info)
-
-        info["Files"] = (
-            dpkg_package_files(
-                root,
-                name,
-            )
+        info["Files"] = dpkg_package_files(
+            root,
+            name,
         )
-
         packages[name] = info
 
     return packages
 
 
 # ============================================================================
-# Debian -> Arch mapping
+# DPKG -> Arch
 # ============================================================================
 
-def normalize_distribution_name(
-    name,
-):
+def normalize_distribution_name(name):
     value = name.strip().lower()
 
     value = re.sub(
@@ -2076,11 +1869,11 @@ def arch_candidates_from_dpkg(
         "nodejs-",
         "golang-",
     ):
-        if normalized.startswith(
-            prefix
-        ):
+        if normalized.startswith(prefix):
             result.append(
-                normalized[len(prefix):]
+                normalized[
+                    len(prefix):
+                ]
             )
 
     return list(
@@ -2123,23 +1916,16 @@ def map_dpkg_to_arch(
 
         score = 0
 
-        if (
-            arch_normalized
-            == normalized
-        ):
+        if arch_normalized == normalized:
             score = 100
 
-        elif (
-            arch_normalized.startswith(
-                normalized + "-"
-            )
+        elif arch_normalized.startswith(
+            normalized + "-"
         ):
             score = 80
 
-        elif (
-            normalized.startswith(
-                arch_normalized + "-"
-            )
+        elif normalized.startswith(
+            arch_normalized + "-"
         ):
             score = 70
 
@@ -2160,7 +1946,7 @@ def map_dpkg_to_arch(
 
 
 # ============================================================================
-# Candidate collection
+# Candidate handling
 # ============================================================================
 
 def add_candidate(
@@ -2216,9 +2002,7 @@ def discover(
         }
     )
 
-    # ------------------------------------------------------------------
-    # Exact Arch .files ownership.
-    # ------------------------------------------------------------------
+    # Exact Arch file ownership from .files.
     for path in scan_tree(
         root,
         lambda _: True,
@@ -2255,9 +2039,7 @@ def discover(
             "arch-files",
         )
 
-    # ------------------------------------------------------------------
     # Libraries.
-    # ------------------------------------------------------------------
     for path, prefix in scan_files(
         root,
         LIB_DIRS,
@@ -2315,9 +2097,7 @@ def discover(
             "filesystem",
         )
 
-    # ------------------------------------------------------------------
     # Executables.
-    # ------------------------------------------------------------------
     for path, _prefix in scan_files(
         root,
         tuple(
@@ -2325,7 +2105,10 @@ def discover(
             for directory in BIN_DIRS
         ),
         lambda path: (
-            os.access(path, os.X_OK)
+            os.access(
+                path,
+                os.X_OK,
+            )
             and "." not in path.name
         ),
     ):
@@ -2367,9 +2150,7 @@ def discover(
             "filesystem",
         )
 
-    # ------------------------------------------------------------------
     # pkg-config.
-    # ------------------------------------------------------------------
     for path, prefix in scan_files(
         root,
         PC_DIRS,
@@ -2427,9 +2208,7 @@ def discover(
             "filesystem",
         )
 
-    # ------------------------------------------------------------------
     # Firefox.
-    # ------------------------------------------------------------------
     if (
         "firefox" in arch_packages
         and "firefox" not in installed_kuzpkg
@@ -2454,9 +2233,7 @@ def discover(
                 "filesystem",
             )
 
-    # ------------------------------------------------------------------
     # Language/module roots.
-    # ------------------------------------------------------------------
     for path in scan_module_roots(root):
         try:
             relative = rel(
@@ -2496,9 +2273,7 @@ def discover(
             "filesystem",
         )
 
-    # ------------------------------------------------------------------
-    # Debian / dpkg mapping.
-    # ------------------------------------------------------------------
+    # dpkg -> Arch.
     if include_dpkg:
         for dpkg_name, info in dpkg_packages.items():
             package_name, map_source = (
@@ -2539,7 +2314,6 @@ def discover(
                         "dpkg-mapped",
                         map_source,
                     )
-
             else:
                 add_candidate(
                     candidates,
@@ -2552,9 +2326,6 @@ def discover(
                     map_source,
                 )
 
-    # ------------------------------------------------------------------
-    # Finalize.
-    # ------------------------------------------------------------------
     result = []
 
     for name, item in candidates.items():
@@ -2579,7 +2350,6 @@ def discover(
             )
         )
 
-    # Highest evidence count first, then name.
     result.sort(
         key=lambda item: (
             -item[1],
@@ -2591,7 +2361,7 @@ def discover(
 
 
 # ============================================================================
-# Metadata helpers
+# .PKGINFO
 # ============================================================================
 
 def pkginfo_escape(value):
@@ -2680,11 +2450,12 @@ def make_pkginfo(
             + pkginfo_escape(repo)
         )
 
-    return (
-        "\n".join(lines)
-        + "\n"
-    )
+    return "\n".join(lines) + "\n"
 
+
+# ============================================================================
+# Detailed output
+# ============================================================================
 
 def format_package_details(
     name,
@@ -2713,8 +2484,8 @@ def format_package_details(
 
     println(
         f"  Version    : "
-        f"{version}"
-        f" {DIM}({version_source}){RESET}"
+        f"{version} "
+        f"{DIM}({version_source}){RESET}"
     )
 
     println(
@@ -2880,11 +2651,13 @@ def make_archive(
     )
 
     if not version:
-        version, version_source = detect_version(
-            name,
-            evidence,
-            root,
-            arch_packages,
+        version, version_source = (
+            detect_version(
+                name,
+                evidence,
+                root,
+                arch_packages,
+            )
         )
 
     filename = (
@@ -3097,8 +2870,7 @@ def main():
         "--root",
         default="/",
         help=(
-            "alternate installation "
-            "root/chroot"
+            "alternate installation root/chroot"
         ),
     )
 
@@ -3125,17 +2897,20 @@ def main():
         "--details",
         action="store_true",
         help=(
-            "show full metadata, "
-            "dependencies, sources and evidence"
+            "show full metadata, dependencies, "
+            "sources and evidence"
         ),
     )
 
+    # IMPORTANT:
+    # Do not put literal "%FILES%" in an argparse help string.
+    # argparse uses '%' formatting internally.
     parser.add_argument(
         "--show-files",
         action="store_true",
         help=(
-            "show the complete Arch %FILES% "
-            "list in detailed output"
+            "show the complete Arch repository "
+            "file list in detailed output"
         ),
     )
 
@@ -3151,8 +2926,7 @@ def main():
         "--output-dir",
         default="/var/lib/kuzpkg/pkg",
         help=(
-            "output directory for "
-            "kuzpkg archives"
+            "output directory for kuzpkg archives"
         ),
     )
 
@@ -3160,7 +2934,7 @@ def main():
         "--pkgrel",
         default="1",
         help=(
-            "kuzpkg package release"
+            "kuzpkg package release number"
         ),
     )
 
@@ -3208,7 +2982,7 @@ def main():
         "--no-dpkg",
         action="store_true",
         help=(
-            "disable Debian/dpkg mapping"
+            "disable Debian/dpkg package mapping"
         ),
     )
 
@@ -3220,7 +2994,7 @@ def main():
         )
 
     # ==================================================================
-    # Load Arch metadata
+    # Arch metadata
     # ==================================================================
     try:
         arch_packages = load_arch_packages(
@@ -3233,7 +3007,7 @@ def main():
     except RuntimeError as exc:
         stderr_write(
             "kuzpkg-untracked: "
-            "error loading Arch metadata: "
+            f"error loading Arch metadata: "
             f"{exc}\n",
             flush=True,
         )
@@ -3246,7 +3020,7 @@ def main():
     )
 
     # ==================================================================
-    # Load dpkg
+    # DPKG
     # ==================================================================
     dpkg_packages = {}
 
@@ -3266,7 +3040,7 @@ def main():
             )
 
     # ==================================================================
-    # Detect
+    # Detection
     # ==================================================================
     try:
         if not args.quiet:
@@ -3290,8 +3064,8 @@ def main():
             args.root
         ).resolve()
 
-        architecture, architecture_source = (
-            detect_arch(args.arch)
+        architecture, architecture_source = detect_arch(
+            args.arch
         )
 
         if not args.quiet:
@@ -3310,7 +3084,7 @@ def main():
         return 1
 
     # ==================================================================
-    # Quiet mode
+    # Quiet
     # ==================================================================
     if args.quiet:
         for (
@@ -3335,7 +3109,7 @@ def main():
         return 0
 
     # ==================================================================
-    # Details / discovery-only
+    # Details / detection-only
     # ==================================================================
     if args.no_package or args.details:
         for (
@@ -3350,13 +3124,11 @@ def main():
                 {},
             )
 
-            version, version_source = (
-                detect_version(
-                    name,
-                    evidence,
-                    root,
-                    arch_packages,
-                )
+            version, version_source = detect_version(
+                name,
+                evidence,
+                root,
+                arch_packages,
             )
 
             if args.details:
@@ -3371,7 +3143,6 @@ def main():
                     version_source,
                     show_files=args.show_files,
                 )
-
             else:
                 println(
                     f"{name:<44} "
@@ -3392,7 +3163,7 @@ def main():
             return 0
 
     # ==================================================================
-    # Package creation
+    # Packaging
     # ==================================================================
     output_dir = Path(
         args.output_dir
@@ -3507,27 +3278,35 @@ def main():
     println(
         f"{BOLD}Detection summary{RESET}"
     )
+
     println(
-        f"  Candidates : {total}"
+        f"  Candidates   : {total}"
     )
+
     println(
-        f"  Created    : {created}"
+        f"  Created      : {created}"
     )
+
     println(
-        f"  Skipped    : {skipped}"
+        f"  Skipped      : {skipped}"
     )
+
     println(
-        f"  Failed     : {failed}"
+        f"  Failed       : {failed}"
     )
+
     println(
-        f"  Output     : {output_dir}"
+        f"  Output       : {output_dir}"
     )
+
     println(
-        f"  Architecture: "
-        f"{architecture} ({architecture_source})"
+        f"  Architecture : "
+        f"{architecture} "
+        f"({architecture_source})"
     )
+
     println(
-        f"  Repositories: "
+        f"  Repositories : "
         f"{len(ARCH_REPOSITORIES)}"
     )
 
@@ -3535,6 +3314,7 @@ def main():
         return 1
 
     println()
+
     println(
         "Compressed all detected packages "
         f"to {output_dir}"
