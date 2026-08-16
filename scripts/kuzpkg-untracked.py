@@ -1,3284 +1,860 @@
 #!/usr/bin/env python3
-# Generic filesystem adoption/discovery helper for kuzpkg.
-#
-# Discovery sources:
-#   1. installed kuzpkg LocalDB
-#   2. Arch Linux repository .files databases
-#   3. Arch Linux repository .db databases
-#   4. local filesystem evidence
-#   5. Debian/dpkg package database
-#
-# Arch repositories:
-#   gnome-unstable
-#   kde-unstable
-#   core-testing
-#   extra-testing
-#   multilib-testing
-#   core-staging
-#   extra-staging
-#   multilib-staging
-#   core
-#   extra
-#   multilib
-#
-# Arch .files fields used:
-#   %NAME%
-#   %BASE%
-#   %DESC%
-#   %LICENSE%
-#   %DEPENDS%
-#   %MAKEDEPENDS%
-#   %FILES%
-#
-# Arch .db fields used:
-#   %NAME%
-#   %BASE%
-#   %VERSION%
-#
-# Generated archive:
-#   name-pkgver-pkgrel-arch.kuzpkg.tar.zst
-#
-# Generated metadata:
-#   .PKGINFO
-#   .KUZPKG-METADATA.json
+"""
+kuzpkg-untracked.py
 
+Simple, dependency-light filesystem adopter/reconstructor for kuzpkg.
+
+It does NOT use Arch repositories, ALPM, pacman, or repo metadata.
+It scans the real filesystem, groups evidence into package candidates,
+shows them in a small ncurses/2009-style TUI, and can reconstruct:
+
+    <pkgname>-<pkgver>-<pkgrel>-<arch>.kuzpkg.tar.zst
+
+The archive contains .PKGINFO plus the actual files discovered for the
+candidate.  It also knows about common LFS/BLFS packages, the Linux kernel,
+firmware/module trees, and language ecosystems such as Python, Ruby, Perl,
+Node.js, Rust/Cargo, Go, Java, PHP, Lua and Tcl.
+"""
+
+from __future__ import annotations
 
 import argparse
-import bz2
-import gzip
+import curses
 import json
-import lzma
 import os
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
-import tarfile
 import tempfile
-from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from typing import Iterable
 
+ARCHIVE_SUFFIX = ".kuzpkg.tar.zst"
 
-# ============================================================================
-# Configuration
-# ============================================================================
-
-ARCH_REPOSITORIES = (
-    "gnome-unstable",
-    "kde-unstable",
-    "core-testing",
-    "extra-testing",
-    "multilib-testing",
-    "core-staging",
-    "extra-staging",
-    "multilib-staging",
-    "core",
-    "extra",
-    "multilib",
-)
-
-ARCH_MIRRORS = (
-    "https://ftp.icm.edu.pl/pub/Linux/dist/archlinux",
-    "http://ftp.icm.edu.pl/pub/Linux/dist/archlinux",
-    "https://ftp.icm.edu.pl/Linux/dist/archlinux",
-    "http://ftp.icm.edu.pl/Linux/dist/archlinux",
-)
-
-ARCH_ARCH = "x86_64"
-
-ARCH_DB_CACHE_DEFAULT = (
-    "/var/cache/kuzpkg/arch-repo-db"
-)
-
-ARCH_FILES_CACHE_DEFAULT = (
-    "/var/cache/kuzpkg/arch-repo-files"
-)
-
-DPKG_STATUS_DEFAULT = (
-    "/var/lib/dpkg/status"
-)
-
-DPKG_INFO_DEFAULT = (
-    "/var/lib/dpkg/info"
-)
+# Deliberately boring: no repository configuration and no network discovery.
+# These are filesystem roots that normally do not describe installed package
+# payloads and may contain huge/volatile trees or user data.
+EXCLUDED_ROOTS = {
+    "home", "root", "proc", "run", "sys", "dev", "tmp", "mnt", "srv"
+}
 
 LIB_DIRS = (
-    ("/usr/lib", ""),
-    ("/usr/lib64", ""),
-    ("/lib", ""),
-    ("/lib64", ""),
-    ("/lib32", "lib32-"),
-    ("/usr/lib32", "lib32-"),
-    ("/libx32", "libx32-"),
-    ("/usr/libx32", "libx32-"),
+    "/lib", "/lib64", "/lib32", "/libx32",
+    "/usr/lib", "/usr/lib64", "/usr/lib32", "/usr/libx32",
+)
+BIN_DIRS = ("/bin", "/sbin", "/usr/bin", "/usr/sbin")
+INCLUDE_DIRS = ("/include", "/usr/include", "/usr/local/include")
+PKGCONFIG_DIRS = (
+    "/usr/lib/pkgconfig", "/usr/lib64/pkgconfig", "/usr/lib32/pkgconfig",
+    "/usr/libx32/pkgconfig", "/usr/share/pkgconfig", "/usr/local/lib/pkgconfig",
 )
 
-BIN_DIRS = (
-    "/usr/bin",
-    "/usr/sbin",
-    "/bin",
-    "/sbin",
-)
-
-PC_DIRS = (
-    ("/usr/lib/pkgconfig", ""),
-    ("/usr/lib64/pkgconfig", ""),
-    ("/usr/share/pkgconfig", ""),
-    ("/usr/lib32/pkgconfig", "lib32-"),
-    ("/lib32/pkgconfig", "lib32-"),
-    ("/usr/libx32/pkgconfig", "libx32-"),
-    ("/libx32/pkgconfig", "lib32-"),
-)
-
-FIREFOX_DIRS = (
-    "/lib/firefox",
-    "/usr/lib/firefox",
-)
-
-MODULE_ROOTS = (
-    "/usr/lib/python",
-    "/usr/lib64/python",
-    "/usr/local/lib/python",
-    "/usr/local/lib64/python",
-    "/usr/lib/site-packages",
-    "/usr/lib64/site-packages",
-    "/usr/local/lib/site-packages",
-    "/usr/local/lib64/site-packages",
-    "/usr/lib/dist-packages",
-    "/usr/lib64/dist-packages",
-    "/usr/local/lib/dist-packages",
-    "/usr/local/lib64/dist-packages",
-    "/usr/lib/ruby",
-    "/usr/lib64/ruby",
-    "/usr/local/lib/ruby",
-    "/usr/local/lib64/ruby",
-    "/usr/lib/node_modules",
-    "/usr/local/lib/node_modules",
-    "/usr/share/nodejs",
-    "/usr/lib/cargo",
-    "/usr/local/lib/cargo",
-)
-
-EXCLUDED_TOPLEVEL = {
-    "home",
-    "root",
-    "proc",
-    "run",
-    "sys",
-    "dev",
-    "tmp",
-    "mnt",
-    "srv",
+# Known multi-binary LFS packages.  These are hints; only files that really
+# exist are claimed.
+KNOWN_BINARIES: dict[str, list[str]] = {
+    "coreutils": "ls cat cp mv rm mkdir rmdir touch chmod chown chgrp ln df du echo printf sort uniq cut tr wc head tail basename dirname pwd sleep true false yes date env expr install mktemp nice nohup od readlink realpath seq shred shuf split stat sync tac tee timeout tty uname unlink who whoami id groups logname nproc numfmt base64 md5sum sha1sum sha224sum sha256sum sha384sum sha512sum comm fmt fold join nl dd dir vdir test expr factor hostid pathchk pinky stty sum tsort uname users uptime users".split(),
+    "util-linux": "mount umount fdisk sfdisk blkid lsblk losetup swapon swapoff mkswap fsck dmesg hwclock kill lscpu findmnt flock nsenter unshare uuidgen wipefs column script rev look logger agetty setterm rename renice chcpu choom ionice lslocks lslogins lsns mountpoint namei taskset wdctl".split(),
+    "procps-ng": "ps top free pkill pgrep pmap pwdx slabtop sysctl tload uptime vmstat w watch".split(),
+    "findutils": ["find", "xargs", "locate", "updatedb"],
+    "e2fsprogs": "mke2fs mkfs.ext2 mkfs.ext3 mkfs.ext4 e2fsck fsck.ext2 fsck.ext3 fsck.ext4 tune2fs dumpe2fs resize2fs debugfs badblocks e2label filefrag lsattr chattr uuidgen".split(),
+    "shadow": "passwd login useradd userdel usermod groupadd groupdel groupmod chage chfn chsh gpasswd newgrp newusers pwck grpck vipw vigr faillog lastlog nologin chpasswd".split(),
+    "binutils": "ld as ar nm objdump objcopy ranlib strip readelf addr2line size strings c++filt gprof elfedit gold lto-dump".split(),
 }
 
-GENERIC_BINARY_SUFFIXES = {
-    ".so",
-    ".a",
-    ".dll",
-    ".dylib",
-    ".node",
-    ".jar",
-    ".wasm",
+KNOWN_LIBS: dict[str, list[str]] = {
+    "glibc": "c m pthread dl rt resolv util crypt nsl nss_files nss_dns".split(),
+    "util-linux": "uuid blkid mount smartcols fdisk".split(),
+    "zlib": ["z"],
+    "openssl": ["ssl", "crypto"],
+    "curl": ["curl"],
+    "pcre2": ["pcre2-8", "pcre2-posix"],
+    "expat": ["expat"],
+    "libxml2": ["xml2"],
+    "ncurses": "ncurses ncursesw panel panelw form formw menu menuw".split(),
+    "readline": ["readline", "history"],
+    "libffi": ["ffi"],
+    "libcap": ["cap", "psx"],
+    "libstdc++": ["stdc++"],
+    "libgcc": ["gcc_s"],
 }
 
-PYTHON_SUFFIXES = {
-    ".py",
-    ".pyc",
-    ".pyo",
-    ".pyd",
+KNOWN_DATA: dict[str, list[str]] = {
+    "ca-certificates": ["/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem"],
+    "linux-api-headers": ["/usr/include/linux/version.h"],
+    "bash": ["/usr/share/doc/bash"],
+}
+
+# Kernel payload hints. The actual running kernel is detected separately and
+# these trees are grouped under the linux package rather than being interpreted
+# as thousands of unrelated package names.
+KERNEL_ROOTS = (
+    "/boot", "/lib/modules", "/usr/lib/modules", "/usr/src/linux-headers"
+)
+KERNEL_FILES = (
+    "vmlinuz", "bzImage", "Image", "kernel", "System.map", "config"
+)
+
+ECOSYSTEM_MARKERS: dict[str, tuple[str, ...]] = {
+    "python": ("site-packages", "dist-packages", ".dist-info", ".egg-info", ".py"),
+    "rust": ("/.cargo/registry/", "/.cargo/git/", "Cargo.toml", "Cargo.lock", ".rlib", ".rmeta"),
+    "ruby": ("/gems/", ".gemspec", ".gem", "vendor_ruby", ".rb"),
+    "perl": (".pm", ".pod", "/perl"),
+    "node": ("node_modules", "package.json", ".node", ".mjs", ".cjs"),
+    "go": ("go.mod", "go.sum", "/pkg/mod/", ".a"),
+    "java": (".jar", ".class", "pom.xml", "build.gradle", ".war", ".ear"),
+    "php": ("composer.json", "composer.lock", ".phar", ".php"),
+    "lua": (".lua", ".luac"),
+    "tcl": (".tcl", ".tm"),
+    "wasm": (".wasm",),
 }
 
 VERSION_RE = re.compile(
-    r"(?:version|release|v)?\s*"
-    r"([0-9]+(?:\.[0-9A-Za-z]+)+"
-    r"(?:[-+._][0-9A-Za-z.-]+)?)",
-    re.IGNORECASE,
+    r"(?<![A-Za-z0-9])v?"
+    r"(\d+(?:\.\d+){1,8}(?:[-+._~][0-9A-Za-z._~+-]+)?)"
 )
-
-PYTHON_ABI_RE = re.compile(
-    r"\.cpython-\d+"
-    r"(?:-[A-Za-z0-9_]+)*$",
-    re.IGNORECASE,
-)
-
-PYTHON_OPT_RE = re.compile(
-    r"\.opt-[12]$",
-    re.IGNORECASE,
-)
-
-SONAME_RE = re.compile(
-    r"\.so(?:\.[0-9A-Za-z._-]+)*$",
-    re.IGNORECASE,
-)
-
-SUPPORTED_FILES_FIELDS = {
-    "NAME",
-    "BASE",
-    "DESC",
-    "LICENSE",
-    "DEPENDS",
-    "MAKEDEPENDS",
-    "FILES",
-}
-
-SUPPORTED_DB_FIELDS = {
-    "NAME",
-    "BASE",
-    "VERSION",
-}
+PYTHON_TAG_RE = re.compile(r"(?:-py\d+)?\.cpython[-_]\d+(?:[-_][A-Za-z0-9]+)*$")
 
 
-# ============================================================================
-# Terminal
-# ============================================================================
+@dataclass
+class Candidate:
+    name: str
+    files: set[str] = field(default_factory=set)
+    kinds: set[str] = field(default_factory=set)
+    version_hint: str = ""
+    version_verified: bool = False
+    score: int = 0
 
-def detect_unicode_support():
-    if os.environ.get("KUZPKG_ASCII") == "1":
-        return False
-
-    encoding = (
-        getattr(
-            sys.stdout,
-            "encoding",
-            None,
-        )
-        or ""
-    ).lower().replace("-", "")
-
-    return encoding in {
-        "utf8",
-        "utf8sig",
-    }
+    def add(self, path: str, kind: str, score: int = 1) -> None:
+        self.files.add(path)
+        self.kinds.add(kind)
+        self.score += score
 
 
-USE_UNICODE = detect_unicode_support()
+# ---------------------------------------------------------------------------
+# Paths and filesystem helpers
+# ---------------------------------------------------------------------------
 
-BOLD = "\033[1m" if sys.stdout.isatty() else ""
-DIM = "\033[2m" if sys.stdout.isatty() else ""
-RESET = "\033[0m" if sys.stdout.isatty() else ""
-
-FILL = "█" if USE_UNICODE else "#"
-EMPTY = "░" if USE_UNICODE else "-"
-CHECK = "✓" if USE_UNICODE else "done"
-
-
-def stdout_write(text="", flush=False):
-    sys.stdout.write(str(text))
-    if flush:
-        sys.stdout.flush()
+def normalize_root(root: str) -> Path:
+    p = Path(root).resolve()
+    if not p.is_dir():
+        raise ValueError(f"root is not a directory: {p}")
+    return p
 
 
-def stderr_write(text="", flush=False):
-    sys.stderr.write(str(text))
-    if flush:
-        sys.stderr.flush()
-
-
-def println(text=""):
-    sys.stdout.write(str(text) + "\n")
-
-
-def progress_bar(current, total, width=32):
-    if total <= 0:
-        return f"[{EMPTY * width}] 0/0"
-
-    current = max(0, min(current, total))
-    filled = int(width * current / total)
-
-    return (
-        f"[{FILL * filled}"
-        f"{EMPTY * (width - filled)}] "
-        f"{current}/{total}"
-    )
-
-
-# ============================================================================
-# HTTP
-# ============================================================================
-
-def fetch_url(url, timeout=30):
-    request = Request(
-        url,
-        headers={
-            "User-Agent": "kuzpkg-untracked/4.1",
-        },
-    )
-
+def relpath(path: Path, root: Path) -> str:
+    if root == Path("/"):
+        return "/" + str(path).lstrip("/")
     try:
-        with urlopen(
-            request,
-            timeout=timeout,
-        ) as response:
-            return response.read()
+        return "/" + str(path.relative_to(root)).lstrip("/")
+    except ValueError:
+        return str(path)
 
-    except HTTPError as exc:
-        raise RuntimeError(
-            f"HTTP {exc.code}: {url}"
-        ) from exc
 
-    except URLError as exc:
-        raise RuntimeError(
-            f"network error: {exc.reason}"
-        ) from exc
+def root_join(root: Path, absolute_path: str) -> Path:
+    return Path(absolute_path) if root == Path("/") else root / absolute_path.lstrip("/")
 
-    except OSError as exc:
-        raise RuntimeError(
-            f"cannot fetch {url}: {exc}"
-        ) from exc
 
-
-# ============================================================================
-# ALPM field parsing
-# ============================================================================
-
-def parse_alpm_fields(text, allowed_fields):
-    result = {}
-    current = None
-
-    for raw_line in text.splitlines():
-        line = raw_line.rstrip("\n")
-
-        if (
-            line.startswith("%")
-            and line.endswith("%")
-        ):
-            current = line[1:-1]
-
-            if current in allowed_fields:
-                result[current] = []
-
-            continue
-
-        if (
-            current in allowed_fields
-            and line
-        ):
-            result.setdefault(
-                current,
-                [],
-            ).append(line)
-
-    return result
-
-
-def decompress_database(data, filename):
-    lower = filename.lower()
-
-    if lower.endswith(".gz"):
-        return gzip.decompress(data)
-
-    if lower.endswith(".bz2"):
-        return bz2.decompress(data)
-
-    if lower.endswith(".xz"):
-        return lzma.decompress(data)
-
-    if lower.endswith(".zst"):
-        zstd = shutil.which("zstd")
-
-        if not zstd:
-            raise RuntimeError(
-                "zstd is required to read "
-                "Arch repository databases"
-            )
-
-        process = subprocess.run(
-            [
-                zstd,
-                "-d",
-                "-q",
-                "-c",
-            ],
-            input=data,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-
-        if process.returncode != 0:
-            raise RuntimeError(
-                "failed to decompress "
-                "Arch repository zstd database"
-            )
-
-        return process.stdout
-
-    return data
-
-
-# ============================================================================
-# Arch repository URLs
-# ============================================================================
-
-def arch_repo_urls(repository):
-    suffix = (
-        f"/{repository}/os/"
-        f"{ARCH_ARCH}/"
-    )
-
-    for mirror in ARCH_MIRRORS:
-        yield (
-            mirror.rstrip("/")
-            + suffix
-        )
-
-
-def arch_files_repo_urls(repository):
-    for base in arch_repo_urls(repository):
-        yield base + f"{repository}.files"
-        yield base + f"{repository}.files.tar.gz"
-        yield base + f"{repository}.files.tar.xz"
-        yield base + f"{repository}.files.tar.zst"
-
-
-def arch_db_repo_urls(repository):
-    for base in arch_repo_urls(repository):
-        yield base + f"{repository}.db"
-        yield base + f"{repository}.db.tar.gz"
-        yield base + f"{repository}.db.tar.xz"
-        yield base + f"{repository}.db.tar.zst"
-
-
-# ============================================================================
-# Arch .files
-# ============================================================================
-
-def parse_arch_files_database(
-    data,
-    filename,
-    repository,
-):
-    tar_data = decompress_database(
-        data,
-        filename,
-    )
-
-    packages = {}
-
-    with tempfile.TemporaryDirectory(
-        prefix="kuzpkg-arch-files-",
-    ) as temp_dir:
-        temp_dir = Path(temp_dir)
-        tar_path = temp_dir / "files.tar"
-        tar_path.write_bytes(tar_data)
-
-        with tarfile.open(
-            tar_path,
-            "r:*",
-        ) as archive:
-            for member in archive.getmembers():
-                if not member.isdir():
-                    continue
-
-                package_dir = member.name.rstrip("/")
-
-                if not package_dir:
-                    continue
-
-                desc_member = archive.extractfile(
-                    f"{package_dir}/desc"
-                )
-
-                if desc_member is None:
-                    continue
-
-                desc_text = (
-                    desc_member
-                    .read()
-                    .decode(
-                        "utf-8",
-                        errors="replace",
-                    )
-                )
-
-                fields = parse_alpm_fields(
-                    desc_text,
-                    SUPPORTED_FILES_FIELDS,
-                )
-
-                names = fields.get(
-                    "NAME",
-                    [],
-                )
-
-                if not names:
-                    continue
-
-                name = names[0]
-
-                bases = fields.get(
-                    "BASE",
-                    [],
-                )
-
-                descriptions = fields.get(
-                    "DESC",
-                    [],
-                )
-
-                licenses = fields.get(
-                    "LICENSE",
-                    [],
-                )
-
-                depends = fields.get(
-                    "DEPENDS",
-                    [],
-                )
-
-                makedepends = fields.get(
-                    "MAKEDEPENDS",
-                    [],
-                )
-
-                file_list = []
-
-                files_member = archive.extractfile(
-                    f"{package_dir}/files"
-                )
-
-                if files_member is not None:
-                    files_text = (
-                        files_member
-                        .read()
-                        .decode(
-                            "utf-8",
-                            errors="replace",
-                        )
-                    )
-
-                    in_files = False
-
-                    for line in files_text.splitlines():
-                        if line == "%FILES%":
-                            in_files = True
-                            continue
-
-                        if (
-                            in_files
-                            and line
-                            and not line.startswith("%")
-                        ):
-                            file_list.append(line)
-
-                if not file_list:
-                    file_list = fields.get(
-                        "FILES",
-                        [],
-                    )
-
-                packages[name] = {
-                    "name": name,
-                    "base": (
-                        bases[0]
-                        if bases
-                        else name
-                    ),
-                    "desc": (
-                        descriptions[0]
-                        if descriptions
-                        else ""
-                    ),
-                    "license": licenses,
-                    "depends": depends,
-                    "makedepends": makedepends,
-                    "files": file_list,
-                    "version": "",
-                    "repo": repository,
-                    "source": "files",
-                }
-
-    return packages
-
-
-def download_arch_files_database(
-    repository,
-    cache_dir,
-    refresh=False,
-):
-    cache_dir = Path(cache_dir)
-    cache_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    json_cache = (
-        cache_dir
-        / f"{repository}.json"
-    )
-
-    if (
-        json_cache.exists()
-        and not refresh
-    ):
-        try:
-            cached = json.loads(
-                json_cache.read_text(
-                    errors="replace",
-                )
-            )
-
-            if isinstance(cached, dict):
-                return cached
-
-        except (
-            OSError,
-            json.JSONDecodeError,
-        ):
-            pass
-
-    errors = []
-
-    for url in arch_files_repo_urls(repository):
-        filename = (
-            url.rstrip("/")
-            .split("/")[-1]
-        )
-
-        cache_file = (
-            cache_dir
-            / f"{repository}-{filename}"
-        )
-
-        try:
-            if (
-                cache_file.exists()
-                and not refresh
-            ):
-                data = cache_file.read_bytes()
-            else:
-                data = fetch_url(url)
-
-                temporary = cache_file.with_suffix(
-                    cache_file.suffix + ".tmp"
-                )
-
-                temporary.write_bytes(data)
-                temporary.replace(cache_file)
-
-            packages = parse_arch_files_database(
-                data,
-                filename,
-                repository,
-            )
-
-            if not packages:
-                raise RuntimeError(
-                    "empty .files database"
-                )
-
-            try:
-                temporary_json = json_cache.with_suffix(
-                    ".json.tmp"
-                )
-
-                temporary_json.write_text(
-                    json.dumps(
-                        packages,
-                        indent=2,
-                    )
-                    + "\n"
-                )
-
-                temporary_json.replace(
-                    json_cache
-                )
-
-            except OSError:
-                pass
-
-            return packages
-
-        except (
-            OSError,
-            RuntimeError,
-            tarfile.TarError,
-        ) as exc:
-            errors.append(
-                f"{url}: {exc}"
-            )
-
-    raise RuntimeError(
-        f"cannot obtain {repository}.files: "
-        + "; ".join(errors[-3:])
-    )
-
-
-def load_arch_files_databases(
-    cache_dir,
-    refresh=False,
-    quiet=False,
-):
-    combined = {}
-
-    for repository in ARCH_REPOSITORIES:
-        try:
-            if not quiet:
-                println(
-                    f"Loading "
-                    f"Arch [{repository}].files..."
-                )
-
-            packages = download_arch_files_database(
-                repository,
-                cache_dir,
-                refresh=refresh,
-            )
-
-            for name, info in packages.items():
-                if name not in combined:
-                    info = dict(info)
-                    info["repo"] = repository
-                    info["source"] = "files"
-                    combined[name] = info
-
-            if not quiet:
-                println(
-                    f"  {repository:<18} "
-                    f"{len(packages):>6} packages"
-                )
-
-        except RuntimeError as exc:
-            if not quiet:
-                println(
-                    f"  {repository:<18} "
-                    f"unavailable: {exc}"
-                )
-
-    return combined
-
-
-# ============================================================================
-# Arch .db
-# ============================================================================
-
-def parse_arch_db_database(
-    data,
-    filename,
-    repository,
-):
-    tar_data = decompress_database(
-        data,
-        filename,
-    )
-
-    packages = {}
-
-    with tempfile.TemporaryDirectory(
-        prefix="kuzpkg-arch-db-",
-    ) as temp_dir:
-        temp_dir = Path(temp_dir)
-        tar_path = temp_dir / "db.tar"
-        tar_path.write_bytes(tar_data)
-
-        with tarfile.open(
-            tar_path,
-            "r:*",
-        ) as archive:
-            for member in archive.getmembers():
-                if not member.isdir():
-                    continue
-
-                package_dir = member.name.rstrip("/")
-
-                if not package_dir:
-                    continue
-
-                desc_member = archive.extractfile(
-                    f"{package_dir}/desc"
-                )
-
-                if desc_member is None:
-                    continue
-
-                desc_text = (
-                    desc_member
-                    .read()
-                    .decode(
-                        "utf-8",
-                        errors="replace",
-                    )
-                )
-
-                fields = parse_alpm_fields(
-                    desc_text,
-                    SUPPORTED_DB_FIELDS,
-                )
-
-                names = fields.get(
-                    "NAME",
-                    [],
-                )
-
-                if not names:
-                    continue
-
-                bases = fields.get(
-                    "BASE",
-                    [],
-                )
-
-                versions = fields.get(
-                    "VERSION",
-                    [],
-                )
-
-                name = names[0]
-
-                packages[name] = {
-                    "name": name,
-                    "base": (
-                        bases[0]
-                        if bases
-                        else name
-                    ),
-                    "version": (
-                        versions[0]
-                        if versions
-                        else ""
-                    ),
-                    "repo": repository,
-                    "source": "db",
-                }
-
-    return packages
-
-
-def download_arch_db_database(
-    repository,
-    cache_dir,
-    refresh=False,
-):
-    cache_dir = Path(cache_dir)
-    cache_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    json_cache = (
-        cache_dir
-        / f"{repository}.json"
-    )
-
-    if (
-        json_cache.exists()
-        and not refresh
-    ):
-        try:
-            cached = json.loads(
-                json_cache.read_text(
-                    errors="replace",
-                )
-            )
-
-            if isinstance(cached, dict):
-                return cached
-
-        except (
-            OSError,
-            json.JSONDecodeError,
-        ):
-            pass
-
-    errors = []
-
-    for url in arch_db_repo_urls(repository):
-        filename = (
-            url.rstrip("/")
-            .split("/")[-1]
-        )
-
-        cache_file = (
-            cache_dir
-            / f"{repository}-{filename}"
-        )
-
-        try:
-            if (
-                cache_file.exists()
-                and not refresh
-            ):
-                data = cache_file.read_bytes()
-            else:
-                data = fetch_url(url)
-
-                temporary = cache_file.with_suffix(
-                    cache_file.suffix + ".tmp"
-                )
-
-                temporary.write_bytes(data)
-                temporary.replace(cache_file)
-
-            packages = parse_arch_db_database(
-                data,
-                filename,
-                repository,
-            )
-
-            if not packages:
-                raise RuntimeError(
-                    "empty .db database"
-                )
-
-            try:
-                temporary_json = json_cache.with_suffix(
-                    ".json.tmp"
-                )
-
-                temporary_json.write_text(
-                    json.dumps(
-                        packages,
-                        indent=2,
-                    )
-                    + "\n"
-                )
-
-                temporary_json.replace(
-                    json_cache
-                )
-
-            except OSError:
-                pass
-
-            return packages
-
-        except (
-            OSError,
-            RuntimeError,
-            tarfile.TarError,
-        ) as exc:
-            errors.append(
-                f"{url}: {exc}"
-            )
-
-    raise RuntimeError(
-        f"cannot obtain {repository}.db: "
-        + "; ".join(errors[-3:])
-    )
-
-
-def load_arch_db_databases(
-    cache_dir,
-    refresh=False,
-    quiet=False,
-):
-    combined = {}
-
-    for repository in ARCH_REPOSITORIES:
-        try:
-            if not quiet:
-                println(
-                    f"Loading "
-                    f"Arch [{repository}].db..."
-                )
-
-            packages = download_arch_db_database(
-                repository,
-                cache_dir,
-                refresh=refresh,
-            )
-
-            for name, info in packages.items():
-                if name not in combined:
-                    info = dict(info)
-                    info["repo"] = repository
-                    info["source"] = "db"
-                    combined[name] = info
-
-            if not quiet:
-                println(
-                    f"  {repository:<18} "
-                    f"{len(packages):>6} packages"
-                )
-
-        except RuntimeError as exc:
-            if not quiet:
-                println(
-                    f"  {repository:<18} "
-                    f"unavailable: {exc}"
-                )
-
-    return combined
-
-
-# ============================================================================
-# Combine Arch metadata
-# ============================================================================
-
-def load_arch_packages(
-    db_cache,
-    files_cache,
-    refresh=False,
-    quiet=False,
-):
-    files_packages = load_arch_files_databases(
-        files_cache,
-        refresh=refresh,
-        quiet=quiet,
-    )
-
-    db_packages = load_arch_db_databases(
-        db_cache,
-        refresh=refresh,
-        quiet=quiet,
-    )
-
-    combined = {}
-
-    for name, info in db_packages.items():
-        combined[name] = dict(info)
-
-    for name, info in files_packages.items():
-        if name not in combined:
-            combined[name] = {}
-
-        combined[name].update(
-            {
-                "name": info.get(
-                    "name",
-                    name,
-                ),
-                "base": info.get(
-                    "base",
-                    name,
-                ),
-                "desc": info.get(
-                    "desc",
-                    "",
-                ),
-                "license": info.get(
-                    "license",
-                    [],
-                ),
-                "depends": info.get(
-                    "depends",
-                    [],
-                ),
-                "makedepends": info.get(
-                    "makedepends",
-                    [],
-                ),
-                "files": info.get(
-                    "files",
-                    [],
-                ),
-                "repo": info.get(
-                    "repo",
-                    combined[name].get(
-                        "repo",
-                        "",
-                    ),
-                ),
-                "source": "files",
-            }
-        )
-
-    if not combined:
-        raise RuntimeError(
-            "no Arch repository metadata "
-            "could be loaded"
-        )
-
-    if not quiet:
-        println(
-            f"{CHECK}, "
-            f"{len(combined)} unique "
-            "Arch packages"
-        )
-
-    return combined
-
-
-# ============================================================================
-# kuzpkg LocalDB
-# ============================================================================
-
-def run_kuzpkg(root, args):
-    command = (
-        ["kuzpkg"]
-        + (
-            []
-            if root == "/"
-            else ["--root", root]
-        )
-        + list(args)
-    )
-
+def excluded(path: Path, root: Path) -> bool:
     try:
-        process = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=False,
-        )
-
-    except OSError as exc:
-        raise RuntimeError(
-            f"cannot execute kuzpkg: {exc}"
-        ) from exc
-
-    return [
-        line.strip()
-        for line in process.stdout.splitlines()
-        if line.strip()
-    ]
-
-
-def norm(path):
-    return (
-        str(path)
-        .replace(os.sep, "/")
-        .lstrip("/")
-        .rstrip("/")
-    )
-
-
-def rel(path, root):
-    return norm(
-        Path(path).relative_to(
-            Path(root)
-        )
-    )
-
-
-def load_local_db(root):
-    packages = set()
-
-    try:
-        packages = set(
-            run_kuzpkg(
-                root,
-                ["-Qq"],
-            )
-        )
-    except RuntimeError:
-        packages = set()
-
-    owned = set()
-
-    for package in sorted(packages):
-        try:
-            files = run_kuzpkg(
-                root,
-                ["-Qql", package],
-            )
-        except RuntimeError:
-            continue
-
-        for item in files:
-            if item.startswith(
-                package + " "
-            ):
-                item = item.split(
-                    None,
-                    1,
-                )[1]
-
-            owned.add(
-                norm(item)
-            )
-
-    return packages, owned
-
-
-# ============================================================================
-# Architecture
-# ============================================================================
-
-def detect_arch(explicit=None):
-    """
-    Determine the architecture used for generated kuzpkg archives.
-
-    --arch overrides automatic detection.
-    """
-    if explicit:
-        return (
-            explicit,
-            "explicit",
-        )
-
-    try:
-        architecture = os.uname().machine
-        source = "uname"
-    except AttributeError:
-        architecture = platform.machine()
-        source = "platform"
-
-    if not architecture:
-        return (
-            "unknown",
-            source,
-        )
-
-    return (
-        architecture,
-        source,
-    )
-
-
-# ============================================================================
-# Arch file ownership
-# ============================================================================
-
-def build_arch_file_index(arch_packages):
-    index = defaultdict(set)
-
-    for package_name, info in arch_packages.items():
-        for filename in info.get(
-            "files",
-            [],
-        ):
-            filename = str(filename).strip()
-
-            if not filename:
-                continue
-
-            index[
-                filename.lstrip("/")
-            ].add(package_name)
-
-    return index
-
-
-def find_arch_package_for_file(
-    relative_path,
-    index,
-):
-    normalized = (
-        str(relative_path)
-        .lstrip("/")
-        .replace(
-            os.sep,
-            "/",
-        )
-    )
-
-    packages = index.get(
-        normalized
-    )
-
-    if packages:
-        return sorted(packages)[0]
-
-    return None
-
-
-# ============================================================================
-# Filesystem scanning
-# ============================================================================
-
-def excluded_dir(path, root):
-    path = Path(path)
-    root = Path(root)
-
-    try:
-        relative = path.relative_to(root)
+        rel = path.relative_to(root)
     except ValueError:
         return True
+    return bool(rel.parts and rel.parts[0] in EXCLUDED_ROOTS)
 
-    if not relative.parts:
+
+def walk_files(root: Path) -> Iterable[Path]:
+    """Safe recursive walk; skips volatile/user trees and symlink directories."""
+    for current, dirs, files in os.walk(root, topdown=True, followlinks=False):
+        cur = Path(current)
+        dirs[:] = [
+            d for d in dirs
+            if not excluded(cur / d, root) and not (cur / d).is_symlink()
+        ]
+        for name in files:
+            path = cur / name
+            try:
+                if path.is_symlink() or path.is_file():
+                    yield path
+            except OSError:
+                continue
+
+
+def safe_read_text(path: Path, limit: int = 65536) -> str:
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as f:
+            return f.read(limit)
+    except OSError:
+        return ""
+
+
+def executable(path: Path) -> bool:
+    try:
+        return path.is_file() and os.access(path, os.X_OK)
+    except OSError:
         return False
 
-    return (
-        relative.parts[0]
-        in EXCLUDED_TOPLEVEL
-    )
+
+def which_in_root(binary: str, root: Path) -> Path | None:
+    for directory in BIN_DIRS:
+        p = root_join(root, directory) / binary
+        if executable(p):
+            return p
+    return None
 
 
-def scan_files(
-    root,
-    directories,
-    predicate,
-):
-    root = Path(root)
-    result = []
+# ---------------------------------------------------------------------------
+# Version probing
+# ---------------------------------------------------------------------------
 
-    for directory, prefix in directories:
-        base = (
-            root
-            / directory.lstrip("/")
-        )
-
-        if (
-            not base.exists()
-            or not base.is_dir()
-            or excluded_dir(base, root)
-        ):
-            continue
-
-        for current, dirnames, filenames in os.walk(
-            base,
-            topdown=True,
-            followlinks=False,
-        ):
-            current_path = Path(current)
-
-            dirnames[:] = [
-                dirname
-                for dirname in dirnames
-                if not (
-                    current_path / dirname
-                ).is_symlink()
-            ]
-
-            for filename in filenames:
-                path = current_path / filename
-
-                try:
-                    valid = (
-                        path.is_file()
-                        or path.is_symlink()
-                    )
-                except OSError:
-                    valid = False
-
-                if valid and predicate(path):
-                    result.append(
-                        (
-                            path,
-                            prefix,
-                        )
-                    )
-
-    return result
-
-
-def scan_tree(
-    root,
-    predicate,
-):
-    root = Path(root)
-    result = []
-
-    for current, dirnames, filenames in os.walk(
-        root,
-        topdown=True,
-        followlinks=False,
-    ):
-        current_path = Path(current)
-
-        if excluded_dir(
-            current_path,
-            root,
-        ):
-            dirnames[:] = []
-            continue
-
-        dirnames[:] = [
-            dirname
-            for dirname in dirnames
-            if (
-                dirname not in EXCLUDED_TOPLEVEL
-                and not (
-                    current_path / dirname
-                ).is_symlink()
-            )
-        ]
-
-        for filename in filenames:
-            path = current_path / filename
-
+def probe_version(path: Path) -> tuple[str, bool]:
+    if executable(path):
+        for option in ("--version", "-version", "-V"):
             try:
-                valid = (
-                    path.is_file()
-                    or path.is_symlink()
+                proc = subprocess.run(
+                    [str(path), option],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    timeout=2,
+                    check=False,
+                    env={**os.environ, "LC_ALL": "C", "LANG": "C"},
                 )
-            except OSError:
-                valid = False
-
-            if valid and predicate(path):
-                result.append(path)
-
-    return result
-
-
-def scan_firefox(root):
-    result = []
-
-    for directory in FIREFOX_DIRS:
-        base = (
-            Path(root)
-            / directory.lstrip("/")
-        )
-
-        if (
-            not base.exists()
-            or not base.is_dir()
-            or excluded_dir(base, root)
-        ):
-            continue
-
-        for current, dirnames, filenames in os.walk(
-            base,
-            topdown=True,
-            followlinks=False,
-        ):
-            current_path = Path(current)
-
-            dirnames[:] = [
-                dirname
-                for dirname in dirnames
-                if not (
-                    current_path / dirname
-                ).is_symlink()
-            ]
-
-            result.extend(
-                current_path / filename
-                for filename in filenames
-            )
-
-    return result
+                match = VERSION_RE.search(proc.stdout or "")
+                if match:
+                    return match.group(1), True
+            except (OSError, subprocess.SubprocessError):
+                pass
+    return "", False
 
 
-def scan_module_roots(root):
-    result = []
-
-    for directory in MODULE_ROOTS:
-        base = (
-            Path(root)
-            / directory.lstrip("/")
-        )
-
-        if (
-            not base.exists()
-            or not base.is_dir()
-            or excluded_dir(base, root)
-        ):
-            continue
-
-        for current, dirnames, filenames in os.walk(
-            base,
-            topdown=True,
-            followlinks=False,
-        ):
-            current_path = Path(current)
-
-            dirnames[:] = [
-                dirname
-                for dirname in dirnames
-                if not (
-                    current_path / dirname
-                ).is_symlink()
-            ]
-
-            for filename in filenames:
-                path = current_path / filename
-
-                try:
-                    valid = (
-                        path.is_file()
-                        or path.is_symlink()
-                    )
-                except OSError:
-                    valid = False
-
-                if valid:
-                    result.append(path)
-
-    return result
+def version_from_text(text: str) -> str:
+    match = VERSION_RE.search(text)
+    return match.group(1) if match else ""
 
 
-# ============================================================================
-# Package-name heuristics
-# ============================================================================
+def kernel_version(root: Path) -> tuple[str, bool]:
+    # Prefer the actual uname string only when scanning the host root.
+    if root == Path("/"):
+        value = platform.release()
+        if value:
+            return value, True
 
-def normalize_python_name(name):
-    value = name
-
-    for suffix in (
-        ".pyc",
-        ".pyo",
-        ".py",
-        ".pyd",
+    for path in (
+        root_join(root, "/proc/version"),
+        root_join(root, "/usr/include/linux/version.h"),
     ):
-        if value.lower().endswith(suffix):
-            value = value[:-len(suffix)]
-            break
-
-    value = PYTHON_OPT_RE.sub(
-        "",
-        value,
-    )
-
-    value = PYTHON_ABI_RE.sub(
-        "",
-        value,
-    )
-
-    return value
-
-
-def package_guess(path):
-    path = Path(path)
-
-    name = path.name
-    lower = name.lower()
-    suffix = path.suffix.lower()
-
-    if lower.endswith(".pc"):
-        return name[:-3]
-
-    if suffix in PYTHON_SUFFIXES:
-        return normalize_python_name(name)
-
-    if lower.endswith(".egg-info"):
-        return name[:-9]
-
-    if lower.endswith(".dist-info"):
-        return name[:-10]
-
-    shared = SONAME_RE.sub(
-        "",
-        name,
-    )
-
-    if shared != name:
-        if shared.startswith("lib"):
-            return shared[3:]
-
-        return shared
-
-    if lower.endswith(".a"):
-        value = name[:-2]
-
-        if value.startswith("lib"):
-            value = value[3:]
-
-        return value
-
-    if lower.endswith(".node"):
-        return name[:-5]
-
-    for extension in (
-        ".rlib",
-        ".rmeta",
-        ".crate",
-        ".jar",
-        ".war",
-        ".ear",
-    ):
-        if lower.endswith(extension):
-            return name[
-                :-len(extension)
-            ]
-
-    try:
-        executable = (
-            path.is_file()
-            and os.access(
-                path,
-                os.X_OK,
-            )
-        )
-    except OSError:
-        executable = False
-
-    if (
-        executable
-        and "." not in name
-    ):
-        return name
-
-    return None
-
-
-# ============================================================================
-# Version
-# ============================================================================
-
-def version_from_text(text):
-    for line in text.splitlines()[:100]:
-        match = VERSION_RE.search(line)
-
-        if match:
-            return match.group(1)
-
-    return None
-
-
-def probe_version(path):
-    path = Path(path)
-
-    try:
-        executable = (
-            path.is_file()
-            and os.access(
-                path,
-                os.X_OK,
-            )
-        )
-    except OSError:
-        executable = False
-
-    if not executable:
-        return None
-
-    for argument in (
-        "--version",
-        "-version",
-    ):
-        try:
-            process = subprocess.run(
-                [
-                    str(path),
-                    argument,
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                timeout=3,
-                check=False,
-            )
-
-            version = version_from_text(
-                process.stdout
-            )
-
-            if version:
-                return version
-
-        except (
-            OSError,
-            subprocess.SubprocessError,
-        ):
-            pass
-
-    return None
-
-
-def detect_version(
-    name,
-    evidence,
-    root,
-    arch_packages,
-):
-    info = arch_packages.get(
-        name,
-        {},
-    )
-
-    repository_version = info.get(
-        "version",
-        "",
-    )
-
-    if repository_version:
-        return (
-            repository_version,
-            "arch-repository",
-        )
-
-    for path in evidence:
-        version = probe_version(path)
-
+        text = safe_read_text(path)
+        version = version_from_text(text)
         if version:
-            return (
-                version,
-                "version-probe",
-            )
-
-    return (
-        "0.0.0+detected",
-        "unverified",
-    )
-
-
-# ============================================================================
-# DPKG
-# ============================================================================
-
-def parse_dpkg_status(root):
-    status_path = (
-        Path(root)
-        / DPKG_STATUS_DEFAULT.lstrip("/")
-    )
-
-    if not status_path.exists():
-        return {}
-
-    try:
-        text = status_path.read_text(
-            errors="replace"
-        )
-    except OSError:
-        return {}
-
-    packages = {}
-
-    for paragraph in re.split(
-        r"\n\s*\n",
-        text,
-    ):
-        fields = {}
-        current = None
-
-        for line in paragraph.splitlines():
-            if (
-                line.startswith(" ")
-                or line.startswith("\t")
-            ):
-                if current:
-                    fields[current] += (
-                        "\n"
-                        + line.lstrip()
-                    )
-                continue
-
-            if ":" not in line:
-                continue
-
-            key, value = line.split(
-                ":",
-                1,
-            )
-
-            current = key
-            fields[key] = value.strip()
-
-        name = fields.get("Package")
-        status = fields.get(
-            "Status",
-            "",
-        )
-
-        if not name:
-            continue
-
-        if not status.startswith(
-            "install ok installed"
-        ):
-            continue
-
-        packages[name] = fields
-
-    return packages
-
-
-def dpkg_package_files(
-    root,
-    package_name,
-):
-    list_path = (
-        Path(root)
-        / DPKG_INFO_DEFAULT.lstrip("/")
-        / f"{package_name}.list"
-    )
-
-    if not list_path.exists():
-        return []
-
-    try:
-        return [
-            line.strip()
-            for line in list_path.read_text(
-                errors="replace"
-            ).splitlines()
-            if line.strip()
-        ]
-
-    except OSError:
-        return []
-
-
-def load_dpkg_packages(root):
-    packages = parse_dpkg_status(root)
-
-    for name, info in packages.items():
-        info = dict(info)
-        info["Files"] = dpkg_package_files(
-            root,
-            name,
-        )
-        packages[name] = info
-
-    return packages
-
-
-# ============================================================================
-# Debian -> Arch
-# ============================================================================
-
-def normalize_distribution_name(name):
-    value = name.strip().lower()
-
-    value = re.sub(
-        r":(?:amd64|arm64|i386|armhf|all)$",
-        "",
-        value,
-    )
-
-    aliases = {
-        "python3": "python",
-        "python3-dev": "python",
-        "python3-pip": "python-pip",
-        "libssl3": "openssl",
-        "libssl-dev": "openssl",
-        "zlib1g": "zlib",
-        "zlib1g-dev": "zlib",
-        "libreadline8": "readline",
-        "libreadline-dev": "readline",
-        "libncurses6": "ncurses",
-        "libncurses-dev": "ncurses",
-        "libexpat1": "expat",
-        "libexpat1-dev": "expat",
-        "libffi8": "libffi",
-        "libffi-dev": "libffi",
-        "libfontconfig1": "fontconfig",
-        "libfreetype6": "freetype2",
-        "libglib2.0-0": "glib2",
-        "libglib2.0-dev": "glib2",
-        "libgtk-3-0": "gtk3",
-        "libgtk-3-dev": "gtk3",
-        "libgtk-4-1": "gtk4",
-        "libgtk-4-dev": "gtk4",
-        "libc6": "glibc",
-        "libc6-dev": "glibc",
-        "libstdc++6": "gcc",
-        "libgcc-s1": "gcc",
-    }
-
-    return aliases.get(
-        value,
-        value,
-    )
-
-
-def arch_candidates_from_dpkg(
-    dpkg_name,
-):
-    normalized = normalize_distribution_name(
-        dpkg_name
-    )
-
-    result = [
-        dpkg_name,
-        normalized,
-    ]
-
-    if normalized.endswith("-dev"):
-        result.append(
-            normalized[:-4]
-        )
-
-    for prefix in (
-        "python3-",
-        "python-",
-        "ruby-",
-        "node-",
-        "nodejs-",
-        "golang-",
-    ):
-        if normalized.startswith(prefix):
-            result.append(
-                normalized[len(prefix):]
-            )
-
-    return list(
-        dict.fromkeys(
-            candidate
-            for candidate in result
-            if candidate
-        )
-    )
-
-
-def map_dpkg_to_arch(
-    dpkg_name,
-    arch_packages,
-):
-    for candidate in (
-        arch_candidates_from_dpkg(
-            dpkg_name
-        )
-    ):
-        if candidate in arch_packages:
-            return (
-                candidate,
-                "dpkg-name",
-            )
-
-    normalized = normalize_distribution_name(
-        dpkg_name
-    )
-
-    best = None
-    best_score = 0
-
-    for arch_name in arch_packages:
-        arch_normalized = (
-            normalize_distribution_name(
-                arch_name
-            )
-        )
-
-        score = 0
-
-        if arch_normalized == normalized:
-            score = 100
-
-        elif arch_normalized.startswith(
-            normalized + "-"
-        ):
-            score = 80
-
-        elif normalized.startswith(
-            arch_normalized + "-"
-        ):
-            score = 70
-
-        if score > best_score:
-            best = arch_name
-            best_score = score
-
-    if best is not None:
-        return (
-            best,
-            "dpkg-fuzzy",
-        )
-
-    return (
-        None,
-        None,
-    )
-
-
-# ============================================================================
-# Candidate handling
-# ============================================================================
-
-def add_candidate(
-    candidates,
-    package_name,
-    path,
-    kind,
-    source,
-):
-    if not package_name:
-        return
-
-    item = candidates[
-        package_name
-    ]
-
-    item["count"] += 1
-    item["types"].add(kind)
-    item["sources"].add(source)
-
-    if len(item["evidence"]) < 100:
-        item["evidence"].append(
-            Path(path)
-        )
-
-
-# ============================================================================
-# Discovery
-# ============================================================================
-
-def discover(
-    root,
-    minimum,
-    arch_packages,
-    arch_file_index,
-    dpkg_packages,
-    include_dpkg,
-):
-    root = Path(root).resolve()
-
-    installed_kuzpkg, owned = (
-        load_local_db(
-            str(root)
-        )
-    )
-
-    candidates = defaultdict(
-        lambda: {
-            "count": 0,
-            "types": set(),
-            "sources": set(),
-            "evidence": [],
-        }
-    )
-
-    # Exact Arch .files ownership.
-    for path in scan_tree(
-        root,
-        lambda _: True,
-    ):
-        try:
-            relative = rel(
-                path,
-                root,
-            )
-        except ValueError:
-            continue
-
-        if relative in owned:
-            continue
-
-        package_name = (
-            find_arch_package_for_file(
-                relative,
-                arch_file_index,
-            )
-        )
-
-        if not package_name:
-            continue
-
-        if package_name in installed_kuzpkg:
-            continue
-
-        add_candidate(
-            candidates,
-            package_name,
-            path,
-            "arch-file-owner",
-            "arch-files",
-        )
-
-    # Shared libraries.
-    for path, prefix in scan_files(
-        root,
-        LIB_DIRS,
-        lambda path: ".so" in path.name,
-    ):
-        try:
-            relative = rel(
-                path,
-                root,
-            )
-        except ValueError:
-            continue
-
-        if relative in owned:
-            continue
-
-        package_name = (
-            find_arch_package_for_file(
-                relative,
-                arch_file_index,
-            )
-        )
-
-        if not package_name:
-            guess = package_guess(path)
-
-            if guess:
-                variants = []
-
-                if prefix:
-                    variants.append(
-                        prefix + guess
-                    )
-
-                variants.append(guess)
-
-                for variant in variants:
-                    if variant in arch_packages:
-                        package_name = variant
-                        break
-
-        if not package_name:
-            continue
-
-        if package_name in installed_kuzpkg:
-            continue
-
-        add_candidate(
-            candidates,
-            package_name,
-            path,
-            "library",
-            "filesystem",
-        )
-
-    # Executables.
-    for path, _prefix in scan_files(
-        root,
-        tuple(
-            (directory, "")
-            for directory in BIN_DIRS
-        ),
-        lambda path: (
-            os.access(
-                path,
-                os.X_OK,
-            )
-            and "." not in path.name
-        ),
-    ):
-        try:
-            relative = rel(
-                path,
-                root,
-            )
-        except ValueError:
-            continue
-
-        if relative in owned:
-            continue
-
-        package_name = (
-            find_arch_package_for_file(
-                relative,
-                arch_file_index,
-            )
-        )
-
-        if not package_name:
-            guess = package_guess(path)
-
-            if guess in arch_packages:
-                package_name = guess
-
-        if not package_name:
-            continue
-
-        if package_name in installed_kuzpkg:
-            continue
-
-        add_candidate(
-            candidates,
-            package_name,
-            path,
-            "binary",
-            "filesystem",
-        )
-
-    # pkg-config files.
-    for path, prefix in scan_files(
-        root,
-        PC_DIRS,
-        lambda path: path.name.endswith(".pc"),
-    ):
-        try:
-            relative = rel(
-                path,
-                root,
-            )
-        except ValueError:
-            continue
-
-        if relative in owned:
-            continue
-
-        package_name = (
-            find_arch_package_for_file(
-                relative,
-                arch_file_index,
-            )
-        )
-
-        if not package_name:
-            guess = package_guess(path)
-
-            if guess:
-                variants = []
-
-                if prefix:
-                    variants.append(
-                        prefix + guess
-                    )
-
-                variants.append(guess)
-
-                for variant in variants:
-                    if variant in arch_packages:
-                        package_name = variant
-                        break
-
-        if not package_name:
-            continue
-
-        if package_name in installed_kuzpkg:
-            continue
-
-        add_candidate(
-            candidates,
-            package_name,
-            path,
-            "pkgconfig",
-            "filesystem",
-        )
-
-    # Firefox.
+            return version, True
+
+    return "", False
+
+
+# ---------------------------------------------------------------------------
+# Package-name inference
+# ---------------------------------------------------------------------------
+
+def strip_shared_library(name: str) -> str:
+    base = name.split(".so", 1)[0]
+    if base.startswith("lib"):
+        base = base[3:]
+    return base
+
+
+def python_name(path: Path) -> str:
+    name = path.name
+    if name.endswith(".dist-info"):
+        name = name[:-10]
+    elif name.endswith(".egg-info"):
+        name = name[:-9]
+    elif name.endswith(".py"):
+        name = name[:-3]
+    name = PYTHON_TAG_RE.sub("", name)
+    name = re.sub(r"[-_.]?(?:\d+)(?:[._-]\d+)*$", "", name)
+    return name or "python-module"
+
+
+def node_name(path: Path) -> str:
+    parts = path.parts
+    lower = [p.lower() for p in parts]
+    if "node_modules" in lower:
+        i = lower.index("node_modules")
+        if i + 1 < len(parts):
+            name = parts[i + 1]
+            if name.startswith("@") and i + 2 < len(parts):
+                return f"{name}-{parts[i + 2]}"
+            return name
+    return path.stem or "node-module"
+
+
+def cargo_name(path: Path) -> str:
+    data = safe_read_text(path)
+    m = re.search(r"(?m)^name\s*=\s*['\"]([^'\"]+)['\"]", data)
+    return m.group(1) if m else (path.parent.name or "rust-crate")
+
+
+def infer_candidate(path: Path, root: Path) -> tuple[str, str, int] | None:
+    rp = relpath(path, root)
+    low = rp.lower()
+    name = path.name
+
+    # Firefox is intentionally one package, including everything below both
+    # /lib/firefox and /usr/lib/firefox.
+    if low.startswith("/lib/firefox/") or low.startswith("/usr/lib/firefox/"):
+        return "firefox", "firefox", 8
+
+    # Linux kernel and module payload.
     if (
-        "firefox" in arch_packages
-        and "firefox" not in installed_kuzpkg
+        low.startswith("/lib/modules/")
+        or low.startswith("/usr/lib/modules/")
+        or (
+            low.startswith("/boot/")
+            and any(token in name.lower() for token in KERNEL_FILES)
+        )
+        or low.endswith("/linux/version.h")
     ):
-        for path in scan_firefox(root):
-            try:
-                relative = rel(
-                    path,
-                    root,
-                )
-            except ValueError:
+        return "linux", "kernel", 10
+
+    # Python ecosystem.
+    if "site-packages/" in low or "dist-packages/" in low or name.endswith((".py", ".pyc", ".pyo", ".pyd")) or name.endswith((".dist-info", ".egg-info")):
+        return python_name(path), "python", 3
+
+    # Node.js modules.
+    if "node_modules/" in low or name == "package.json" or name.endswith((".node", ".mjs", ".cjs")):
+        return node_name(path), "node", 3
+
+    # Rust / Cargo. Cargo.toml is especially useful because it exposes the
+    # real crate name instead of guessing from one compiled artifact.
+    if name == "Cargo.toml":
+        return cargo_name(path), "rust", 5
+    if "/.cargo/registry/" in low or name.endswith((".rlib", ".rmeta")):
+        return path.parent.name or "rust-crate", "rust", 2
+
+    # Ruby.
+    if "/gems/" in low or name.endswith((".gemspec", ".gem")):
+        return path.parent.name or "ruby-gem", "ruby", 2
+
+    # Perl.
+    if name.endswith((".pm", ".pod")) or "/perl" in low:
+        return path.stem or "perl-module", "perl", 2
+
+    # Go.
+    if name in ("go.mod", "go.sum") or "/pkg/mod/" in low:
+        return path.parent.name or "go-module", "go", 2
+
+    # Java / PHP / Lua / Tcl / WASM.
+    suffix = path.suffix.lower()
+    simple_types = {
+        ".jar": "java", ".class": "java", ".war": "java", ".ear": "java",
+        ".phar": "php", ".php": "php", ".lua": "lua", ".luac": "lua",
+        ".tcl": "tcl", ".tm": "tcl", ".wasm": "wasm",
+    }
+    if suffix in simple_types:
+        return path.stem or simple_types[suffix], simple_types[suffix], 2
+
+    # Shared libraries. Avoid treating every soname as a unique package.
+    if ".so" in name:
+        return strip_shared_library(name), "library", 5
+
+    # pkg-config is a strong development-file signal.
+    if name.endswith(".pc"):
+        return name[:-3], "pkgconfig", 4
+
+    # Static libraries and common developer payloads.
+    if suffix in {".a", ".la"}:
+        base = name.rsplit(".", 1)[0]
+        if base.startswith("lib"):
+            base = base[3:]
+        return base or "library", "static-library", 2
+
+    return None
+
+
+def add_known_hints(root: Path, candidates: dict[str, Candidate]) -> None:
+    for package, binaries in KNOWN_BINARIES.items():
+        for binary in binaries:
+            p = which_in_root(binary, root)
+            if p:
+                c = candidates.setdefault(package, Candidate(package))
+                c.add(relpath(p, root), "lfs-bin", 5)
+                if not c.version_hint:
+                    version, verified = probe_version(p)
+                    if version:
+                        c.version_hint, c.version_verified = version, verified
+
+    for package, libs in KNOWN_LIBS.items():
+        c = None
+        for base in LIB_DIRS:
+            directory = root_join(root, base)
+            if not directory.exists():
                 continue
+            for lib in libs:
+                for p in directory.glob(f"lib{lib}.so*"):
+                    if not p.exists():
+                        continue
+                    c = c or candidates.setdefault(package, Candidate(package))
+                    c.add(relpath(p, root), "lfs-lib", 4)
 
-            if relative in owned:
-                continue
+    for package, paths in KNOWN_DATA.items():
+        c = candidates.setdefault(package, Candidate(package))
+        for absolute in paths:
+            p = root_join(root, absolute)
+            if p.exists():
+                c.add(relpath(p, root), "lfs-data", 3)
 
-            add_candidate(
-                candidates,
-                "firefox",
-                path,
-                "firefox",
-                "filesystem",
-            )
+    # Kernel package gets the real version when possible.
+    kver, verified = kernel_version(root)
+    kpaths = []
+    for base in ("/lib/modules", "/usr/lib/modules"):
+        p = root_join(root, base)
+        if p.exists():
+            for child in p.iterdir():
+                if child.is_dir():
+                    kpaths.extend(relpath(x, root) for x in walk_files(child))
+                    if len(kpaths) > 50000:
+                        break
+    for base in ("/boot",):
+        p = root_join(root, base)
+        if p.exists():
+            for child in p.iterdir():
+                low = child.name.lower()
+                if any(low.startswith(x.lower()) for x in KERNEL_FILES):
+                    kpaths.append(relpath(child, root))
+    if kpaths:
+        c = candidates.setdefault("linux", Candidate("linux"))
+        for item in kpaths:
+            c.add(item, "kernel", 5)
+        if kver:
+            c.version_hint, c.version_verified = kver, verified
 
-    # Language/module roots.
-    for path in scan_module_roots(root):
+
+def discover(root: Path, skip_known_bins: bool = False) -> dict[str, Candidate]:
+    candidates: dict[str, Candidate] = {}
+
+    for path in walk_files(root):
+        result = infer_candidate(path, root)
+        if not result:
+            continue
+        name, kind, score = result
+        # Prevent a flood of one-byte/generated cache artifacts.
         try:
-            relative = rel(
-                path,
-                root,
-            )
-        except ValueError:
+            size = path.stat().st_size
+        except OSError:
+            size = 0
+        if size == 0 and kind not in {"kernel", "python", "pkgconfig"}:
             continue
+        c = candidates.setdefault(name, Candidate(name))
+        c.add(relpath(path, root), kind, score)
 
-        if relative in owned:
-            continue
+        if not c.version_hint and executable(path) and ".so" not in path.name:
+            version, verified = probe_version(path)
+            if version:
+                c.version_hint, c.version_verified = version, verified
 
-        package_name = (
-            find_arch_package_for_file(
-                relative,
-                arch_file_index,
-            )
-        )
+    if not skip_known_bins:
+        add_known_hints(root, candidates)
 
-        if not package_name:
-            guess = package_guess(path)
-
-            if guess in arch_packages:
-                package_name = guess
-
-        if not package_name:
-            continue
-
-        if package_name in installed_kuzpkg:
-            continue
-
-        add_candidate(
-            candidates,
-            package_name,
-            path,
-            "module",
-            "filesystem",
-        )
-
-    # Debian/dpkg -> Arch mapping.
-    if include_dpkg:
-        for dpkg_name, info in dpkg_packages.items():
-            package_name, map_source = (
-                map_dpkg_to_arch(
-                    dpkg_name,
-                    arch_packages,
-                )
-            )
-
-            if not package_name:
-                continue
-
-            if package_name in installed_kuzpkg:
-                continue
-
-            files = info.get(
-                "Files",
-                [],
-            )
-
-            existing = []
-
-            for filename in files:
-                path = (
-                    root
-                    / filename.lstrip("/")
-                )
-
-                if path.exists():
-                    existing.append(path)
-
-            if existing:
-                for path in existing[:100]:
-                    add_candidate(
-                        candidates,
-                        package_name,
-                        path,
-                        "dpkg-mapped",
-                        map_source,
-                    )
-            else:
-                add_candidate(
-                    candidates,
-                    package_name,
-                    root / (
-                        "<dpkg:"
-                        f"{dpkg_name}>"
-                    ),
-                    "dpkg-mapped",
-                    map_source,
-                )
-
-    result = []
-
-    for name, item in candidates.items():
-        if item["count"] < minimum:
-            continue
-
-        evidence = sorted(
-            set(
-                Path(path)
-                for path in item["evidence"]
-            ),
-            key=str,
-        )
-
-        result.append(
-            (
-                name,
-                item["count"],
-                item["types"],
-                item["sources"],
-                evidence,
-            )
-        )
-
-    result.sort(
-        key=lambda item: (
-            -item[1],
-            item[0].lower(),
-        )
-    )
-
-    return result
+    return {name: c for name, c in candidates.items() if c.files}
 
 
-# ============================================================================
-# .PKGINFO
-# ============================================================================
+# ---------------------------------------------------------------------------
+# Metadata and archive writing
+# ---------------------------------------------------------------------------
 
-def pkginfo_escape(value):
-    return (
-        str(value)
-        .replace("\\", "\\\\")
-        .replace("\n", " ")
-    )
+def architecture() -> str:
+    return getattr(os, "uname", lambda: None)().machine if hasattr(os, "uname") else platform.machine()
 
 
-def make_pkginfo(
-    name,
-    info,
-    version,
-    pkgrel,
-    architecture,
-):
+def safe_token(value: str) -> str:
+    value = re.sub(r"[^A-Za-z0-9+_.@-]+", "-", value)
+    return value.strip("-") or "unknown"
+
+
+def package_version(candidate: Candidate) -> tuple[str, bool]:
+    if candidate.version_hint:
+        return candidate.version_hint, candidate.version_verified
+    return "0.0.0+detected", False
+
+
+def package_description(candidate: Candidate) -> str:
+    kinds = ", ".join(sorted(candidate.kinds))
+    return f"Reconstructed from existing filesystem; evidence: {kinds}"
+
+
+def pkginfo_text(candidate: Candidate, version: str, verified: bool, pkgrel: str, arch: str) -> str:
     lines = [
-        "# Generated by kuzpkg-untracked",
-        f"pkgname = {pkginfo_escape(name)}",
-        f"pkgbase = {pkginfo_escape(info.get('base', name))}",
-        f"pkgver = {pkginfo_escape(version)}",
-        f"pkgrel = {pkginfo_escape(pkgrel)}",
-        f"arch = {pkginfo_escape(architecture)}",
+        f"pkgname = {candidate.name}",
+        f"pkgver = {version}",
+        f"pkgrel = {pkgrel}",
+        f"arch = {arch}",
+        "pkgtype = reconstructed",
+        "origin = untracked-adoption",
+        f"version_verified = {'true' if verified else 'false'}",
+        f"description = {package_description(candidate)}",
+        f"file_count = {len(candidate.files)}",
+        f"evidence_score = {candidate.score}",
+        f"types = {','.join(sorted(candidate.kinds))}",
     ]
-
-    description = info.get(
-        "desc",
-        "",
-    )
-
-    if description:
-        lines.append(
-            "pkgdesc = "
-            + pkginfo_escape(description)
-        )
-
-    for license_name in info.get(
-        "license",
-        [],
-    ):
-        lines.append(
-            "license = "
-            + pkginfo_escape(license_name)
-        )
-
-    for dependency in info.get(
-        "depends",
-        [],
-    ):
-        lines.append(
-            "depend = "
-            + pkginfo_escape(dependency)
-        )
-
-    for dependency in info.get(
-        "makedepends",
-        [],
-    ):
-        lines.append(
-            "makedepend = "
-            + pkginfo_escape(dependency)
-        )
-
-    repo = info.get(
-        "repo",
-        "",
-    )
-
-    if repo:
-        lines.append(
-            "x_kuzpkg_repo = "
-            + pkginfo_escape(repo)
-        )
-
     return "\n".join(lines) + "\n"
 
 
-# ============================================================================
-# Detailed output
-# ============================================================================
-
-def format_package_details(
-    name,
-    count,
-    types,
-    sources,
-    evidence,
-    info,
-    version,
-    version_source,
-    show_files=False,
-):
-    println(
-        f"{BOLD}{name}{RESET}"
-    )
-
-    println(
-        f"  Repository : "
-        f"{info.get('repo', 'unknown')}"
-    )
-
-    println(
-        f"  Base       : "
-        f"{info.get('base', name)}"
-    )
-
-    println(
-        f"  Version    : "
-        f"{version} "
-        f"{DIM}({version_source}){RESET}"
-    )
-
-    println(
-        f"  Description: "
-        f"{info.get('desc', '')}"
-    )
-
-    licenses = info.get(
-        "license",
-        [],
-    )
-
-    println(
-        "  License    : "
-        + (
-            ", ".join(licenses)
-            if licenses
-            else "(none)"
-        )
-    )
-
-    depends = info.get(
-        "depends",
-        [],
-    )
-
-    makedepends = info.get(
-        "makedepends",
-        [],
-    )
-
-    println(
-        f"  Depends    : "
-        f"{len(depends)}"
-    )
-
-    println(
-        f"  MakeDepends: "
-        f"{len(makedepends)}"
-    )
-
-    println(
-        f"  Evidence   : "
-        f"{count} item(s)"
-    )
-
-    println(
-        "  Types      : "
-        + (
-            ", ".join(sorted(types))
-            if types
-            else "(none)"
-        )
-    )
-
-    println(
-        "  Sources    : "
-        + (
-            ", ".join(sorted(sources))
-            if sources
-            else "(none)"
-        )
-    )
-
-    if depends:
-        println(
-            "  Dependencies:"
-        )
-
-        for dependency in depends:
-            println(
-                f"    - {dependency}"
-            )
-
-    if makedepends:
-        println(
-            "  Build dependencies:"
-        )
-
-        for dependency in makedepends:
-            println(
-                f"    - {dependency}"
-            )
-
-    if show_files:
-        files = info.get(
-            "files",
-            [],
-        )
-
-        println(
-            f"  Repository files: "
-            f"{len(files)}"
-        )
-
-        for filename in files:
-            println(
-                f"    {filename}"
-            )
-
-    println(
-        "  Evidence paths:"
-    )
-
-    for path in evidence[:10]:
-        println(
-            f"    {path}"
-        )
-
-    if len(evidence) > 10:
-        println(
-            f"    ... "
-            f"{len(evidence) - 10} more"
-        )
+def tar_add_path(tar, source: Path, arcname: str) -> None:
+    # Avoid dereferencing symlinks so the recreated package retains the same
+    # filesystem relationship rather than copying the symlink target.
+    info = tar.gettarinfo(str(source), arcname=arcname, recursive=False)
+    if stat.S_ISREG(info.mode):
+        with source.open("rb") as f:
+            tar.addfile(info, f)
+    else:
+        tar.addfile(info)
 
 
-# ============================================================================
-# Archive creation
-# ============================================================================
+def create_archive(
+    candidate: Candidate,
+    root: Path,
+    output_dir: Path,
+    pkgrel: str,
+    arch: str,
+    overwrite: bool = False,
+) -> tuple[Path, bool, str]:
+    version, verified = package_version(candidate)
+    filename = f"{safe_token(candidate.name)}-{safe_token(version)}-{safe_token(pkgrel)}-{safe_token(arch)}{ARCHIVE_SUFFIX}"
+    destination = output_dir / filename
 
-def safe(value):
-    return re.sub(
-        r"[^A-Za-z0-9._+@-]+",
-        "_",
-        value,
-    )
-
-
-def make_archive(
-    name,
-    count,
-    types,
-    sources,
-    evidence,
-    root,
-    output_dir,
-    pkgrel,
-    architecture,
-    overwrite,
-    arch_packages,
-):
-    root = Path(root)
-    output_dir = Path(output_dir)
-
-    info = arch_packages.get(
-        name,
-        {},
-    )
-
-    version = info.get(
-        "version",
-        "",
-    )
-
-    version_source = (
-        "arch-repository"
-        if version
-        else "unverified"
-    )
-
-    if not version:
-        version, version_source = (
-            detect_version(
-                name,
-                evidence,
-                root,
-                arch_packages,
-            )
-        )
-
-    filename = (
-        f"{safe(name)}-"
-        f"{safe(version)}-"
-        f"{safe(pkgrel)}-"
-        f"{safe(architecture)}"
-        ".kuzpkg.tar.zst"
-    )
-
-    output = output_dir / filename
-
-    if (
-        output.exists()
-        and not overwrite
-    ):
-        return (
-            output,
-            version,
-            version_source,
-            False,
-        )
+    if destination.exists() and not overwrite:
+        return destination, False, "already exists"
 
     zstd = shutil.which("zstd")
-
     if not zstd:
-        raise RuntimeError(
-            "zstd is required to create "
-            ".kuzpkg.tar.zst archives"
+        return destination, False, "zstd command not found"
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix="kuzpkg-rebuild-") as temp:
+        stage = Path(temp)
+        info_path = stage / ".PKGINFO"
+        info_path.write_text(
+            pkginfo_text(candidate, version, verified, pkgrel, arch),
+            encoding="utf-8",
         )
 
-    output_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    pkginfo_text = make_pkginfo(
-        name,
-        info,
-        version,
-        pkgrel,
-        architecture,
-    )
-
-    metadata = {
-        "format": "kuzpkg-detected-v9",
-        "name": name,
-        "base": info.get(
-            "base",
-            name,
-        ),
-        "version": version,
-        "version_source": version_source,
-        "pkgrel": pkgrel,
-        "arch": architecture,
-        "repo": info.get(
-            "repo",
-            "",
-        ),
-        "description": info.get(
-            "desc",
-            "",
-        ),
-        "license": info.get(
-            "license",
-            [],
-        ),
-        "depends": info.get(
-            "depends",
-            [],
-        ),
-        "makedepends": info.get(
-            "makedepends",
-            [],
-        ),
-        "repository_file_count": len(
-            info.get(
-                "files",
-                [],
-            )
-        ),
-        "artifact_types": sorted(types),
-        "candidate_sources": sorted(
-            sources
-        ),
-        "artifact_count": count,
-        "origin": (
-            "filesystem-and-"
-            "repository-discovery"
-        ),
-    }
-
-    with tempfile.TemporaryDirectory(
-        prefix="kuzpkg-untracked-",
-    ) as temp_dir:
-        temp_dir = Path(temp_dir)
-
-        tar_path = (
-            temp_dir
-            / "package.kuzpkg.tar"
-        )
-
-        pkginfo_path = (
-            temp_dir
-            / ".PKGINFO"
-        )
-
-        metadata_path = (
-            temp_dir
-            / ".KUZPKG-METADATA.json"
-        )
-
-        pkginfo_path.write_text(
-            pkginfo_text
-        )
-
-        metadata_path.write_text(
-            json.dumps(
-                metadata,
-                indent=2,
-            )
-            + "\n"
-        )
-
-        added = set()
-
-        with tarfile.open(
-            tar_path,
-            "w",
-        ) as archive:
-            archive.add(
-                pkginfo_path,
-                arcname=".PKGINFO",
-            )
-
-            archive.add(
-                metadata_path,
-                arcname=".KUZPKG-METADATA.json",
-            )
-
-            for path in evidence:
-                path = Path(path)
-
-                if not path.exists():
-                    continue
-
+        tar_path = stage / "payload.tar"
+        with __import__("tarfile").open(tar_path, "w") as tar:
+            tar_add_path(tar, info_path, ".PKGINFO")
+            for rel in sorted(candidate.files):
+                source = root_join(root, rel)
                 try:
-                    relative = rel(
-                        path,
-                        root,
+                    if not (source.exists() or source.is_symlink()):
+                        continue
+                    tar_add_path(tar, source, rel.lstrip("/"))
+                except (OSError, ValueError):
+                    continue
+
+        temporary = destination.with_suffix(destination.suffix + ".tmp")
+        process = subprocess.run(
+            [zstd, "-q", "-f", str(tar_path), "-o", str(temporary)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+        if process.returncode != 0:
+            try:
+                temporary.unlink()
+            except OSError:
+                pass
+            return destination, False, process.stderr.strip() or "zstd failed"
+        temporary.replace(destination)
+
+    return destination, True, "created"
+
+
+# ---------------------------------------------------------------------------
+# Optional local database hints — intentionally generic and non-Arch.
+# ---------------------------------------------------------------------------
+
+def existing_kuzpkg_names() -> set[str]:
+    """Read package names from a simple local database if kuzpkg exposes one.
+
+    Supported forms:
+      * `kuzpkg -Qq` output
+      * `KUZPKG_LOCALDB` text file with one package name per line
+
+    Failure simply means there is no filtering by installed metadata.
+    """
+    names: set[str] = set()
+    env_file = os.environ.get("KUZPKG_LOCALDB")
+    if env_file:
+        try:
+            for line in Path(env_file).read_text(errors="replace").splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    names.add(line.split()[0])
+        except OSError:
+            pass
+
+    tool = shutil.which("kuzpkg")
+    if tool:
+        try:
+            p = subprocess.run(
+                [tool, "-Qq"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if p.returncode == 0:
+                names.update(x.strip() for x in p.stdout.splitlines() if x.strip())
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return names
+
+
+# ---------------------------------------------------------------------------
+# ncurses TUI
+# ---------------------------------------------------------------------------
+
+
+def short_types(candidate: Candidate, width: int = 24) -> str:
+    text = ",".join(sorted(candidate.kinds))
+    return text if len(text) <= width else text[: width - 1] + "…"
+
+
+def tui_title(stdscr, text: str) -> None:
+    h, w = stdscr.getmaxyx()
+    stdscr.attron(curses.A_REVERSE)
+    stdscr.addnstr(0, 0, (" " + text).ljust(max(w, len(text) + 1)), w - 1)
+    stdscr.attroff(curses.A_REVERSE)
+
+
+def draw_tui(stdscr, rows, cursor, marked, message, mode="browse") -> None:
+    curses.erasechar if False else None
+    stdscr.erase()
+    h, w = stdscr.getmaxyx()
+    tui_title(stdscr, "kuzpkg-untracked  |  filesystem adoption  |  2009")
+    if h < 8 or w < 60:
+        stdscr.addstr(2, 0, "terminal too small; resize to at least 60x8")
+        stdscr.refresh()
+        return
+
+    stdscr.addnstr(1, 0, "↑/↓ move  SPACE mark  A all  N none  P package  R rescan  Q quit", w - 1)
+    stdscr.addnstr(2, 0, f"mode={mode}  candidates={len(rows)}  selected={len(marked)}", w - 1)
+
+    visible = max(1, h - 7)
+    start = max(0, min(cursor - visible // 2, max(0, len(rows) - visible)))
+    end = min(len(rows), start + visible)
+
+    y = 4
+    for index in range(start, end):
+        name, candidate = rows[index]
+        marker = "*" if index in marked else " "
+        version = candidate.version_hint or "0.0.0+detected"
+        verified = "!" if not candidate.version_verified else " "
+        line = f"{marker}{verified} {name:<30} {version:<20} {len(candidate.files):>6} {short_types(candidate):<24}"
+        if index == cursor:
+            stdscr.attron(curses.A_REVERSE)
+        stdscr.addnstr(y, 0, line, w - 1)
+        if index == cursor:
+            stdscr.attroff(curses.A_REVERSE)
+        y += 1
+
+    stdscr.addnstr(h - 2, 0, message[: w - 1], w - 1)
+    stdscr.attron(curses.A_REVERSE)
+    stdscr.addnstr(h - 1, 0, " F1 help   ENTER details   P create archives ".ljust(w - 1), w - 1)
+    stdscr.attroff(curses.A_REVERSE)
+    stdscr.refresh()
+
+
+def details(stdscr, candidate: Candidate) -> None:
+    while True:
+        stdscr.erase()
+        h, w = stdscr.getmaxyx()
+        tui_title(stdscr, f"{candidate.name} details")
+        lines = [
+            f"version: {candidate.version_hint or '0.0.0+detected'}",
+            f"verified: {'yes' if candidate.version_verified else 'no'}",
+            f"evidence score: {candidate.score}",
+            f"types: {', '.join(sorted(candidate.kinds))}",
+            f"files: {len(candidate.files)}",
+            "",
+        ]
+        lines.extend(sorted(candidate.files))
+        for i, line in enumerate(lines[: max(0, h - 3)], start=2):
+            stdscr.addnstr(i, 0, line, w - 1)
+        stdscr.addnstr(h - 1, 0, "Press any key to return", w - 1, curses.A_REVERSE)
+        stdscr.refresh()
+        stdscr.getch()
+        return
+
+
+def run_tui(candidates: dict[str, Candidate], root: Path, output: Path, pkgrel: str, arch: str, overwrite: bool) -> int:
+    rows = sorted(candidates.items(), key=lambda item: (-item[1].score, item[0]))
+    marked: set[int] = set()
+    state = {"cursor": 0, "message": "Ready."}
+
+    def loop(stdscr):
+        curses.curs_set(0)
+        try:
+            stdscr.keypad(True)
+        except curses.error:
+            pass
+
+        while True:
+            draw_tui(stdscr, rows, state["cursor"], marked, state["message"])
+            key = stdscr.getch()
+            cursor = state["cursor"]
+
+            if key in (ord("q"), ord("Q")):
+                return
+            if key == curses.KEY_UP:
+                state["cursor"] = max(0, cursor - 1)
+            elif key == curses.KEY_DOWN:
+                state["cursor"] = min(max(0, len(rows) - 1), cursor + 1)
+            elif key == curses.KEY_PPAGE:
+                state["cursor"] = max(0, cursor - 10)
+            elif key == curses.KEY_NPAGE:
+                state["cursor"] = min(max(0, len(rows) - 1), cursor + 10)
+            elif key == ord(" ") and rows:
+                marked.symmetric_difference_update({cursor})
+            elif key in (ord("a"), ord("A")):
+                marked.update(range(len(rows)))
+            elif key in (ord("n"), ord("N")):
+                marked.clear()
+            elif key in (10, 13) and rows:
+                details(stdscr, rows[cursor][1])
+            elif key in (ord("p"), ord("P")):
+                if not marked:
+                    state["message"] = "Nothing selected. Press SPACE or A first."
+                    continue
+                created = 0
+                skipped = 0
+                errors = []
+                for index in sorted(marked):
+                    name, candidate = rows[index]
+                    archive, ok, message = create_archive(
+                        candidate, root, output, pkgrel, arch, overwrite
                     )
-                except ValueError:
-                    continue
+                    if ok:
+                        created += 1
+                    elif message == "already exists":
+                        skipped += 1
+                    else:
+                        errors.append(f"{name}: {message}")
+                if errors:
+                    state["message"] = f"created={created} skipped={skipped} error={errors[0]}"
+                else:
+                    state["message"] = f"created={created} skipped={skipped} -> {output}"
+            elif key in (ord("r"), ord("R")):
+                state["message"] = "Rescan is available from the command line (restart the tool)."
+            elif key == curses.KEY_F1:
+                help_lines = [
+                    "kuzpkg-untracked",
+                    "",
+                    "This tool scans the existing filesystem only.",
+                    "No Arch repository code, pacman DB, or network access is used.",
+                    "",
+                    "SPACE  mark/unmark    A all    N none",
+                    "P      build .kuzpkg.tar.zst",
+                    "ENTER  show candidate files",
+                    "Q      quit",
+                    "",
+                    "! beside a version means it was inferred, not verified.",
+                ]
+                stdscr.erase()
+                for i, line in enumerate(help_lines[: max(1, stdscr.getmaxyx()[0] - 1)]):
+                    stdscr.addnstr(i, 0, line, stdscr.getmaxyx()[1] - 1)
+                stdscr.getch()
 
-                if relative in added:
-                    continue
-
-                try:
-                    archive.add(
-                        path,
-                        arcname=relative,
-                        recursive=False,
-                    )
-                except (
-                    OSError,
-                    ValueError,
-                ):
-                    continue
-
-                added.add(relative)
-
-        subprocess.run(
-            [
-                zstd,
-                "-q",
-                "-f",
-                "-o",
-                str(output),
-                str(tar_path),
-            ],
-            check=True,
-        )
-
-    return (
-        output,
-        version,
-        version_source,
-        True,
-    )
+    curses.wrapper(loop)
+    return 0
 
 
-# ============================================================================
-# Main
-# ============================================================================
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
 
-def main():
-    parser = argparse.ArgumentParser(
-        description=(
-            "Discover untracked packages using "
-            "Arch repository .db/.files "
-            "metadata and dpkg data"
-        )
-    )
 
-    parser.add_argument(
-        "--root",
-        default="/",
-        help=(
-            "alternate installation root/chroot"
-        ),
-    )
+def print_table(candidates: dict[str, Candidate]) -> None:
+    rows = sorted(candidates.values(), key=lambda c: (-c.score, c.name))
+    print(f"{'PACKAGE':32} {'VERSION':22} {'FILES':>7}  TYPES")
+    print("-" * 90)
+    for c in rows:
+        ver = c.version_hint or "0.0.0+detected"
+        flag = "" if c.version_verified else "*"
+        print(f"{c.name:32} {(ver + flag):22} {len(c.files):7d}  {','.join(sorted(c.kinds))}")
 
-    parser.add_argument(
-        "--minimum",
-        type=int,
-        default=1,
-        help=(
-            "minimum local evidence items "
-            "required for a candidate"
-        ),
-    )
 
-    parser.add_argument(
-        "-q",
-        "--quiet",
-        action="store_true",
-        help="print only package names",
-    )
-
-    parser.add_argument(
-        "--details",
-        action="store_true",
-        help=(
-            "show full metadata, dependencies, "
-            "sources and evidence"
-        ),
-    )
-
-    parser.add_argument(
-        "--show-files",
-        action="store_true",
-        help=(
-            "show the complete Arch repository "
-            "file list in detailed output"
-        ),
-    )
-
-    parser.add_argument(
-        "--no-package",
-        action="store_true",
-        help=(
-            "detect only; do not create archives"
-        ),
-    )
-
-    parser.add_argument(
-        "--output-dir",
-        default="/var/lib/kuzpkg/pkg",
-        help=(
-            "output directory for kuzpkg archives"
-        ),
-    )
-
-    parser.add_argument(
-        "--pkgrel",
-        default="1",
-        help="kuzpkg package release number",
-    )
-
-    parser.add_argument(
-        "--arch",
-        help=(
-            "output package architecture; "
-            "default is uname -m"
-        ),
-    )
-
-    parser.add_argument(
-        "--overwrite",
-        action="store_true",
-        help="overwrite existing archives",
-    )
-
-    parser.add_argument(
-        "--arch-db-cache",
-        default=ARCH_DB_CACHE_DEFAULT,
-        help="cache directory for Arch .db",
-    )
-
-    parser.add_argument(
-        "--arch-files-cache",
-        default=ARCH_FILES_CACHE_DEFAULT,
-        help="cache directory for Arch .files",
-    )
-
-    parser.add_argument(
-        "--refresh-arch",
-        action="store_true",
-        help=(
-            "refresh all Arch repository metadata"
-        ),
-    )
-
-    parser.add_argument(
-        "--no-dpkg",
-        action="store_true",
-        help=(
-            "disable Debian/dpkg package mapping"
-        ),
-    )
-
-    args = parser.parse_args()
-
-    if args.minimum < 1:
-        parser.error(
-            "--minimum must be at least 1"
-        )
-
-    # ==================================================================
-    # Architecture
-    # ==================================================================
-    architecture, architecture_source = detect_arch(
-        args.arch
-    )
-
-    # ==================================================================
-    # Arch metadata
-    # ==================================================================
-    try:
-        arch_packages = load_arch_packages(
-            args.arch_db_cache,
-            args.arch_files_cache,
-            refresh=args.refresh_arch,
-            quiet=args.quiet,
-        )
-
-    except RuntimeError as exc:
-        stderr_write(
-            "kuzpkg-untracked: "
-            f"error loading Arch metadata: "
-            f"{exc}\n",
-            flush=True,
-        )
-        return 1
-
-    arch_file_index = (
-        build_arch_file_index(
-            arch_packages
-        )
-    )
-
-    # ==================================================================
-    # dpkg
-    # ==================================================================
-    dpkg_packages = {}
-
-    if not args.no_dpkg:
-        dpkg_packages = load_dpkg_packages(
-            args.root
-        )
-
-        if (
-            dpkg_packages
-            and not args.quiet
-        ):
-            println(
-                f"Loaded "
-                f"{len(dpkg_packages)} "
-                "installed dpkg package records"
-            )
-
-    # ==================================================================
-    # Discovery
-    # ==================================================================
-    try:
-        if not args.quiet:
-            stdout_write(
-                f"{BOLD}"
-                "Detecting packages..."
-                f"{RESET} ",
-                flush=True,
-            )
-
-        candidates = discover(
-            args.root,
-            args.minimum,
-            arch_packages,
-            arch_file_index,
-            dpkg_packages,
-            include_dpkg=not args.no_dpkg,
-        )
-
-        root = Path(
-            args.root
-        ).resolve()
-
-        if not args.quiet:
-            println(
-                f"{CHECK}, "
-                f"{len(candidates)} "
-                "validated package(s)"
-            )
-
-    except RuntimeError as exc:
-        stderr_write(
-            "kuzpkg-untracked: "
-            f"error: {exc}\n",
-            flush=True,
-        )
-        return 1
-
-    # ==================================================================
-    # Quiet
-    # ==================================================================
-    if args.quiet:
-        for (
-            name,
-            count,
-            types,
-            sources,
-            evidence,
-        ) in candidates:
-            println(name)
-
-        return 0
-
-    # ==================================================================
-    # Empty
-    # ==================================================================
-    if not candidates:
-        println(
-            "No untracked package "
-            "candidates found"
-        )
-        return 0
-
-    # ==================================================================
-    # Details / detection-only
-    # ==================================================================
-    if args.no_package or args.details:
-        for (
-            name,
-            count,
-            types,
-            sources,
-            evidence,
-        ) in candidates:
-            info = arch_packages.get(
-                name,
-                {},
-            )
-
-            version, version_source = detect_version(
-                name,
-                evidence,
-                root,
-                arch_packages,
-            )
-
-            if args.details:
-                format_package_details(
-                    name,
-                    count,
-                    types,
-                    sources,
-                    evidence,
-                    info,
-                    version,
-                    version_source,
-                    show_files=args.show_files,
-                )
-            else:
-                println(
-                    f"{name:<44} "
-                    f"{version:<24} "
-                    f"{count:>4} evidence "
-                    f"[repo="
-                    f"{info.get('repo', '')}; "
-                    f"base="
-                    f"{info.get('base', name)}; "
-                    f"depends="
-                    f"{len(info.get('depends', []))}; "
-                    f"makedepends="
-                    f"{len(info.get('makedepends', []))}; "
-                    f"{version_source}]"
-                )
-
-        if args.no_package:
-            return 0
-
-    # ==================================================================
-    # Package creation
-    # ==================================================================
-    output_dir = Path(
-        args.output_dir
-    ).resolve()
-
-    total = len(candidates)
-
-    created = 0
+def package_all(candidates: dict[str, Candidate], root: Path, output: Path, pkgrel: str, arch: str, overwrite: bool) -> int:
+    made = 0
     skipped = 0
     failed = 0
-
-    println()
-    println(
-        f"{BOLD}"
-        f"Packaging {total} detected package(s)..."
-        f"{RESET}"
-    )
-
-    for index, (
-        name,
-        count,
-        types,
-        sources,
-        evidence,
-    ) in enumerate(
-        candidates,
-        start=1,
-    ):
-        info = arch_packages.get(
-            name,
-            {},
-        )
-
-        println(
-            f"{BOLD}"
-            f"Compressing {name}"
-            f"{RESET} "
-            f"{DIM}("
-            f"{info.get('repo', 'unknown')}, "
-            f"{info.get('version', 'unknown')}"
-            f"){RESET}"
-        )
-
-        stdout_write(
-            "  "
-            + progress_bar(
-                index - 1,
-                total,
-            )
-            + "\r",
-            flush=True,
-        )
-
-        try:
-            (
-                output,
-                version,
-                version_source,
-                was_created,
-            ) = make_archive(
-                name,
-                count,
-                types,
-                sources,
-                evidence,
-                root,
-                output_dir,
-                args.pkgrel,
-                architecture,
-                args.overwrite,
-                arch_packages,
-            )
-
-            stdout_write(
-                "  "
-                + progress_bar(
-                    index,
-                    total,
-                )
-                + "\n",
-                flush=True,
-            )
-
-            if was_created:
-                created += 1
-            else:
-                skipped += 1
-
-        except (
-            OSError,
-            subprocess.SubprocessError,
-            RuntimeError,
-            tarfile.TarError,
-        ) as exc:
-            stderr_write(
-                "  "
-                + progress_bar(
-                    index,
-                    total,
-                )
-                + f" FAILED: {exc}\n",
-                flush=True,
-            )
-
+    for name in sorted(candidates):
+        path, ok, message = create_archive(candidates[name], root, output, pkgrel, arch, overwrite)
+        if ok:
+            made += 1
+            print(f"+ {path}")
+        elif message == "already exists":
+            skipped += 1
+            print(f"= {path} (exists)")
+        else:
             failed += 1
+            print(f"! {name}: {message}", file=sys.stderr)
+    print(f"done: created={made} skipped={skipped} failed={failed}")
+    return 1 if failed else 0
 
-    # ==================================================================
-    # Summary
-    # ==================================================================
-    println()
-    println(
-        f"{BOLD}Detection summary{RESET}"
-    )
-    println(
-        f"  Candidates   : {total}"
-    )
-    println(
-        f"  Created      : {created}"
-    )
-    println(
-        f"  Skipped      : {skipped}"
-    )
-    println(
-        f"  Failed       : {failed}"
-    )
-    println(
-        f"  Output       : {output_dir}"
-    )
-    println(
-        f"  Architecture : "
-        f"{architecture} "
-        f"({architecture_source})"
-    )
-    println(
-        f"  Repositories : "
-        f"{len(ARCH_REPOSITORIES)}"
-    )
 
-    if failed:
-        return 1
-
-    println()
-    println(
-        "Compressed all detected packages "
-        f"to {output_dir}"
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Reconstruct untracked Linux software into .kuzpkg.tar.zst packages"
     )
+    parser.add_argument("--root", default="/", help="filesystem root/chroot to scan")
+    parser.add_argument("--output-dir", default="./kuzpkg-reconstructed", help="archive output directory")
+    parser.add_argument("--pkgrel", default="1")
+    parser.add_argument("--arch", default=None, help="architecture (default: uname -m)")
+    parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--no-tui", action="store_true", help="print candidates only")
+    parser.add_argument("--package-all", action="store_true", help="rebuild every candidate")
+    parser.add_argument("--ignore-localdb", action="store_true", help="do not hide packages already known to kuzpkg")
+    parser.add_argument("--skip-known-hints", action="store_true", help="disable LFS/BLFS package hints")
+    args = parser.parse_args()
 
-    return 0
+    try:
+        root = normalize_root(args.root)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    arch = args.arch or platform.machine() or "unknown"
+    output = Path(args.output_dir).resolve()
+
+    print("kuzpkg-untracked: scanning filesystem...")
+    candidates = discover(root, skip_known_bins=args.skip_known_hints)
+
+    if not args.ignore_localdb:
+        known = existing_kuzpkg_names()
+        for name in list(candidates):
+            if name in known:
+                del candidates[name]
+
+    print(f"kuzpkg-untracked: {len(candidates)} candidate packages")
+
+    if not candidates:
+        return 0
+
+    if args.package_all:
+        return package_all(candidates, root, output, args.pkgrel, arch, args.overwrite)
+
+    if args.no_tui:
+        print_table(candidates)
+        return 0
+
+    return run_tui(candidates, root, output, args.pkgrel, arch, args.overwrite)
 
 
 if __name__ == "__main__":
