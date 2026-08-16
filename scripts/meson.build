@@ -33,12 +33,13 @@ endforeach
 foreach script : python_scripts
   script_shortname = script.split('.')[0]
 
-  configure_file(
+  custom_target(
+    script,
     input : script,
+    command : [ SCRIPT_EDITOR, '@INPUT@', '@OUTPUT@', '0755'],
     output : script_shortname,
     install : true,
-    install_dir : get_option('bindir'),
-    copy : true)
+    install_dir : get_option('bindir'))
 endforeach
 
 script_wrappers = []
