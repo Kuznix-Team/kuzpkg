@@ -9,6 +9,10 @@ scripts = [
   'makepkg-template.pl.in',
 ]
 
+python_scripts = [
+  'kuzpkg-untracked.py',
+]
+
 SCRIPT_EDITOR = find_program(configure_file(
   input : join_paths(meson.project_source_root(), 'build-aux/edit-script.sh.in'),
   output : 'edit-script.sh',
@@ -24,6 +28,17 @@ foreach script : scripts
     output : script_shortname,
     install : true,
     install_dir : get_option('bindir'))
+endforeach
+
+foreach script : python_scripts
+  script_shortname = script.split('.')[0]
+
+  configure_file(
+    input : script,
+    output : script_shortname,
+    install : true,
+    install_dir : get_option('bindir'),
+    copy : true)
 endforeach
 
 script_wrappers = []
