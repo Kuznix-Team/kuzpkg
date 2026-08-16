@@ -134,9 +134,9 @@ VERSION_RE = re.compile(
 )
 
 
-# ---------------------------------------------------------------------------
-# Terminal/font/progress support
-# ---------------------------------------------------------------------------
+# ============================================================================
+# Terminal / font / progress support
+# ============================================================================
 
 def detect_unicode_support():
     if os.environ.get("KUZPKG_ASCII") == "1":
@@ -201,9 +201,9 @@ def progress_bar(current, total, width=32):
     )
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # kuzpkg helpers
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 def run_kuzpkg(root, args):
     cmd = (
@@ -249,6 +249,8 @@ def root_path(root, path):
 
 
 def rel(path, root):
+    path = Path(path)
+    root = Path(root)
     return norm(
         path.relative_to(root)
     )
@@ -277,11 +279,14 @@ def load_local_db(root):
     return packages, owned
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # Filesystem scanning
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 def excluded_dir(path, root):
+    path = Path(path)
+    root = Path(root)
+
     try:
         relative = path.relative_to(root)
     except ValueError:
@@ -295,6 +300,7 @@ def excluded_dir(path, root):
 
 
 def scan_tree(root, predicate=lambda p: True):
+    root = Path(root)
     result = []
 
     for current, dirnames, filenames in os.walk(
@@ -324,10 +330,7 @@ def scan_tree(root, predicate=lambda p: True):
         ]
 
         for filename in filenames:
-            path = (
-                current_path
-                / filename
-            )
+            path = current_path / filename
 
             if (
                 (
@@ -342,6 +345,7 @@ def scan_tree(root, predicate=lambda p: True):
 
 
 def scan_files(root, directories, predicate):
+    root = Path(root)
     result = []
 
     for directory, prefix in directories:
@@ -391,6 +395,8 @@ def scan_files(root, directories, predicate):
 
 
 def scan_include_dirs(root):
+    root = Path(root)
+
     base = root_path(
         str(root),
         "/usr/include",
@@ -413,6 +419,7 @@ def scan_include_dirs(root):
 
 
 def scan_firefox(root):
+    root = Path(root)
     result = []
 
     for directory in FIREFOX_DIRS:
@@ -441,19 +448,21 @@ def scan_firefox(root):
                 ).is_symlink()
             ]
 
-            result.extend(
-                current_path / filename
-                for filename in filenames
-            )
+            for filename in filenames:
+                result.append(
+                    current_path / filename
+                )
 
     return result
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # Package identification
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 def package_guess(path):
+    path = Path(path)
+
     name = path.name
     lower = name.lower()
 
@@ -544,6 +553,8 @@ def package_guess(path):
 
 
 def module_kind(path):
+    path = Path(path)
+
     lower_parts = {
         part.lower()
         for part in path.parts
@@ -664,7 +675,7 @@ def module_kind(path):
 def scan_modules(root):
     return [
         (
-            path,
+            Path(path),
             module_kind(path),
         )
         for path in scan_tree(
@@ -677,9 +688,9 @@ def scan_modules(root):
     ]
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # Version detection
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 def version_from_text(text):
     for line in text.splitlines()[:80]:
@@ -692,9 +703,14 @@ def version_from_text(text):
 
 
 def probe_version(path):
+    path = Path(path)
+
     if (
         not path.is_file()
-        or not os.access(path, os.X_OK)
+        or not os.access(
+            path,
+            os.X_OK,
+        )
     ):
         return None
 
@@ -733,6 +749,8 @@ def detect_version(
     evidence,
     root,
 ):
+    root = Path(root)
+
     base = (
         name
         .removeprefix("lib32-")
@@ -750,7 +768,10 @@ def detect_version(
         )
     ]
 
-    candidates += evidence
+    candidates += [
+        Path(path)
+        for path in evidence
+    ]
 
     seen = set()
 
@@ -785,7 +806,7 @@ def detect_version(
                 match = re.search(
                     r"^Version=([^\n]+)",
                     path.read_text(
-                        errors="replace"
+                        errors="replace",
                     ),
                     re.M,
                 )
@@ -804,12 +825,10 @@ def detect_version(
             evidence_path
         )
 
-        parents = (
+        for parent in (
             evidence_path.parent,
             *evidence_path.parents,
-        )
-
-        for parent in parents:
+        ):
             for metadata_name in (
                 "VERSION",
                 "version",
@@ -831,13 +850,16 @@ def detect_version(
                         continue
 
                     text = metadata_path.read_text(
-                        errors="replace"
+                        errors="replace",
                     )
 
-                    if metadata_name == "package.json":
+                    if (
+                        metadata_name
+                        == "package.json"
+                    ):
                         try:
                             value = json.loads(
-                                text
+                                text,
                             ).get("version")
 
                             if value:
@@ -871,9 +893,9 @@ def detect_version(
     )
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # Architecture
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 def detect_arch(explicit=None):
     if explicit:
@@ -899,9 +921,81 @@ def detect_arch(explicit=None):
     )
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
+# Artifact normalization
+# ============================================================================
+
+def normalize_artifact(artifact):
+    """
+    Normalize scanner output into:
+
+        (Path, kind, prefix)
+
+    This prevents scanner return-shape differences from causing errors such
+    as:
+
+        AttributeError: 'tuple' object has no attribute 'relative_to'
+    """
+
+    if isinstance(artifact, Path):
+        return artifact, "generic", ""
+
+    if isinstance(artifact, str):
+        return Path(artifact), "generic", ""
+
+    if (
+        isinstance(artifact, tuple)
+        and len(artifact) == 3
+    ):
+        path, kind, prefix = artifact
+
+        return (
+            Path(path),
+            str(kind),
+            str(prefix),
+        )
+
+    if (
+        isinstance(artifact, tuple)
+        and len(artifact) == 2
+    ):
+        first, second = artifact
+
+        # Scanner shape:
+        #
+        #   (Path, prefix)
+        #
+        # or:
+        #
+        #   (Path, module_kind)
+        #
+        if isinstance(
+            first,
+            (Path, str),
+        ):
+            return (
+                Path(first),
+                str(second),
+                "",
+            )
+
+        # Defensive fallback.
+        return (
+            Path(str(first)),
+            str(second),
+            "",
+        )
+
+    raise TypeError(
+        "unsupported artifact type: "
+        f"{type(artifact).__name__}: "
+        f"{artifact!r}"
+    )
+
+
+# ============================================================================
 # Discovery
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 def discover(root, minimum):
     root = Path(root).resolve()
@@ -918,10 +1012,15 @@ def discover(root, minimum):
         }
     )
 
-    artifacts = []
+    raw_artifacts = []
 
-    artifacts += [
-        (path, "library", prefix)
+    # Libraries.
+    raw_artifacts.extend(
+        (
+            path,
+            "library",
+            prefix,
+        )
         for path, prefix in scan_files(
             root,
             LIB_DIRS,
@@ -929,11 +1028,16 @@ def discover(root, minimum):
                 ".so" in path.name
             ),
         )
-    ]
+    )
 
-    artifacts += [
-        (path, "binary", "")
-        for path in scan_files(
+    # Binaries.
+    raw_artifacts.extend(
+        (
+            path,
+            "binary",
+            "",
+        )
+        for path, prefix in scan_files(
             root,
             tuple(
                 (
@@ -950,10 +1054,15 @@ def discover(root, minimum):
                 and "." not in path.name
             ),
         )
-    ]
+    )
 
-    artifacts += [
-        (path, "pkgconfig", prefix)
+    # pkg-config files.
+    raw_artifacts.extend(
+        (
+            path,
+            "pkgconfig",
+            prefix,
+        )
         for path, prefix in scan_files(
             root,
             PC_DIRS,
@@ -961,23 +1070,39 @@ def discover(root, minimum):
                 path.name.endswith(".pc")
             ),
         )
-    ]
+    )
 
-    artifacts += [
-        (path, "include", "")
+    # Include directories.
+    raw_artifacts.extend(
+        (
+            path,
+            "include",
+            "",
+        )
         for path in scan_include_dirs(root)
-    ]
+    )
 
-    artifacts += [
-        (path, "firefox", "")
+    # Firefox.
+    raw_artifacts.extend(
+        (
+            path,
+            "firefox",
+            "",
+        )
         for path in scan_firefox(root)
-    ]
+    )
 
-    artifacts += [
-        (path, kind, "")
+    # Language/ecosystem modules.
+    raw_artifacts.extend(
+        (
+            path,
+            kind,
+            "",
+        )
         for path, kind in scan_modules(root)
-    ]
+    )
 
+    # Generic executable/library/module files.
     generic_predicate = lambda path: (
         os.access(path, os.X_OK)
         or path.suffix.lower()
@@ -991,13 +1116,49 @@ def discover(root, minimum):
         }
     )
 
-    artifacts += [
-        (path, "generic", "")
+    raw_artifacts.extend(
+        (
+            path,
+            "generic",
+            "",
+        )
         for path in scan_tree(
             root,
             generic_predicate,
         )
-    ]
+    )
+
+    # Normalize everything before processing it.
+    artifacts = []
+
+    for raw_artifact in raw_artifacts:
+        try:
+            artifact = normalize_artifact(
+                raw_artifact
+            )
+        except (
+            TypeError,
+            ValueError,
+        ) as exc:
+            write_stderr(
+                "kuzpkg-untracked: "
+                f"warning: skipping invalid "
+                f"artifact: {exc}\n"
+            )
+            continue
+
+        path, kind, prefix = artifact
+
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        artifacts.append(
+            (
+                path,
+                kind,
+                prefix,
+            )
+        )
 
     seen = set()
 
@@ -1007,7 +1168,10 @@ def discover(root, minimum):
                 path,
                 root,
             )
-        except ValueError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             continue
 
         if (
@@ -1039,7 +1203,9 @@ def discover(root, minimum):
         if len(
             item["evidence"]
         ) < 25:
-            item["evidence"].append(path)
+            item["evidence"].append(
+                path
+            )
 
     return sorted(
         (
@@ -1060,9 +1226,9 @@ def discover(root, minimum):
     )
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # Archive creation
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 def safe(value):
     return re.sub(
@@ -1083,6 +1249,9 @@ def make_archive(
     arch,
     overwrite,
 ):
+    root = Path(root)
+    outdir = Path(outdir)
+
     version, source = detect_version(
         name,
         evidence,
@@ -1096,10 +1265,7 @@ def make_archive(
         f"{safe(arch)}.kuzpkg.tar.zst"
     )
 
-    output = (
-        outdir
-        / filename
-    )
+    output = outdir / filename
 
     if (
         output.exists()
@@ -1183,6 +1349,8 @@ def make_archive(
             added = set()
 
             for path in evidence:
+                path = Path(path)
+
                 item = rel(
                     path,
                     root,
@@ -1219,9 +1387,9 @@ def make_archive(
     )
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # Main
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 def main():
     parser = argparse.ArgumentParser(
@@ -1306,9 +1474,10 @@ def main():
         )
 
     try:
-        # Avoid print(..., end=...) entirely.
         write_stdout(
-            f"{BOLD}Detecting packages...{RESET} ",
+            f"{BOLD}"
+            "Detecting packages..."
+            f"{RESET} ",
             flush=True,
         )
 
@@ -1335,7 +1504,6 @@ def main():
             "kuzpkg-untracked: "
             f"error: {exc}\n"
         )
-
         return 1
 
     if not candidates:
@@ -1343,6 +1511,18 @@ def main():
             "No unregistered package "
             "candidates found"
         )
+        return 0
+
+    # -q means discovery output only.
+    # It does not disable package detection.
+    if args.quiet:
+        for (
+            name,
+            count,
+            types,
+            evidence,
+        ) in candidates:
+            print_line(name)
 
         return 0
 
@@ -1359,10 +1539,6 @@ def main():
                 evidence,
                 root,
             )
-
-            if args.quiet:
-                print_line(name)
-                continue
 
             print_line(
                 f"{name} "
@@ -1399,7 +1575,7 @@ def main():
             f"{RESET}"
         )
 
-        # Initial progress state.
+        # Show the current state.
         write_stdout(
             "  "
             + progress_bar(
@@ -1428,7 +1604,7 @@ def main():
                 args.overwrite,
             )
 
-            # Clear/rewrite the progress line.
+            # Completed state.
             write_stdout(
                 "  "
                 + progress_bar(
