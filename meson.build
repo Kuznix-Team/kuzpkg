@@ -183,7 +183,6 @@ foreach type : [
   endif
 endforeach
 
-
 if conf.has('HAVE_GETMNTINFO')
   if cc.compiles('''
       #include <sys/types.h>
@@ -203,6 +202,14 @@ elif conf.has('HAVE_STRUCT_STATVFS_F_FLAG')
 elif conf.has('HAVE_STRUCT_STATFS_F_FLAGS')
   conf.set('FSSTATSTYPE', 'struct statfs')
 endif
+
+# Keep the default compiler optimization explicit and portable.
+# The normal build uses -O2 -pipe; the opt-in build uses -O3 -pipe.
+optimization_cflags = ['-O2', '-pipe']
+if get_option('enable-o3')
+  optimization_cflags = ['-O3', '-pipe']
+endif
+add_project_arguments(cc.get_supported_arguments(optimization_cflags), language : 'c')
 
 if get_option('debug')
   extra_cflags = [
@@ -254,8 +261,7 @@ strip_shared = '--strip-unneeded'
 strip_static = '--strip-debug'
 
 file_seccomp = get_option('file-seccomp')
-# meson-git has find_program('file', required: false, version: '>=5.38')
-filever = run_command('sh', '-c', 'file --version | sed -n "s/^file-\(.*\)/\\1/p"', check: true).stdout()
+filever = run_command('sh', '-c', 'file --version | sed -n "s/^file-\\(.*\\)/\\\\1/p"', check: true).stdout()
 if file_seccomp.enabled() or ( file_seccomp.auto() and filever.version_compare('>= 5.38') )
   filecmd = 'file -S'
 endif
@@ -273,8 +279,6 @@ endif
 chost = run_command(cc, '-dumpmachine', check: true).stdout().strip()
 carch = chost.split('-')[0]
 
-# annoyingly, we have to maintain two sets of configuration_data which is
-# largely identical, but which distinguishes between quoting needs.
 substs = configuration_data()
 substs.set('CARCH', carch)
 substs.set('CHOST', chost)
@@ -307,7 +311,6 @@ subdir('src/kuzpkg')
 subdir('src/util')
 subdir('scripts')
 
-# Internationalization
 if get_option('i18n')
   i18n = import('i18n')
   subdir('lib/libkuzpkg/po')
@@ -337,7 +340,6 @@ klpm_deps = [crypto_provider, libarchive, libcurl, libintl, libseccomp, gpgme]
 libkuzpkg_a = static_library(
   'klpm_objlib',
   libkuzpkg_sources,
-  # https://github.com/mesonbuild/meson/issues/3937
   objects : libcommon.extract_all_objects(recursive: true),
   include_directories : includes,
   gnu_symbol_visibility : 'hidden',
@@ -389,115 +391,5 @@ executable(
   include_directories : includes,
   link_with : [libkuzpkg],
   dependencies : [libarchive],
-  install : true,
+  install : false,
 )
-
-executable(
-  'vercmp',
-  vercmp_sources,
-  include_directories : includes,
-  link_with : [libkuzpkg_a],
-  install : true,
-)
-
-foreach wrapper : script_wrappers
-  cdata = configuration_data()
-  cdata.set_quoted('BASH', BASH.full_path())
-  cdata.set_quoted('BUILDDIR', wrapper[2])
-  cdata.set_quoted('REAL_PROGPATH', wrapper[1].full_path())
-
-  # Create a wrapper script that bootstraps the real script within the build
-  # directory. Use configure_file instead of a custom_target to ensure that
-  # permissions on the input script wrapper are preserved.
-  configure_file(
-    input : join_paths(meson.project_source_root(), 'build-aux', 'script-wrapper.sh.in'),
-    output : wrapper[0],
-    configuration : cdata)
-endforeach
-
-configure_file(
-  input : 'etc/makepkg.conf.in',
-  output : 'makepkg.conf',
-  configuration : substs,
-  install_dir : SYSCONFDIR)
-
-configure_file(
-  input : 'etc/makepkg.conf.d/fortran.conf.in',
-  output : 'fortran.conf',
-  configuration : substs,
-  install_dir : join_paths(SYSCONFDIR, 'makepkg.conf.d/'))
-
-configure_file(
-  input : 'etc/makepkg.conf.d/rust.conf.in',
-  output : 'rust.conf',
-  configuration : substs,
-  install_dir : join_paths(SYSCONFDIR, 'makepkg.conf.d/'))
-
-install_emptydir(join_paths(SYSCONFDIR, 'makepkg.d/'))
-
-configure_file(
-  input : 'etc/kuzpkg.conf.in',
-  output : 'kuzpkg.conf',
-  configuration : substs,
-  install_dir : SYSCONFDIR)
-
-install_data(
-  'proto/PKGBUILD-split.proto',
-  'proto/PKGBUILD-vcs.proto',
-  'proto/PKGBUILD.proto',
-  'proto/proto.install',
-  install_dir : join_paths(DATAROOTDIR, 'kuzpkg'))
-
-foreach path : [
-	join_paths(LOCALSTATEDIR, 'lib/kuzpkg/'),
-	join_paths(LOCALSTATEDIR, 'cache/kuzpkg/pkg/'),
-	join_paths(DATAROOTDIR, 'makepkg-template/'),
-	join_paths(DATAROOTDIR, 'libkuzpkg/hooks/'),
-	]
-	meson.add_install_script('sh', '-c', 'mkdir -p "$DESTDIR/@0@"'.format(path))
-endforeach
-
-TEST_ENV = environment()
-TEST_ENV.set('PMTEST_SCRIPTLIB_DIR', join_paths(meson.project_source_root(), 'scripts/library/'))
-TEST_ENV.set('PMTEST_LIBMAKEPKG_DIR', join_paths(meson.project_build_root(), 'scripts/libmakepkg/'))
-TEST_ENV.set('PMTEST_UTIL_DIR', meson.project_build_root() + '/')
-TEST_ENV.set('PMTEST_SCRIPT_DIR', join_paths(meson.project_build_root(), 'scripts/'))
-
-subdir('test/kuzpkg')
-subdir('test/scripts')
-subdir('test/util')
-
-summary({
-  'prefix': PREFIX,
-  'sysconfdir': SYSCONFDIR,
-  '    conf file': join_paths(SYSCONFDIR, 'kuzpkg.conf'),
-  'localstatedir': LOCALSTATEDIR,
-  '    database dir': join_paths(LOCALSTATEDIR, 'lib/kuzpkg/'),
-  '    cache dir': join_paths(LOCALSTATEDIR, 'cache/kuzpkg/pkg/'),
-  'keyringdir': KEYRINGDIR,
-  'compiler': '@0@ @1@\n'.format(cc.get_id(), cc.version()),
-  'Architecture': carch,
-  'Host Type': chost,
-  'File inode command': inodecmd,
-  'File seccomp command': filecmd,
-  'libkuzpkg version': libkuzpkg_version,
-  'kuzpkg version': PACKAGE_VERSION,
-}, section: 'Build information')
-
-summary({
-  'root working directory': ROOTDIR,
-  'package extension': get_option('pkg-ext'),
-  'source pkg extension': get_option('src-ext'),
-  'build script name': BUILDSCRIPT,
-  'template directory': get_option('makepkg-template-dir'),
-}, section: 'Directory and file information')
-
-summary({
-  'i18n support': get_option('i18n'),
-  'Build docs': build_doc,
-  'debug build': get_option('buildtype') == 'debug',
-  'Use libcurl': conf.get('HAVE_LIBCURL'),
-  'Use GPGME': conf.get('HAVE_LIBGPGME'),
-  'Use OpenSSL': conf.has('HAVE_LIBSSL') and conf.get('HAVE_LIBSSL') == 1,
-  'Use nettle': conf.has('HAVE_LIBNETTLE') and conf.get('HAVE_LIBNETTLE') == 1,
-}, section: 'Compilation options')
