@@ -1,9 +1,10 @@
 name: Build kuzpkg packages
 
-# Once every day at 00:00 UTC. No push, PR, or manual trigger.
+# Daily only.
+# 00:00 UTC every day.
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -12,556 +13,1963 @@ permissions:
 env:
   DEBIAN_FRONTEND: noninteractive
 
+# ==============================================================
+# Matrices
+# ==============================================================
+
+x-debian-matrix: &debian-matrix
+  include:
+    # ----------------------------------------------------------
+    # Native Ubuntu
+    # ----------------------------------------------------------
+    - name: ubuntu-24.04
+      runner: ubuntu-24.04
+      mode: native
+      arch: amd64
+
+    - name: ubuntu-26.04
+      runner: ubuntu-26.04
+      mode: native
+      arch: amd64
+
+    - name: ubuntu-26.04-arm
+      runner: ubuntu-26.04-arm
+      mode: native
+      arch: arm64
+
+    # ----------------------------------------------------------
+    # Debian 12
+    # ----------------------------------------------------------
+    - name: debian-12
+      runner: ubuntu-24.04
+      mode: docker
+      image: debian:12
+      arch: amd64
+
+    - name: debian-12-arm
+      runner: ubuntu-26.04-arm
+      mode: docker
+      image: debian:12
+      arch: arm64
+
+    # ----------------------------------------------------------
+    # Debian 13
+    # ----------------------------------------------------------
+    - name: debian-13
+      runner: ubuntu-24.04
+      mode: docker
+      image: debian:13
+      arch: amd64
+
+    - name: debian-13-arm
+      runner: ubuntu-26.04-arm
+      mode: docker
+      image: debian:13
+      arch: arm64
+
+    # ----------------------------------------------------------
+    # Debian testing
+    # ----------------------------------------------------------
+    - name: debian-testing
+      runner: ubuntu-24.04
+      mode: docker
+      image: debian:testing
+      arch: amd64
+
+    - name: debian-testing-arm
+      runner: ubuntu-26.04-arm
+      mode: docker
+      image: debian:testing
+      arch: arm64
+
+    # ----------------------------------------------------------
+    # Debian unstable
+    # ----------------------------------------------------------
+    - name: debian-unstable
+      runner: ubuntu-24.04
+      mode: docker
+      image: debian:unstable
+      arch: amd64
+
+    - name: debian-unstable-arm
+      runner: ubuntu-26.04-arm
+      mode: docker
+      image: debian:unstable
+      arch: arm64
+
+
+x-fedora-matrix: &fedora-matrix
+  include:
+    # ----------------------------------------------------------
+    # Fedora 43
+    # ----------------------------------------------------------
+    - name: fedora-43
+      runner: ubuntu-24.04
+      image: fedora:43
+      arch: x86_64
+
+    - name: fedora-43-arm
+      runner: ubuntu-26.04-arm
+      image: fedora:43
+      arch: aarch64
+
+    # ----------------------------------------------------------
+    # Fedora latest = Fedora 44
+    # ----------------------------------------------------------
+    - name: fedora-44
+      runner: ubuntu-24.04
+      image: fedora:44
+      arch: x86_64
+
+    - name: fedora-44-arm
+      runner: ubuntu-26.04-arm
+      image: fedora:44
+      arch: aarch64
+
+    # ----------------------------------------------------------
+    # Fedora Rawhide
+    # ----------------------------------------------------------
+    - name: fedora-rawhide
+      runner: ubuntu-24.04
+      image: fedora:rawhide
+      arch: x86_64
+
+    - name: fedora-rawhide-arm
+      runner: ubuntu-26.04-arm
+      image: fedora:rawhide
+      arch: aarch64
+
+
+# ==============================================================
+# JOBS
+# ==============================================================
+
 jobs:
+
+  # ============================================================
+  # DEB
+  # ============================================================
+
   deb:
-    name: .deb - ${{ matrix.name }}
+    name: ".deb - ${{ matrix.name }}"
     runs-on: ${{ matrix.runner }}
+
     env:
       PACKAGE_VARIANT: normal
-      O3_FLAG: ''
+      O3_FLAG: ""
+
     strategy:
       fail-fast: false
-      matrix: &debian_matrix
-        include:
-          - name: ubuntu-24.04
-            runner: ubuntu-24.04
-            mode: native
-            arch: amd64
-          - name: ubuntu-26.04
-            runner: ubuntu-26.04
-            mode: native
-            arch: amd64
-          - name: ubuntu-26.04-arm
-            runner: ubuntu-26.04-arm
-            mode: native
-            arch: arm64
-          - name: debian-12
-            runner: ubuntu-24.04
-            mode: docker
-            image: debian:12
-            arch: amd64
-          - name: debian-12-arm
-            runner: ubuntu-26.04-arm
-            mode: docker
-            image: debian:12
-            arch: arm64
-          - name: debian-13
-            runner: ubuntu-24.04
-            mode: docker
-            image: debian:13
-            arch: amd64
-          - name: debian-13-arm
-            runner: ubuntu-26.04-arm
-            mode: docker
-            image: debian:13
-            arch: arm64
-          - name: debian-testing
-            runner: ubuntu-24.04
-            mode: docker
-            image: debian:testing
-            arch: amd64
-          - name: debian-testing-arm
-            runner: ubuntu-26.04-arm
-            mode: docker
-            image: debian:testing
-            arch: arm64
-          - name: debian-unstable
-            runner: ubuntu-24.04
-            mode: docker
-            image: debian:unstable
-            arch: amd64
-          - name: debian-unstable-arm
-            runner: ubuntu-26.04-arm
-            mode: docker
-            image: debian:unstable
-            arch: arm64
-    steps: &debian_steps
+      matrix: *debian-matrix
+
+    steps:
+
+      # --------------------------------------------------------
+      # Checkout
+      # --------------------------------------------------------
+
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Prepare GitHub runner
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y ca-certificates dpkg-dev
-          command -v docker >/dev/null
-          docker --version
+      # --------------------------------------------------------
+      # Runner setup
+      # --------------------------------------------------------
 
-      - name: Build native Ubuntu package
-        if: matrix.mode == 'native'
+      - name: Prepare runner
         run: |
           set -euxo pipefail
+
           sudo apt-get update
+
           sudo apt-get install -y \
-            build-essential meson ninja-build pkg-config zstd \
-            libarchive-dev libcurl4-openssl-dev libgpgme-dev libssl-dev \
-            nettle-dev libseccomp-dev file gettext ca-certificates git
+            ca-certificates \
+            dpkg-dev
 
-          tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-          [ -n "$tag" ] || tag='0.0.0'
-          safe_tag="$(printf '%s' "$tag" | sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g')"
-          deb_version="$(printf '%s' "$tag" | sed 's/^v//; s/[^A-Za-z0-9.+~-]/./g')"
+          if [ "${{ matrix.mode }}" = "docker" ]; then
+            command -v docker
+            docker --version
+          fi
 
-          rm -rf build staging deb-root dist
-          mkdir -p dist deb-root/DEBIAN deb-root/usr
+      # --------------------------------------------------------
+      # Native Ubuntu build
+      # --------------------------------------------------------
+
+      - name: Build native Debian package
+        if: matrix.mode == 'native'
+        env:
+          TARGET_NAME: ${{ matrix.name }}
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            build-essential \
+            meson \
+            ninja-build \
+            pkg-config \
+            zstd \
+            libarchive-dev \
+            libcurl4-openssl-dev \
+            libgpgme-dev \
+            libssl-dev \
+            nettle-dev \
+            libseccomp-dev \
+            file \
+            gettext \
+            ca-certificates \
+            git
+
+          TAG="$(
+            git describe --tags --abbrev=0 2>/dev/null || true
+          )"
+
+          if [ -z "$TAG" ]; then
+            TAG="0.0.0"
+          fi
+
+          SAFE_TAG="$(
+            printf '%s' "$TAG" |
+              sed \
+                's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+          )"
+
+          DEB_VERSION="$(
+            printf '%s' "$TAG" |
+              sed \
+                's/^v//; s/[^A-Za-z0-9.+~-]/./g'
+          )"
+
+          rm -rf \
+            build \
+            staging \
+            deb-root \
+            dist
+
+          mkdir -p \
+            dist \
+            deb-root/DEBIAN \
+            deb-root/usr
 
           if [ -n "$O3_FLAG" ]; then
-            meson setup build --buildtype=release --prefix=/usr "$O3_FLAG"
+            meson setup \
+              build \
+              --buildtype=release \
+              --prefix=/usr \
+              "$O3_FLAG"
           else
-            meson setup build --buildtype=release --prefix=/usr
+            meson setup \
+              build \
+              --buildtype=release \
+              --prefix=/usr
           fi
 
           meson compile -C build
-          meson install -C build --destdir "$PWD/staging" --no-rebuild --strip
 
-          cp -a staging/usr/. deb-root/usr/
+          meson install \
+            -C build \
+            --destdir "$PWD/staging" \
+            --no-rebuild \
+            --strip
+
+          cp -a \
+            staging/usr/. \
+            deb-root/usr/
+
           if [ -d staging/etc ]; then
             mkdir -p deb-root/etc
-            cp -a staging/etc/. deb-root/etc/
+            cp -a \
+              staging/etc/. \
+              deb-root/etc/
           fi
 
-          cat > deb-root/DEBIAN/control <<EOF
-          Package: kuzpkg
-          Version: ${deb_version}
-          Section: admin
-          Priority: optional
-          Architecture: ${{ matrix.arch }}
-          Maintainer: Kuznix Team
-          Description: kuzpkg package manager
-           Package manager for Kuznix Linux (${PACKAGE_VARIANT} build).
-          EOF
+          DESCRIPTION="Package manager for Kuznix Linux."
 
-          suffix=''
-          if [ "$PACKAGE_VARIANT" = 'o3' ]; then suffix='-o3'; fi
-          deb_file="dist/kuzpkg-${safe_tag}-${{ matrix.name }}${suffix}.deb"
-          dpkg-deb --build --root-owner-group deb-root "$deb_file"
-          dpkg-deb --info "$deb_file"
+          if [ "$PACKAGE_VARIANT" = "o3" ]; then
+            DESCRIPTION="Package manager for Kuznix Linux (O3 build)."
+          fi
+
+          printf '%s\n' \
+            "Package: kuzpkg" \
+            "Version: ${DEB_VERSION}" \
+            "Section: admin" \
+            "Priority: optional" \
+            "Architecture: ${TARGET_ARCH}" \
+            "Maintainer: Kuznix Team" \
+            "Description: kuzpkg package manager" \
+            " ${DESCRIPTION}" \
+            > deb-root/DEBIAN/control
+
+          SUFFIX=""
+
+          if [ "$PACKAGE_VARIANT" = "o3" ]; then
+            SUFFIX="-o3"
+          fi
+
+          DEB_FILE="dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}${SUFFIX}.deb"
+
+          dpkg-deb \
+            --build \
+            --root-owner-group \
+            deb-root \
+            "$DEB_FILE"
+
+          dpkg-deb \
+            --info \
+            "$DEB_FILE"
+
+      # --------------------------------------------------------
+      # Debian Docker build
+      # --------------------------------------------------------
 
       - name: Build Debian Docker package
         if: matrix.mode == 'docker'
         env:
           DEBIAN_IMAGE: ${{ matrix.image }}
+          TARGET_NAME: ${{ matrix.name }}
+          TARGET_ARCH: ${{ matrix.arch }}
         run: |
           set -euxo pipefail
-          docker run --rm \
+
+          docker run \
+            --rm \
             -e PACKAGE_VARIANT \
             -e O3_FLAG \
+            -e TARGET_NAME \
+            -e TARGET_ARCH \
             -v "$PWD:/workspace" \
             -w /workspace \
             "$DEBIAN_IMAGE" \
             bash -euxo pipefail -c '
+
               apt-get update
+
               apt-get install -y \
-                build-essential meson ninja-build pkg-config zstd \
-                libarchive-dev libcurl4-openssl-dev libgpgme-dev libssl-dev \
-                nettle-dev libseccomp-dev file gettext ca-certificates git
+                build-essential \
+                meson \
+                ninja-build \
+                pkg-config \
+                zstd \
+                libarchive-dev \
+                libcurl4-openssl-dev \
+                libgpgme-dev \
+                libssl-dev \
+                nettle-dev \
+                libseccomp-dev \
+                file \
+                gettext \
+                ca-certificates \
+                git \
+                dpkg-dev
 
-              tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-              [ -n "$tag" ] || tag="0.0.0"
-              safe_tag="$(printf "%s" "$tag" | sed "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g")"
-              deb_version="$(printf "%s" "$tag" | sed "s/^v//; s/[^A-Za-z0-9.+~-]/./g")"
+              TAG="$(
+                git describe --tags --abbrev=0 2>/dev/null || true
+              )"
 
-              rm -rf build staging deb-root dist
-              mkdir -p dist deb-root/DEBIAN deb-root/usr
+              if [ -z "$TAG" ]; then
+                TAG="0.0.0"
+              fi
+
+              SAFE_TAG="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
+              )"
+
+              DEB_VERSION="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s/^v//; s/[^A-Za-z0-9.+~-]/./g"
+              )"
+
+              rm -rf \
+                build \
+                staging \
+                deb-root \
+                dist
+
+              mkdir -p \
+                dist \
+                deb-root/DEBIAN \
+                deb-root/usr
 
               if [ -n "$O3_FLAG" ]; then
-                meson setup build --buildtype=release --prefix=/usr "$O3_FLAG"
+                meson setup \
+                  build \
+                  --buildtype=release \
+                  --prefix=/usr \
+                  "$O3_FLAG"
               else
-                meson setup build --buildtype=release --prefix=/usr
+                meson setup \
+                  build \
+                  --buildtype=release \
+                  --prefix=/usr
               fi
 
               meson compile -C build
-              meson install -C build --destdir "$PWD/staging" --no-rebuild --strip
 
-              cp -a staging/usr/. deb-root/usr/
+              meson install \
+                -C build \
+                --destdir "$PWD/staging" \
+                --no-rebuild \
+                --strip
+
+              cp -a \
+                staging/usr/. \
+                deb-root/usr/
+
               if [ -d staging/etc ]; then
                 mkdir -p deb-root/etc
-                cp -a staging/etc/. deb-root/etc/
+
+                cp -a \
+                  staging/etc/. \
+                  deb-root/etc/
               fi
 
-              cat > deb-root/DEBIAN/control <<EOF
-              Package: kuzpkg
-              Version: ${deb_version}
-              Section: admin
-              Priority: optional
-              Architecture: ${{ matrix.arch }}
-              Maintainer: Kuznix Team
-              Description: kuzpkg package manager
-               Package manager for Kuznix Linux (${PACKAGE_VARIANT} build).
-              EOF
+              DESCRIPTION="Package manager for Kuznix Linux."
 
-              suffix=''
-              if [ "$PACKAGE_VARIANT" = 'o3' ]; then suffix='-o3'; fi
-              deb_file="dist/kuzpkg-${safe_tag}-${{ matrix.name }}${suffix}.deb"
-              dpkg-deb --build --root-owner-group deb-root "$deb_file"
-              dpkg-deb --info "$deb_file"
+              if [ "$PACKAGE_VARIANT" = "o3" ]; then
+                DESCRIPTION="Package manager for Kuznix Linux (O3 build)."
+              fi
+
+              printf "%s\n" \
+                "Package: kuzpkg" \
+                "Version: ${DEB_VERSION}" \
+                "Section: admin" \
+                "Priority: optional" \
+                "Architecture: ${TARGET_ARCH}" \
+                "Maintainer: Kuznix Team" \
+                "Description: kuzpkg package manager" \
+                " ${DESCRIPTION}" \
+                > deb-root/DEBIAN/control
+
+              SUFFIX=""
+
+              if [ "$PACKAGE_VARIANT" = "o3" ]; then
+                SUFFIX="-o3"
+              fi
+
+              DEB_FILE="dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}${SUFFIX}.deb"
+
+              dpkg-deb \
+                --build \
+                --root-owner-group \
+                deb-root \
+                "$DEB_FILE"
+
+              dpkg-deb \
+                --info \
+                "$DEB_FILE"
             '
 
-      - name: Upload .deb artifact
+      # --------------------------------------------------------
+      # Upload
+      # --------------------------------------------------------
+
+      - name: Upload .deb
         uses: actions/upload-artifact@v4
         with:
-          name: kuzpkg-deb-${{ matrix.name }}-${{ env.PACKAGE_VARIANT }}
+          name: "kuzpkg-deb-${{ matrix.name }}-${{ env.PACKAGE_VARIANT }}"
           path: dist/*.deb
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
 
+
+  # ============================================================
+  # DEB O3
+  # ============================================================
+
   deb-o3:
-    name: .deb O3 - ${{ matrix.name }}
+    name: ".deb O3 - ${{ matrix.name }}"
     runs-on: ${{ matrix.runner }}
+
     env:
       PACKAGE_VARIANT: o3
-      O3_FLAG: -Denable-o3=true
-    strategy:
-      fail-fast: false
-      matrix: *debian_matrix
-    steps: *debian_steps
+      O3_FLAG: "-Denable-o3=true"
 
-  rpm:
-    name: .rpm - ${{ matrix.name }}
-    runs-on: ${{ matrix.runner }}
-    env:
-      PACKAGE_VARIANT: normal
-      O3_FLAG: ''
     strategy:
       fail-fast: false
-      matrix: &fedora_matrix
-        include:
-          - name: fedora-43
-            runner: ubuntu-24.04
-            image: fedora:43
-          - name: fedora-43-arm
-            runner: ubuntu-26.04-arm
-            image: fedora:43
-          - name: fedora-44
-            runner: ubuntu-24.04
-            image: fedora:44
-          - name: fedora-44-arm
-            runner: ubuntu-26.04-arm
-            image: fedora:44
-          - name: fedora-rawhide
-            runner: ubuntu-24.04
-            image: fedora:rawhide
-          - name: fedora-rawhide-arm
-            runner: ubuntu-26.04-arm
-            image: fedora:rawhide
-    steps: &fedora_steps
+      matrix: *debian-matrix
+
+    steps:
+
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Prepare GitHub runner
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y ca-certificates
-          command -v docker >/dev/null
-          docker --version
-
-      - name: Build RPM in Fedora container
-        env:
-          FEDORA_IMAGE: ${{ matrix.image }}
+      - name: Prepare runner
         run: |
           set -euxo pipefail
-          docker run --rm \
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates \
+            dpkg-dev
+
+          if [ "${{ matrix.mode }}" = "docker" ]; then
+            command -v docker
+            docker --version
+          fi
+
+      - name: Build native Debian O3 package
+        if: matrix.mode == 'native'
+        env:
+          TARGET_NAME: ${{ matrix.name }}
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            build-essential \
+            meson \
+            ninja-build \
+            pkg-config \
+            zstd \
+            libarchive-dev \
+            libcurl4-openssl-dev \
+            libgpgme-dev \
+            libssl-dev \
+            nettle-dev \
+            libseccomp-dev \
+            file \
+            gettext \
+            ca-certificates \
+            git
+
+          TAG="$(
+            git describe --tags --abbrev=0 2>/dev/null || true
+          )"
+
+          [ -n "$TAG" ] || TAG="0.0.0"
+
+          SAFE_TAG="$(
+            printf '%s' "$TAG" |
+              sed \
+                's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+          )"
+
+          DEB_VERSION="$(
+            printf '%s' "$TAG" |
+              sed \
+                's/^v//; s/[^A-Za-z0-9.+~-]/./g'
+          )"
+
+          rm -rf \
+            build \
+            staging \
+            deb-root \
+            dist
+
+          mkdir -p \
+            dist \
+            deb-root/DEBIAN \
+            deb-root/usr
+
+          meson setup \
+            build \
+            --buildtype=release \
+            --prefix=/usr \
+            -Denable-o3=true
+
+          meson compile -C build
+
+          meson install \
+            -C build \
+            --destdir "$PWD/staging" \
+            --no-rebuild \
+            --strip
+
+          cp -a \
+            staging/usr/. \
+            deb-root/usr/
+
+          if [ -d staging/etc ]; then
+            mkdir -p deb-root/etc
+
+            cp -a \
+              staging/etc/. \
+              deb-root/etc/
+          fi
+
+          printf '%s\n' \
+            "Package: kuzpkg" \
+            "Version: ${DEB_VERSION}" \
+            "Section: admin" \
+            "Priority: optional" \
+            "Architecture: ${TARGET_ARCH}" \
+            "Maintainer: Kuznix Team" \
+            "Description: kuzpkg package manager" \
+            " Package manager for Kuznix Linux (O3 build)." \
+            > deb-root/DEBIAN/control
+
+          DEB_FILE="dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}-o3.deb"
+
+          dpkg-deb \
+            --build \
+            --root-owner-group \
+            deb-root \
+            "$DEB_FILE"
+
+          dpkg-deb \
+            --info \
+            "$DEB_FILE"
+
+      - name: Build Debian Docker O3 package
+        if: matrix.mode == 'docker'
+        env:
+          DEBIAN_IMAGE: ${{ matrix.image }}
+          TARGET_NAME: ${{ matrix.name }}
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
             -e PACKAGE_VARIANT \
             -e O3_FLAG \
+            -e TARGET_NAME \
+            -e TARGET_ARCH \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            "$DEBIAN_IMAGE" \
+            bash -euxo pipefail -c '
+
+              apt-get update
+
+              apt-get install -y \
+                build-essential \
+                meson \
+                ninja-build \
+                pkg-config \
+                zstd \
+                libarchive-dev \
+                libcurl4-openssl-dev \
+                libgpgme-dev \
+                libssl-dev \
+                nettle-dev \
+                libseccomp-dev \
+                file \
+                gettext \
+                ca-certificates \
+                git \
+                dpkg-dev
+
+              TAG="$(
+                git describe --tags --abbrev=0 2>/dev/null || true
+              )"
+
+              [ -n "$TAG" ] || TAG="0.0.0"
+
+              SAFE_TAG="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
+              )"
+
+              DEB_VERSION="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s/^v//; s/[^A-Za-z0-9.+~-]/./g"
+              )"
+
+              rm -rf \
+                build \
+                staging \
+                deb-root \
+                dist
+
+              mkdir -p \
+                dist \
+                deb-root/DEBIAN \
+                deb-root/usr
+
+              meson setup \
+                build \
+                --buildtype=release \
+                --prefix=/usr \
+                -Denable-o3=true
+
+              meson compile -C build
+
+              meson install \
+                -C build \
+                --destdir "$PWD/staging" \
+                --no-rebuild \
+                --strip
+
+              cp -a \
+                staging/usr/. \
+                deb-root/usr/
+
+              if [ -d staging/etc ]; then
+                mkdir -p deb-root/etc
+
+                cp -a \
+                  staging/etc/. \
+                  deb-root/etc/
+              fi
+
+              printf "%s\n" \
+                "Package: kuzpkg" \
+                "Version: ${DEB_VERSION}" \
+                "Section: admin" \
+                "Priority: optional" \
+                "Architecture: ${TARGET_ARCH}" \
+                "Maintainer: Kuznix Team" \
+                "Description: kuzpkg package manager" \
+                " Package manager for Kuznix Linux (O3 build)." \
+                > deb-root/DEBIAN/control
+
+              DEB_FILE="dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}-o3.deb"
+
+              dpkg-deb \
+                --build \
+                --root-owner-group \
+                deb-root \
+                "$DEB_FILE"
+
+              dpkg-deb \
+                --info \
+                "$DEB_FILE"
+            '
+
+      - name: Upload .deb O3
+        uses: actions/upload-artifact@v4
+        with:
+          name: "kuzpkg-deb-${{ matrix.name }}-o3"
+          path: dist/*-o3.deb
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+
+  # ============================================================
+  # RPM
+  # ============================================================
+
+  rpm:
+    name: ".rpm - ${{ matrix.name }}"
+    runs-on: ${{ matrix.runner }}
+
+    env:
+      PACKAGE_VARIANT: normal
+      O3_FLAG: ""
+
+    strategy:
+      fail-fast: false
+      matrix: *fedora-matrix
+
+    steps:
+
+      - name: Checkout kuzpkg
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Prepare runner
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          command -v docker
+          docker --version
+
+      - name: Build RPM
+        env:
+          FEDORA_IMAGE: ${{ matrix.image }}
+          TARGET_NAME: ${{ matrix.name }}
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
+            -e PACKAGE_VARIANT \
+            -e O3_FLAG \
+            -e TARGET_NAME \
+            -e TARGET_ARCH \
             -v "$PWD:/workspace" \
             -w /workspace \
             "$FEDORA_IMAGE" \
             bash -euxo pipefail -c '
+
               dnf -y update
+
               dnf -y install \
-                git gcc gcc-c++ meson ninja-build pkgconf zstd \
-                libarchive-devel libcurl-devel gpgme-devel openssl-devel \
-                nettle-devel libseccomp-devel file gettext rpm-build rpmdevtools
+                git \
+                gcc \
+                gcc-c++ \
+                meson \
+                ninja-build \
+                pkgconf \
+                zstd \
+                libarchive-devel \
+                libcurl-devel \
+                gpgme-devel \
+                openssl-devel \
+                nettle-devel \
+                libseccomp-devel \
+                file \
+                gettext \
+                rpm-build \
+                rpmdevtools
 
-              tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-              [ -n "$tag" ] || tag="0.0.0"
-              safe_tag="$(printf "%s" "$tag" | sed "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g")"
-              rpm_version="$(printf "%s" "$tag" | sed "s/^v//; s/[^A-Za-z0-9._+]/./g")"
+              TAG="$(
+                git describe --tags --abbrev=0 2>/dev/null || true
+              )"
 
-              rm -rf build staging rpm-build dist
-              mkdir -p rpm-build/BUILD rpm-build/BUILDROOT rpm-build/RPMS rpm-build/SOURCES rpm-build/SPECS rpm-build/SRPMS dist
+              [ -n "$TAG" ] || TAG="0.0.0"
+
+              SAFE_TAG="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
+              )"
+
+              RPM_VERSION="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s/^v//; s/[^A-Za-z0-9._+]/./g"
+              )"
+
+              rm -rf \
+                build \
+                staging \
+                rpm-build \
+                dist
+
+              mkdir -p \
+                rpm-build/BUILD \
+                rpm-build/BUILDROOT \
+                rpm-build/RPMS \
+                rpm-build/SOURCES \
+                rpm-build/SPECS \
+                rpm-build/SRPMS \
+                dist
 
               if [ -n "$O3_FLAG" ]; then
-                meson setup build --buildtype=release --prefix=/usr "$O3_FLAG"
+                meson setup \
+                  build \
+                  --buildtype=release \
+                  --prefix=/usr \
+                  "$O3_FLAG"
               else
-                meson setup build --buildtype=release --prefix=/usr
+                meson setup \
+                  build \
+                  --buildtype=release \
+                  --prefix=/usr
               fi
 
               meson compile -C build
-              meson install -C build --destdir "$PWD/staging" --no-rebuild --strip
 
-              cat > rpm-build/SPECS/kuzpkg.spec <<EOF
-              Name: kuzpkg
-              Version: ${rpm_version}
-              Release: 1%{?dist}
-              Summary: kuzpkg package manager
-              License: GPLv2+
+              meson install \
+                -C build \
+                --destdir "$PWD/staging" \
+                --no-rebuild \
+                --strip
 
-              %description
-              Package manager for Kuznix Linux.
+              printf '%s\n' \
+                "Name:           kuzpkg" \
+                "Version:        ${RPM_VERSION}" \
+                "Release:        1%{?dist}" \
+                "Summary:        kuzpkg package manager" \
+                "License:        GPLv2+" \
+                "ExclusiveArch:  ${TARGET_ARCH}" \
+                "" \
+                "%description" \
+                "Package manager for Kuznix Linux." \
+                "" \
+                "%prep" \
+                "" \
+                "%build" \
+                "" \
+                "%install" \
+                "rm -rf %{buildroot}" \
+                "mkdir -p %{buildroot}" \
+                "cp -a /workspace/staging/. %{buildroot}/" \
+                "" \
+                "%files" \
+                "/usr/*" \
+                "%config(noreplace) /etc/kuzpkg.conf" \
+                "%config(noreplace) /etc/makepkg.conf" \
+                "%config(noreplace) /etc/makepkg.conf.d/fortran.conf" \
+                "%config(noreplace) /etc/makepkg.conf.d/rust.conf" \
+                "" \
+                "%changelog" \
+                "* $(date -u "+%a %b %d %Y") Kuznix Team - ${RPM_VERSION}-1" \
+                "- Daily ${PACKAGE_VARIANT} Fedora build" \
+                > rpm-build/SPECS/kuzpkg.spec
 
-              %prep
+              rpmbuild \
+                --define "_topdir /workspace/rpm-build" \
+                -bb \
+                rpm-build/SPECS/kuzpkg.spec
 
-              %build
+              RPM_FILE="$(
+                find \
+                  rpm-build/RPMS \
+                  -type f \
+                  -name "*.rpm" |
+                head -n 1
+              )"
 
-              %install
-              rm -rf %{buildroot}
-              mkdir -p %{buildroot}
-              cp -a /workspace/staging/. %{buildroot}/
+              if [ -z "$RPM_FILE" ]; then
+                echo "ERROR: RPM was not produced"
+                find rpm-build/RPMS -type f -print
+                exit 1
+              fi
 
-              %files
-              /usr/*
-              %config(noreplace) /etc/kuzpkg.conf
-              %config(noreplace) /etc/makepkg.conf
-              %config(noreplace) /etc/makepkg.conf.d/fortran.conf
-              %config(noreplace) /etc/makepkg.conf.d/rust.conf
+              SUFFIX=""
 
-              %changelog
-              * $(date -u "+%a %b %d %Y") Kuznix Team - ${rpm_version}-1
-              - Daily ${PACKAGE_VARIANT} Fedora build
-              EOF
+              if [ "$PACKAGE_VARIANT" = "o3" ]; then
+                SUFFIX="-o3"
+              fi
 
-              rpmbuild --define "_topdir /workspace/rpm-build" -bb rpm-build/SPECS/kuzpkg.spec
-              rpm_file="$(find rpm-build/RPMS -type f -name "*.rpm" | head -n1)"
-              test -n "$rpm_file"
-              suffix=''
-              if [ "$PACKAGE_VARIANT" = 'o3' ]; then suffix='-o3'; fi
-              cp "$rpm_file" "dist/kuzpkg-${safe_tag}-${{ matrix.name }}${suffix}.rpm"
-              rpm -qip "$rpm_file"
+              OUTPUT="dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}${SUFFIX}.rpm"
+
+              cp \
+                "$RPM_FILE" \
+                "$OUTPUT"
+
+              rpm \
+                -qip \
+                "$RPM_FILE"
             '
 
-      - name: Upload RPM artifact
+      - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
-          name: kuzpkg-rpm-${{ matrix.name }}-${{ env.PACKAGE_VARIANT }}
+          name: "kuzpkg-rpm-${{ matrix.name }}-${{ env.PACKAGE_VARIANT }}"
           path: dist/*.rpm
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
 
+
+  # ============================================================
+  # RPM O3
+  # ============================================================
+
   rpm-o3:
-    name: .rpm O3 - ${{ matrix.name }}
+    name: ".rpm O3 - ${{ matrix.name }}"
     runs-on: ${{ matrix.runner }}
+
     env:
       PACKAGE_VARIANT: o3
-      O3_FLAG: -Denable-o3=true
+      O3_FLAG: "-Denable-o3=true"
+
     strategy:
       fail-fast: false
-      matrix: *fedora_matrix
-    steps: *fedora_steps
+      matrix: *fedora-matrix
 
-  pkg-tar-zst:
-    name: .pkg.tar.zst - Arch Linux
-    runs-on: ubuntu-24.04
-    env:
-      PACKAGE_VARIANT: normal
-      O3_FLAG: ''
-    steps: &arch_steps
+    steps:
+
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Prepare GitHub runner
+      - name: Prepare runner
         run: |
-          set -euo pipefail
+          set -euxo pipefail
+
           sudo apt-get update
-          sudo apt-get install -y ca-certificates
-          command -v docker >/dev/null
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          command -v docker
+          docker --version
+
+      - name: Build RPM O3
+        env:
+          FEDORA_IMAGE: ${{ matrix.image }}
+          TARGET_NAME: ${{ matrix.name }}
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
+            -e PACKAGE_VARIANT \
+            -e O3_FLAG \
+            -e TARGET_NAME \
+            -e TARGET_ARCH \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            "$FEDORA_IMAGE" \
+            bash -euxo pipefail -c '
+
+              dnf -y update
+
+              dnf -y install \
+                git \
+                gcc \
+                gcc-c++ \
+                meson \
+                ninja-build \
+                pkgconf \
+                zstd \
+                libarchive-devel \
+                libcurl-devel \
+                gpgme-devel \
+                openssl-devel \
+                nettle-devel \
+                libseccomp-devel \
+                file \
+                gettext \
+                rpm-build \
+                rpmdevtools
+
+              TAG="$(
+                git describe --tags --abbrev=0 2>/dev/null || true
+              )"
+
+              [ -n "$TAG" ] || TAG="0.0.0"
+
+              SAFE_TAG="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
+              )"
+
+              RPM_VERSION="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s/^v//; s/[^A-Za-z0-9._+]/./g"
+              )"
+
+              rm -rf \
+                build \
+                staging \
+                rpm-build \
+                dist
+
+              mkdir -p \
+                rpm-build/BUILD \
+                rpm-build/BUILDROOT \
+                rpm-build/RPMS \
+                rpm-build/SOURCES \
+                rpm-build/SPECS \
+                rpm-build/SRPMS \
+                dist
+
+              meson setup \
+                build \
+                --buildtype=release \
+                --prefix=/usr \
+                -Denable-o3=true
+
+              meson compile -C build
+
+              meson install \
+                -C build \
+                --destdir "$PWD/staging" \
+                --no-rebuild \
+                --strip
+
+              printf '%s\n' \
+                "Name:           kuzpkg" \
+                "Version:        ${RPM_VERSION}" \
+                "Release:        1%{?dist}" \
+                "Summary:        kuzpkg package manager" \
+                "License:        GPLv2+" \
+                "ExclusiveArch:  ${TARGET_ARCH}" \
+                "" \
+                "%description" \
+                "Package manager for Kuznix Linux (O3 build)." \
+                "" \
+                "%prep" \
+                "" \
+                "%build" \
+                "" \
+                "%install" \
+                "rm -rf %{buildroot}" \
+                "mkdir -p %{buildroot}" \
+                "cp -a /workspace/staging/. %{buildroot}/" \
+                "" \
+                "%files" \
+                "/usr/*" \
+                "%config(noreplace) /etc/kuzpkg.conf" \
+                "%config(noreplace) /etc/makepkg.conf" \
+                "%config(noreplace) /etc/makepkg.conf.d/fortran.conf" \
+                "%config(noreplace) /etc/makepkg.conf.d/rust.conf" \
+                "" \
+                "%changelog" \
+                "* $(date -u "+%a %b %d %Y") Kuznix Team - ${RPM_VERSION}-1" \
+                "- Daily Fedora O3 build" \
+                > rpm-build/SPECS/kuzpkg.spec
+
+              rpmbuild \
+                --define "_topdir /workspace/rpm-build" \
+                -bb \
+                rpm-build/SPECS/kuzpkg.spec
+
+              RPM_FILE="$(
+                find \
+                  rpm-build/RPMS \
+                  -type f \
+                  -name "*.rpm" |
+                head -n 1
+              )"
+
+              if [ -z "$RPM_FILE" ]; then
+                echo "ERROR: RPM was not produced"
+                find rpm-build/RPMS -type f -print
+                exit 1
+              fi
+
+              OUTPUT="dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}-o3.rpm"
+
+              cp \
+                "$RPM_FILE" \
+                "$OUTPUT"
+
+              rpm \
+                -qip \
+                "$RPM_FILE"
+            '
+
+      - name: Upload RPM O3
+        uses: actions/upload-artifact@v4
+        with:
+          name: "kuzpkg-rpm-${{ matrix.name }}-o3"
+          path: dist/*-o3.rpm
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+
+  # ============================================================
+  # ARCH .PKG.TAR.ZST
+  # ============================================================
+
+  pkg-tar-zst:
+    name: ".pkg.tar.zst - Arch Linux"
+    runs-on: ubuntu-24.04
+
+    env:
+      PACKAGE_VARIANT: normal
+      O3_FLAG: ""
+
+    steps:
+
+      - name: Checkout kuzpkg
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Prepare runner
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          command -v docker
           docker --version
 
       - name: Build Arch package
         run: |
           set -euxo pipefail
-          docker run --rm \
+
+          docker run \
+            --rm \
             -e PACKAGE_VARIANT \
             -e O3_FLAG \
             -v "$PWD:/workspace" \
             -w /workspace \
             archlinux:latest \
             bash -euxo pipefail -c '
+
               pacman -Syu --noconfirm
+
               pacman -S --noconfirm --needed \
-                base-devel git meson ninja pkgconf zstd libarchive \
-                curl gpgme openssl nettle libseccomp file gettext
+                base-devel \
+                git \
+                meson \
+                ninja \
+                pkgconf \
+                zstd \
+                libarchive \
+                curl \
+                gpgme \
+                openssl \
+                nettle \
+                libseccomp \
+                file \
+                gettext
 
-              tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-              [ -n "$tag" ] || tag='0.0.0'
-              ver="$(printf "%s" "$tag" | sed "s/^v//; s/[^A-Za-z0-9._+]/./g")"
+              TAG="$(
+                git describe --tags --abbrev=0 2>/dev/null || true
+              )"
 
-              rm -rf build dist
-              mkdir -p dist
+              [ -n "$TAG" ] || TAG="0.0.0"
 
-              meson_arg=''
-              if [ "$PACKAGE_VARIANT" = 'o3' ]; then meson_arg='-Denable-o3=true'; fi
+              VERSION="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s/^v//; s/[^A-Za-z0-9._+]/./g"
+              )"
 
-              cat > PKGBUILD <<EOF
-              pkgname=kuzpkg
-              pkgver=${ver}
-              pkgrel=1
-              pkgdesc="kuzpkg package manager"
-              arch=(x86_64)
-              license=(GPL)
-              depends=(bash libarchive curl gpgme openssl nettle libseccomp)
+              rm -rf \
+                build \
+                package-build \
+                dist
 
-              build() {
-                  meson setup build --buildtype=release --prefix=/usr ${meson_arg}
-                  meson compile -C build
-              }
+              mkdir -p \
+                dist \
+                package-build
 
-              package() {
-                  meson install -C build --destdir "\$pkgdir" --no-rebuild --strip
-              }
-              EOF
+              if [ "$PACKAGE_VARIANT" = "o3" ]; then
+                MESON_FLAG="-Denable-o3=true"
+              else
+                MESON_FLAG=""
+              fi
 
-              useradd -m builder
-              chown -R builder:builder /workspace
-              su builder -c "cd /workspace && makepkg --syncdeps --noconfirm --cleanbuild --clean"
-              chown -R root:root /workspace
+              if [ -n "$MESON_FLAG" ]; then
 
-              pkg="$(find /workspace -maxdepth 1 -type f -name 'kuzpkg-*.pkg.tar.zst' | head -n1)"
-              test -n "$pkg"
-              suffix=''
-              if [ "$PACKAGE_VARIANT" = 'o3' ]; then suffix='-o3'; fi
-              base="$(basename "$pkg" .pkg.tar.zst)"
-              cp "$pkg" "dist/${base}${suffix}.pkg.tar.zst"
-              tar -tf "dist/${base}${suffix}.pkg.tar.zst" >/dev/null
+                printf "%s\n" \
+                  "pkgname=kuzpkg" \
+                  "pkgver=${VERSION}" \
+                  "pkgrel=1" \
+                  "pkgdesc=\"kuzpkg package manager\"" \
+                  "arch=(x86_64)" \
+                  "license=(GPL)" \
+                  "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
+                  "" \
+                  "build() {" \
+                  "    meson setup build --buildtype=release --prefix=/usr ${MESON_FLAG}" \
+                  "    meson compile -C build" \
+                  "}" \
+                  "" \
+                  "package() {" \
+                  "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
+                  "}" \
+                  > package-build/PKGBUILD
+
+              else
+
+                printf "%s\n" \
+                  "pkgname=kuzpkg" \
+                  "pkgver=${VERSION}" \
+                  "pkgrel=1" \
+                  "pkgdesc=\"kuzpkg package manager\"" \
+                  "arch=(x86_64)" \
+                  "license=(GPL)" \
+                  "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
+                  "" \
+                  "build() {" \
+                  "    meson setup build --buildtype=release --prefix=/usr" \
+                  "    meson compile -C build" \
+                  "}" \
+                  "" \
+                  "package() {" \
+                  "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
+                  "}" \
+                  > package-build/PKGBUILD
+
+              fi
+
+              useradd \
+                -m \
+                builder
+
+              chown \
+                -R \
+                builder:builder \
+                /workspace
+
+              su builder -c '
+                cd /workspace/package-build
+
+                makepkg \
+                  --syncdeps \
+                  --noconfirm \
+                  --cleanbuild \
+                  --clean
+              '
+
+              chown \
+                -R \
+                root:root \
+                /workspace
+
+              PKG_FILE="$(
+                find \
+                  package-build \
+                  -maxdepth 1 \
+                  -type f \
+                  -name "kuzpkg-*.pkg.tar.zst" |
+                head -n 1
+              )"
+
+              if [ -z "$PKG_FILE" ]; then
+                echo "ERROR: Arch package was not produced"
+                find package-build -maxdepth 1 -type f -print
+                exit 1
+              fi
+
+              BASE="$(
+                basename \
+                  "$PKG_FILE" \
+                  ".pkg.tar.zst"
+              )"
+
+              cp \
+                "$PKG_FILE" \
+                "dist/${BASE}.pkg.tar.zst"
+
+              test \
+                -f \
+                "dist/${BASE}.pkg.tar.zst"
+
+              tar \
+                -tf \
+                "dist/${BASE}.pkg.tar.zst" \
+                >/dev/null
             '
 
-      - name: Upload Arch artifact
+      - name: Upload Arch package
         uses: actions/upload-artifact@v4
         with:
-          name: kuzpkg-pkg-tar-zst-${{ env.PACKAGE_VARIANT }}
+          name: kuzpkg-pkg-tar-zst
           path: dist/*.pkg.tar.zst
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
 
+
+  # ============================================================
+  # ARCH .PKG.TAR.ZST O3
+  # ============================================================
+
   pkg-tar-zst-o3:
-    name: .pkg.tar.zst O3 - Arch Linux
+    name: ".pkg.tar.zst O3 - Arch Linux"
     runs-on: ubuntu-24.04
+
     env:
       PACKAGE_VARIANT: o3
-      O3_FLAG: -Denable-o3=true
-    steps: *arch_steps
+      O3_FLAG: "-Denable-o3=true"
 
-  kuzpkg-tar-zst:
-    name: .kuzpkg.tar.zst - Kuzpkg makepkg
-    runs-on: ubuntu-24.04
-    env:
-      PACKAGE_VARIANT: normal
-      O3_FLAG: ''
-    steps: &kuzpkg_steps
+    steps:
+
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Prepare GitHub runner
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y ca-certificates
-          command -v docker >/dev/null
-          docker --version
-
-      - name: Build with Kuzpkg makepkg from source
+      - name: Prepare runner
         run: |
           set -euxo pipefail
-          docker run --rm \
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          command -v docker
+          docker --version
+
+      - name: Build Arch O3 package
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
             -e PACKAGE_VARIANT \
             -e O3_FLAG \
             -v "$PWD:/workspace" \
             -w /workspace \
             archlinux:latest \
             bash -euxo pipefail -c '
+
               pacman -Syu --noconfirm
+
               pacman -S --noconfirm --needed \
-                base-devel git meson ninja pkgconf zstd libarchive \
-                curl gpgme openssl nettle libseccomp file gettext
+                base-devel \
+                git \
+                meson \
+                ninja \
+                pkgconf \
+                zstd \
+                libarchive \
+                curl \
+                gpgme \
+                openssl \
+                nettle \
+                libseccomp \
+                file \
+                gettext
 
-              tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-              [ -n "$tag" ] || tag='0.0.0'
-              ver="$(printf "%s" "$tag" | sed "s/^v//; s/[^A-Za-z0-9._+]/./g")"
+              TAG="$(
+                git describe --tags --abbrev=0 2>/dev/null || true
+              )"
 
-              rm -rf source-build package-build /tmp/kuzpkg-install dist
-              mkdir -p dist
+              [ -n "$TAG" ] || TAG="0.0.0"
 
-              meson_arg=''
-              if [ "$PACKAGE_VARIANT" = 'o3' ]; then meson_arg='-Denable-o3=true'; fi
+              VERSION="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s/^v//; s/[^A-Za-z0-9._+]/./g"
+              )"
 
-              meson setup source-build \
-                --buildtype=release \
-                --prefix=/tmp/kuzpkg-install/usr \
-                ${meson_arg}
+              rm -rf \
+                package-build \
+                dist
 
-              meson compile -C source-build
-              meson install -C source-build --no-rebuild --strip
+              mkdir -p \
+                package-build \
+                dist
 
-              test -x /tmp/kuzpkg-install/usr/bin/makepkg
-              test -d /tmp/kuzpkg-install/usr/share/makepkg
+              printf "%s\n" \
+                "pkgname=kuzpkg" \
+                "pkgver=${VERSION}" \
+                "pkgrel=1" \
+                "pkgdesc=\"kuzpkg package manager\"" \
+                "arch=(x86_64)" \
+                "license=(GPL)" \
+                "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
+                "" \
+                "build() {" \
+                "    meson setup build --buildtype=release --prefix=/usr -Denable-o3=true" \
+                "    meson compile -C build" \
+                "}" \
+                "" \
+                "package() {" \
+                "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
+                "}" \
+                > package-build/PKGBUILD
 
-              mkdir package-build
-              cd package-build
+              useradd \
+                -m \
+                builder
 
-              cat > PKGBUILD <<EOF
-              pkgname=kuzpkg
-              pkgver=${ver}
-              pkgrel=1
-              pkgdesc="kuzpkg package manager"
-              arch=(x86_64)
-              license=(GPL)
-              depends=(bash libarchive curl gpgme openssl nettle libseccomp)
+              chown \
+                -R \
+                builder:builder \
+                /workspace
 
-              build() {
-                  meson setup build --buildtype=release --prefix=/usr ${meson_arg}
-                  meson compile -C build
-              }
+              su builder -c '
+                cd /workspace/package-build
 
-              package() {
-                  meson install -C build --destdir "\$pkgdir" --no-rebuild --strip
-              }
-              EOF
+                makepkg \
+                  --syncdeps \
+                  --noconfirm \
+                  --cleanbuild \
+                  --clean
+              '
 
-              PATH=/tmp/kuzpkg-install/usr/bin:$PATH \
-              /tmp/kuzpkg-install/usr/bin/makepkg \
-                --syncdeps \
-                --noconfirm \
-                --cleanbuild \
-                --clean
+              chown \
+                -R \
+                root:root \
+                /workspace
 
-              pkg="$(find . -maxdepth 1 -type f -name 'kuzpkg-*.pkg.tar.zst' | head -n1)"
-              test -n "$pkg"
-              suffix=''
-              if [ "$PACKAGE_VARIANT" = 'o3' ]; then suffix='-o3'; fi
-              out="../dist/$(basename "$pkg" .pkg.tar.zst)${suffix}.kuzpkg.tar.zst"
-              cp "$pkg" "$out"
-              tar -tf "$out" >/dev/null
+              PKG_FILE="$(
+                find \
+                  package-build \
+                  -maxdepth 1 \
+                  -type f \
+                  -name "kuzpkg-*.pkg.tar.zst" |
+                head -n 1
+              )"
+
+              if [ -z "$PKG_FILE" ]; then
+                echo "ERROR: Arch O3 package was not produced"
+                find package-build -maxdepth 1 -type f -print
+                exit 1
+              fi
+
+              BASE="$(
+                basename \
+                  "$PKG_FILE" \
+                  ".pkg.tar.zst"
+              )"
+
+              cp \
+                "$PKG_FILE" \
+                "dist/${BASE}-o3.pkg.tar.zst"
+
+              tar \
+                -tf \
+                "dist/${BASE}-o3.pkg.tar.zst" \
+                >/dev/null
             '
 
-      - name: Upload Kuzpkg artifact
+      - name: Upload Arch O3 package
         uses: actions/upload-artifact@v4
         with:
-          name: kuzpkg-kuzpkg-tar-zst-${{ env.PACKAGE_VARIANT }}
+          name: kuzpkg-pkg-tar-zst-o3
+          path: dist/*-o3.pkg.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+
+  # ============================================================
+  # KUZPKG .KUZPKG.TAR.ZST
+  #
+  # Build makepkg from the current Kuzpkg source tree first,
+  # then use that freshly-built makepkg to package Kuzpkg.
+  # ==============================================================
+
+  kuzpkg-tar-zst:
+    name: ".kuzpkg.tar.zst - Kuzpkg makepkg"
+    runs-on: ubuntu-24.04
+
+    env:
+      PACKAGE_VARIANT: normal
+      O3_FLAG: ""
+
+    steps:
+
+      - name: Checkout kuzpkg
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Prepare runner
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          command -v docker
+          docker --version
+
+      - name: Build Kuzpkg and Kuzpkg makepkg
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
+            -e PACKAGE_VARIANT \
+            -e O3_FLAG \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            archlinux:latest \
+            bash -euxo pipefail -c '
+
+              pacman -Syu --noconfirm
+
+              pacman -S --noconfirm --needed \
+                base-devel \
+                git \
+                meson \
+                ninja \
+                pkgconf \
+                zstd \
+                libarchive \
+                curl \
+                gpgme \
+                openssl \
+                nettle \
+                libseccomp \
+                file \
+                gettext
+
+              # --------------------------------------------------
+              # Build Kuzpkg source normally.
+              # --------------------------------------------------
+
+              rm -rf \
+                source-build \
+                kuzpkg-install \
+                package-build \
+                dist
+
+              mkdir -p \
+                dist
+
+              meson setup \
+                source-build \
+                --buildtype=release \
+                --prefix=/usr
+
+              meson compile \
+                -C \
+                source-build
+
+              meson install \
+                -C \
+                source-build \
+                --destdir \
+                "$PWD/kuzpkg-install" \
+                --no-rebuild \
+                --strip
+
+              # --------------------------------------------------
+              # Verify Kuzpkg makepkg was installed.
+              # --------------------------------------------------
+
+              MAKEPKG_PATH="/workspace/kuzpkg-install/usr/bin/makepkg"
+
+              if [ ! -x "$MAKEPKG_PATH" ]; then
+                echo "ERROR: makepkg was not installed by Kuzpkg"
+                find /workspace/kuzpkg-install -type f -o -type l | sort
+                exit 1
+              fi
+
+              echo "Using Kuzpkg makepkg:"
+              "$MAKEPKG_PATH" --version || true
+
+              # --------------------------------------------------
+              # Create package definition.
+              # No heredoc.
+              # --------------------------------------------------
+
+              TAG="$(
+                git describe --tags --abbrev=0 2>/dev/null || true
+              )"
+
+              [ -n "$TAG" ] || TAG="0.0.0"
+
+              VERSION="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s/^v//; s/[^A-Za-z0-9._+]/./g"
+              )"
+
+              rm -rf \
+                package-build
+
+              mkdir -p \
+                package-build
+
+              printf "%s\n" \
+                "pkgname=kuzpkg" \
+                "pkgver=${VERSION}" \
+                "pkgrel=1" \
+                "pkgdesc=\"kuzpkg package manager\"" \
+                "arch=(x86_64)" \
+                "license=(GPL)" \
+                "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
+                "" \
+                "build() {" \
+                "    meson setup build --buildtype=release --prefix=/usr" \
+                "    meson compile -C build" \
+                "}" \
+                "" \
+                "package() {" \
+                "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
+                "}" \
+                > package-build/PKGBUILD
+
+              # --------------------------------------------------
+              # Run makepkg built from Kuzpkg source.
+              # --------------------------------------------------
+
+              useradd \
+                -m \
+                builder
+
+              chown \
+                -R \
+                builder:builder \
+                /workspace
+
+              su builder -c "
+                cd /workspace/package-build
+                PATH=/workspace/kuzpkg-install/usr/bin:\$PATH \
+                /workspace/kuzpkg-install/usr/bin/makepkg \
+                  --syncdeps \
+                  --noconfirm \
+                  --cleanbuild \
+                  --clean
+              "
+
+              chown \
+                -R \
+                root:root \
+                /workspace
+
+              # --------------------------------------------------
+              # Find package.
+              # --------------------------------------------------
+
+              PKG_FILE="$(
+                find \
+                  package-build \
+                  -maxdepth 1 \
+                  -type f \
+                  -name "kuzpkg-*.pkg.tar.zst" |
+                head -n 1
+              )"
+
+              if [ -z "$PKG_FILE" ]; then
+                echo "ERROR: Kuzpkg makepkg did not produce package"
+                find package-build -maxdepth 1 -type f -print
+                exit 1
+              fi
+
+              BASE="$(
+                basename \
+                  "$PKG_FILE" \
+                  ".pkg.tar.zst"
+              )"
+
+              cp \
+                "$PKG_FILE" \
+                "dist/${BASE}.kuzpkg.tar.zst"
+
+              tar \
+                -tf \
+                "dist/${BASE}.kuzpkg.tar.zst" \
+                >/dev/null
+
+              test \
+                -f \
+                "dist/${BASE}.kuzpkg.tar.zst"
+            '
+
+      - name: Upload Kuzpkg package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuzpkg-kuzpkg-tar-zst
           path: dist/*.kuzpkg.tar.zst
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
 
+
+  # ============================================================
+  # KUZPKG .KUZPKG.TAR.ZST O3
+  # ==============================================================
+
   kuzpkg-tar-zst-o3:
-    name: .kuzpkg.tar.zst O3 - Kuzpkg makepkg
+    name: ".kuzpkg.tar.zst O3 - Kuzpkg makepkg"
     runs-on: ubuntu-24.04
+
     env:
       PACKAGE_VARIANT: o3
-      O3_FLAG: -Denable-o3=true
-    steps: *kuzpkg_steps
+      O3_FLAG: "-Denable-o3=true"
+
+    steps:
+
+      - name: Checkout kuzpkg
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Prepare runner
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          command -v docker
+          docker --version
+
+      - name: Build Kuzpkg O3 and Kuzpkg makepkg O3
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
+            -e PACKAGE_VARIANT \
+            -e O3_FLAG \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            archlinux:latest \
+            bash -euxo pipefail -c '
+
+              pacman -Syu --noconfirm
+
+              pacman -S --noconfirm --needed \
+                base-devel \
+                git \
+                meson \
+                ninja \
+                pkgconf \
+                zstd \
+                libarchive \
+                curl \
+                gpgme \
+                openssl \
+                nettle \
+                libseccomp \
+                file \
+                gettext
+
+              # --------------------------------------------------
+              # Build Kuzpkg source with O3.
+              # --------------------------------------------------
+
+              rm -rf \
+                source-build \
+                kuzpkg-install \
+                package-build \
+                dist
+
+              mkdir -p \
+                dist
+
+              meson setup \
+                source-build \
+                --buildtype=release \
+                --prefix=/usr \
+                -Denable-o3=true
+
+              meson compile \
+                -C \
+                source-build
+
+              meson install \
+                -C \
+                source-build \
+                --destdir \
+                "$PWD/kuzpkg-install" \
+                --no-rebuild \
+                --strip
+
+              MAKEPKG_PATH="/workspace/kuzpkg-install/usr/bin/makepkg"
+
+              if [ ! -x "$MAKEPKG_PATH" ]; then
+                echo "ERROR: O3 makepkg was not installed"
+                find /workspace/kuzpkg-install -type f -o -type l | sort
+                exit 1
+              fi
+
+              echo "Using O3 Kuzpkg makepkg:"
+              "$MAKEPKG_PATH" --version || true
+
+              # --------------------------------------------------
+              # Package definition.
+              # --------------------------------------------------
+
+              TAG="$(
+                git describe --tags --abbrev=0 2>/dev/null || true
+              )"
+
+              [ -n "$TAG" ] || TAG="0.0.0"
+
+              VERSION="$(
+                printf "%s" "$TAG" |
+                  sed \
+                    "s/^v//; s/[^A-Za-z0-9._+]/./g"
+              )"
+
+              rm -rf \
+                package-build
+
+              mkdir -p \
+                package-build
+
+              printf "%s\n" \
+                "pkgname=kuzpkg" \
+                "pkgver=${VERSION}" \
+                "pkgrel=1" \
+                "pkgdesc=\"kuzpkg package manager\"" \
+                "arch=(x86_64)" \
+                "license=(GPL)" \
+                "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
+                "" \
+                "build() {" \
+                "    meson setup build --buildtype=release --prefix=/usr -Denable-o3=true" \
+                "    meson compile -C build" \
+                "}" \
+                "" \
+                "package() {" \
+                "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
+                "}" \
+                > package-build/PKGBUILD
+
+              # --------------------------------------------------
+              # Use the O3 makepkg built from this Kuzpkg source.
+              # --------------------------------------------------
+
+              useradd \
+                -m \
+                builder
+
+              chown \
+                -R \
+                builder:builder \
+                /workspace
+
+              su builder -c "
+                cd /workspace/package-build
+                PATH=/workspace/kuzpkg-install/usr/bin:\$PATH \
+                /workspace/kuzpkg-install/usr/bin/makepkg \
+                  --syncdeps \
+                  --noconfirm \
+                  --cleanbuild \
+                  --clean
+              "
+
+              chown \
+                -R \
+                root:root \
+                /workspace
+
+              PKG_FILE="$(
+                find \
+                  package-build \
+                  -maxdepth 1 \
+                  -type f \
+                  -name "kuzpkg-*.pkg.tar.zst" |
+                head -n 1
+              )"
+
+              if [ -z "$PKG_FILE" ]; then
+                echo "ERROR: Kuzpkg O3 makepkg did not produce package"
+                find package-build -maxdepth 1 -type f -print
+                exit 1
+              fi
+
+              BASE="$(
+                basename \
+                  "$PKG_FILE" \
+                  ".pkg.tar.zst"
+              )"
+
+              cp \
+                "$PKG_FILE" \
+                "dist/${BASE}-o3.kuzpkg.tar.zst"
+
+              tar \
+                -tf \
+                "dist/${BASE}-o3.kuzpkg.tar.zst" \
+                >/dev/null
+
+              test \
+                -f \
+                "dist/${BASE}-o3.kuzpkg.tar.zst"
+            '
+
+      - name: Upload Kuzpkg O3 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuzpkg-kuzpkg-tar-zst-o3
+          path: dist/*-o3.kuzpkg.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
