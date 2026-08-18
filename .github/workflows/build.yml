@@ -1,6 +1,6 @@
 name: Build kuzpkg packages
 
-# Daily only: intentionally no push, pull_request, or manual triggers.
+# Once every day at 00:00 UTC. No push, PR, or manual trigger.
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -12,9 +12,6 @@ env:
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
-  # ============================================================
-  # .DEB MATRIX
-  # ============================================================
   deb:
     name: .deb - ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
@@ -96,24 +93,11 @@ jobs:
         if: matrix.mode == 'native'
         run: |
           set -euxo pipefail
-
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential \
-            meson \
-            ninja-build \
-            pkg-config \
-            zstd \
-            libarchive-dev \
-            libcurl4-openssl-dev \
-            libgpgme-dev \
-            libssl-dev \
-            nettle-dev \
-            libseccomp-dev \
-            file \
-            gettext \
-            ca-certificates \
-            git
+            build-essential meson ninja-build pkg-config zstd \
+            libarchive-dev libcurl4-openssl-dev libgpgme-dev libssl-dev \
+            nettle-dev libseccomp-dev file gettext ca-certificates git
 
           tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
           [ -n "$tag" ] || tag='0.0.0'
@@ -149,7 +133,9 @@ jobs:
            Package manager for Kuznix Linux (${PACKAGE_VARIANT} build).
           EOF
 
-          deb_file="dist/kuzpkg-${safe_tag}-${{ matrix.name }}${PACKAGE_VARIANT == 'o3' && '-o3' || ''}.deb"
+          suffix=''
+          if [ "$PACKAGE_VARIANT" = 'o3' ]; then suffix='-o3'; fi
+          deb_file="dist/kuzpkg-${safe_tag}-${{ matrix.name }}${suffix}.deb"
           dpkg-deb --build --root-owner-group deb-root "$deb_file"
           dpkg-deb --info "$deb_file"
 
@@ -159,7 +145,6 @@ jobs:
           DEBIAN_IMAGE: ${{ matrix.image }}
         run: |
           set -euxo pipefail
-
           docker run --rm \
             -e PACKAGE_VARIANT \
             -e O3_FLAG \
@@ -169,21 +154,9 @@ jobs:
             bash -euxo pipefail -c '
               apt-get update
               apt-get install -y \
-                build-essential \
-                meson \
-                ninja-build \
-                pkg-config \
-                zstd \
-                libarchive-dev \
-                libcurl4-openssl-dev \
-                libgpgme-dev \
-                libssl-dev \
-                nettle-dev \
-                libseccomp-dev \
-                file \
-                gettext \
-                ca-certificates \
-                git
+                build-essential meson ninja-build pkg-config zstd \
+                libarchive-dev libcurl4-openssl-dev libgpgme-dev libssl-dev \
+                nettle-dev libseccomp-dev file gettext ca-certificates git
 
               tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
               [ -n "$tag" ] || tag="0.0.0"
@@ -246,10 +219,6 @@ jobs:
       matrix: *debian_matrix
     steps: *debian_steps
 
-  # ============================================================
-  # .RPM MATRIX
-  # Fedora 43 / 44 / Rawhide, x86_64 + native arm64.
-  # ============================================================
   rpm:
     name: .rpm - ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
@@ -293,12 +262,11 @@ jobs:
           command -v docker >/dev/null
           docker --version
 
-      - name: Build RPM in native Fedora container
+      - name: Build RPM in Fedora container
         env:
           FEDORA_IMAGE: ${{ matrix.image }}
         run: |
           set -euxo pipefail
-
           docker run --rm \
             -e PACKAGE_VARIANT \
             -e O3_FLAG \
@@ -308,26 +276,12 @@ jobs:
             bash -euxo pipefail -c '
               dnf -y update
               dnf -y install \
-                git \
-                gcc \
-                gcc-c++ \
-                meson \
-                ninja-build \
-                pkgconf \
-                zstd \
-                libarchive-devel \
-                libcurl-devel \
-                gpgme-devel \
-                openssl-devel \
-                nettle-devel \
-                libseccomp-devel \
-                file \
-                gettext \
-                rpm-build \
-                rpmdevtools
+                git gcc gcc-c++ meson ninja-build pkgconf zstd \
+                libarchive-devel libcurl-devel gpgme-devel openssl-devel \
+                nettle-devel libseccomp-devel file gettext rpm-build rpmdevtools
 
               tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-              [ -n "$tag" ] || tag='0.0.0'
+              [ -n "$tag" ] || tag="0.0.0"
               safe_tag="$(printf "%s" "$tag" | sed "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g")"
               rpm_version="$(printf "%s" "$tag" | sed "s/^v//; s/[^A-Za-z0-9._+]/./g")"
 
@@ -375,7 +329,6 @@ jobs:
               EOF
 
               rpmbuild --define "_topdir /workspace/rpm-build" -bb rpm-build/SPECS/kuzpkg.spec
-
               rpm_file="$(find rpm-build/RPMS -type f -name "*.rpm" | head -n1)"
               test -n "$rpm_file"
               suffix=''
@@ -404,10 +357,6 @@ jobs:
       matrix: *fedora_matrix
     steps: *fedora_steps
 
-  # ============================================================
-  # ARCH .PKG.TAR.ZST
-  # x86_64 build, normal and O3 as separate jobs.
-  # ============================================================
   pkg-tar-zst:
     name: .pkg.tar.zst - Arch Linux
     runs-on: ubuntu-24.04
@@ -432,7 +381,6 @@ jobs:
       - name: Build Arch package
         run: |
           set -euxo pipefail
-
           docker run --rm \
             -e PACKAGE_VARIANT \
             -e O3_FLAG \
@@ -442,20 +390,8 @@ jobs:
             bash -euxo pipefail -c '
               pacman -Syu --noconfirm
               pacman -S --noconfirm --needed \
-                base-devel \
-                git \
-                meson \
-                ninja \
-                pkgconf \
-                zstd \
-                libarchive \
-                curl \
-                gpgme \
-                openssl \
-                nettle \
-                libseccomp \
-                file \
-                gettext
+                base-devel git meson ninja pkgconf zstd libarchive \
+                curl gpgme openssl nettle libseccomp file gettext
 
               tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
               [ -n "$tag" ] || tag='0.0.0'
@@ -463,6 +399,9 @@ jobs:
 
               rm -rf build dist
               mkdir -p dist
+
+              meson_arg=''
+              if [ "$PACKAGE_VARIANT" = 'o3' ]; then meson_arg='-Denable-o3=true'; fi
 
               cat > PKGBUILD <<EOF
               pkgname=kuzpkg
@@ -474,11 +413,7 @@ jobs:
               depends=(bash libarchive curl gpgme openssl nettle libseccomp)
 
               build() {
-                  if [ -n "\$O3_FLAG" ]; then
-                      meson setup build --buildtype=release --prefix=/usr "\$O3_FLAG"
-                  else
-                      meson setup build --buildtype=release --prefix=/usr
-                  fi
+                  meson setup build --buildtype=release --prefix=/usr ${meson_arg}
                   meson compile -C build
               }
 
@@ -501,7 +436,7 @@ jobs:
               tar -tf "dist/${base}${suffix}.pkg.tar.zst" >/dev/null
             '
 
-      - name: Upload Arch package
+      - name: Upload Arch artifact
         uses: actions/upload-artifact@v4
         with:
           name: kuzpkg-pkg-tar-zst-${{ env.PACKAGE_VARIANT }}
@@ -518,11 +453,6 @@ jobs:
       O3_FLAG: -Denable-o3=true
     steps: *arch_steps
 
-  # ============================================================
-  # .KUZPKG.TAR.ZST
-  # Build kuzpkg first, then use the freshly built makepkg from
-  # that exact source tree to build the package.
-  # ============================================================
   kuzpkg-tar-zst:
     name: .kuzpkg.tar.zst - Kuzpkg makepkg
     runs-on: ubuntu-24.04
@@ -544,10 +474,9 @@ jobs:
           command -v docker >/dev/null
           docker --version
 
-      - name: Build and package with Kuzpkg makepkg
+      - name: Build with Kuzpkg makepkg from source
         run: |
           set -euxo pipefail
-
           docker run --rm \
             -e PACKAGE_VARIANT \
             -e O3_FLAG \
@@ -557,20 +486,8 @@ jobs:
             bash -euxo pipefail -c '
               pacman -Syu --noconfirm
               pacman -S --noconfirm --needed \
-                base-devel \
-                git \
-                meson \
-                ninja \
-                pkgconf \
-                zstd \
-                libarchive \
-                curl \
-                gpgme \
-                openssl \
-                nettle \
-                libseccomp \
-                file \
-                gettext
+                base-devel git meson ninja pkgconf zstd libarchive \
+                curl gpgme openssl nettle libseccomp file gettext
 
               tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
               [ -n "$tag" ] || tag='0.0.0'
@@ -579,11 +496,13 @@ jobs:
               rm -rf source-build package-build /tmp/kuzpkg-install dist
               mkdir -p dist
 
-              if [ -n "$O3_FLAG" ]; then
-                meson setup source-build --buildtype=release --prefix=/tmp/kuzpkg-install/usr "$O3_FLAG"
-              else
-                meson setup source-build --buildtype=release --prefix=/tmp/kuzpkg-install/usr
-              fi
+              meson_arg=''
+              if [ "$PACKAGE_VARIANT" = 'o3' ]; then meson_arg='-Denable-o3=true'; fi
+
+              meson setup source-build \
+                --buildtype=release \
+                --prefix=/tmp/kuzpkg-install/usr \
+                ${meson_arg}
 
               meson compile -C source-build
               meson install -C source-build --no-rebuild --strip
@@ -604,11 +523,7 @@ jobs:
               depends=(bash libarchive curl gpgme openssl nettle libseccomp)
 
               build() {
-                  if [ -n "\$O3_FLAG" ]; then
-                      meson setup build --buildtype=release --prefix=/usr "\$O3_FLAG"
-                  else
-                      meson setup build --buildtype=release --prefix=/usr
-                  fi
+                  meson setup build --buildtype=release --prefix=/usr ${meson_arg}
                   meson compile -C build
               }
 
@@ -633,7 +548,7 @@ jobs:
               tar -tf "$out" >/dev/null
             '
 
-      - name: Upload Kuzpkg package
+      - name: Upload Kuzpkg artifact
         uses: actions/upload-artifact@v4
         with:
           name: kuzpkg-kuzpkg-tar-zst-${{ env.PACKAGE_VARIANT }}
