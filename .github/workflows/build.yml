@@ -12,11 +12,23 @@ permissions:
 env:
   DEBIAN_FRONTEND: noninteractive
 
-
 jobs:
 
   # ==========================================================
-  # DEB
+  # .DEB
+  #
+  # Native:
+  #   Ubuntu 26.04 x86_64
+  #   Ubuntu 26.04 ARM64
+  #   Debian unstable x86_64
+  #   Debian unstable ARM64
+  #
+  # Generic Ubuntu 26.04 Docker:
+  #   x86_64
+  #   ARM64
+  #   PPC64LE
+  #   RISC-V64
+  #   S390X
   # ==========================================================
 
   deb:
@@ -85,20 +97,12 @@ jobs:
             platform: linux/riscv64
             arch: riscv64
 
-          - name: generic-armv7
-            runner: ubuntu-26.04
-            mode: docker
-            image: arm32v7/ubuntu:26.04
-            platform: linux/arm/v7
-            arch: armhf
-
           - name: generic-s390x
             runner: ubuntu-26.04
             mode: docker
             image: s390x/ubuntu:26.04
             platform: linux/s390x
             arch: s390x
-
 
     steps:
 
@@ -107,7 +111,6 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-
 
       - name: Determine version
         id: version
@@ -155,13 +158,11 @@ jobs:
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
 
-
       - name: Set up QEMU
         if: matrix.mode == 'docker'
         uses: docker/setup-qemu-action@v4
         with:
           platforms: all
-
 
       - name: Install native dependencies
         if: matrix.mode == 'native'
@@ -188,7 +189,6 @@ jobs:
             git \
             dpkg-dev
 
-
       - name: Prepare Docker runner
         if: matrix.mode == 'docker'
         run: |
@@ -200,7 +200,6 @@ jobs:
             ca-certificates
 
           docker --version
-
 
       - name: Verify Docker architecture
         if: matrix.mode == 'docker'
@@ -215,7 +214,6 @@ jobs:
             --platform "$PLATFORM" \
             "$IMAGE" \
             uname -m
-
 
       - name: Build native .deb
         if: matrix.mode == 'native'
@@ -255,32 +253,8 @@ jobs:
             --strip
 
           cp -a \
-            staging/usr/. \
-            deb-root/usr/
-
-          if [ -d staging/etc ]; then
-            mkdir -p deb-root/etc
-
-            cp -a \
-              staging/etc/. \
-              deb-root/etc/
-          fi
-
-          if [ -d staging/var ]; then
-            mkdir -p deb-root/var
-
-            cp -a \
-              staging/var/. \
-              deb-root/var/
-          fi
-
-          if [ -d staging/usr/share ]; then
-            mkdir -p deb-root/usr/share
-
-            cp -a \
-              staging/usr/share/. \
-              deb-root/usr/share/
-          fi
+            staging/. \
+            deb-root/
 
           printf '%s\n' \
             "Package: kuzpkg" \
@@ -310,7 +284,6 @@ jobs:
             "$DEB_FILE"
 
           test -f "$DEB_FILE"
-
 
       - name: Build Docker .deb
         if: matrix.mode == 'docker'
@@ -369,7 +342,6 @@ jobs:
                 build \
                 staging \
                 deb-root/DEBIAN \
-                deb-root/usr \
                 dist
 
               meson setup \
@@ -387,24 +359,8 @@ jobs:
                 --strip
 
               cp -a \
-                staging/usr/. \
-                deb-root/usr/
-
-              if [ -d staging/etc ]; then
-                mkdir -p deb-root/etc
-
-                cp -a \
-                  staging/etc/. \
-                  deb-root/etc/
-              fi
-
-              if [ -d staging/var ]; then
-                mkdir -p deb-root/var
-
-                cp -a \
-                  staging/var/. \
-                  deb-root/var/
-              fi
+                staging/. \
+                deb-root/
 
               printf "%s\n" \
                 "Package: kuzpkg" \
@@ -436,7 +392,6 @@ jobs:
               test -f "$DEB_FILE"
             '
 
-
       - name: Upload .deb
         uses: actions/upload-artifact@v4
         with:
@@ -448,7 +403,14 @@ jobs:
 
 
   # ==========================================================
-  # RPM
+  # .RPM
+  #
+  # Generic Ubuntu 26.04 containers:
+  #   x86_64
+  #   ARM64
+  #   PPC64LE
+  #   RISC-V64
+  #   S390X
   # ==========================================================
 
   rpm:
@@ -481,16 +443,10 @@ jobs:
             platform: linux/riscv64
             rpm_arch: riscv64
 
-          - name: generic-armv7
-            image: arm32v7/ubuntu:26.04
-            platform: linux/arm/v7
-            rpm_arch: armv7hl
-
           - name: generic-s390x
             image: s390x/ubuntu:26.04
             platform: linux/s390x
             rpm_arch: s390x
-
 
     steps:
 
@@ -499,7 +455,6 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-
 
       - name: Determine version
         id: version
@@ -530,7 +485,6 @@ jobs:
 
           TAG_VERSION="${GIT_TAG#v}"
           DATE_VERSION="$(date -u +%Y%m%d)"
-
           PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
 
           RPM_VERSION="$(
@@ -552,12 +506,10 @@ jobs:
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
 
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
         with:
           platforms: all
-
 
       - name: Prepare runner
         run: |
@@ -569,7 +521,6 @@ jobs:
             ca-certificates
 
           docker --version
-
 
       - name: Verify Docker architecture
         env:
@@ -583,7 +534,6 @@ jobs:
             --platform "$PLATFORM" \
             "$IMAGE" \
             uname -m
-
 
       - name: Build RPM
         env:
@@ -728,7 +678,6 @@ jobs:
               test -f "$OUTPUT"
             '
 
-
       - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
@@ -747,6 +696,13 @@ jobs:
   # No makepkg.
   # No PKGBUILD.
   # No heredocs.
+  #
+  # Generic:
+  #   x86_64
+  #   ARM64
+  #   PPC64LE
+  #   RISC-V64
+  #   S390X
   # ==========================================================
 
   pkg-tar-zst:
@@ -779,16 +735,10 @@ jobs:
             platform: linux/riscv64
             arch: riscv64
 
-          - name: generic-armv7
-            image: arm32v7/ubuntu:26.04
-            platform: linux/arm/v7
-            arch: armv7
-
           - name: generic-s390x
             image: s390x/ubuntu:26.04
             platform: linux/s390x
             arch: s390x
-
 
     steps:
 
@@ -797,7 +747,6 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-
 
       - name: Determine version
         id: version
@@ -848,12 +797,10 @@ jobs:
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
 
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
         with:
           platforms: all
-
 
       - name: Prepare runner
         run: |
@@ -865,7 +812,6 @@ jobs:
             ca-certificates
 
           docker --version
-
 
       - name: Verify Docker architecture
         env:
@@ -879,7 +825,6 @@ jobs:
             --platform "$PLATFORM" \
             "$IMAGE" \
             uname -m
-
 
       - name: Build .pkg.tar.zst
         env:
@@ -1034,7 +979,6 @@ jobs:
               ls -lh "$OUTPUT"
             '
 
-
       - name: Verify .pkg.tar.zst
         run: |
           set -euxo pipefail
@@ -1056,7 +1000,6 @@ jobs:
 
           ls -lh "$PKG_FILE"
 
-
       - name: Upload .pkg.tar.zst
         uses: actions/upload-artifact@v4
         with:
@@ -1075,6 +1018,13 @@ jobs:
   # No makepkg.
   # No PKGBUILD.
   # No heredocs.
+  #
+  # Generic:
+  #   x86_64
+  #   ARM64
+  #   PPC64LE
+  #   RISC-V64
+  #   S390X
   # ==========================================================
 
   kuzpkg-tar-zst:
@@ -1107,16 +1057,10 @@ jobs:
             platform: linux/riscv64
             arch: riscv64
 
-          - name: generic-armv7
-            image: arm32v7/ubuntu:26.04
-            platform: linux/arm/v7
-            arch: armv7
-
           - name: generic-s390x
             image: s390x/ubuntu:26.04
             platform: linux/s390x
             arch: s390x
-
 
     steps:
 
@@ -1125,7 +1069,6 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-
 
       - name: Determine version
         id: version
@@ -1177,12 +1120,10 @@ jobs:
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
 
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
         with:
           platforms: all
-
 
       - name: Prepare runner
         run: |
@@ -1194,7 +1135,6 @@ jobs:
             ca-certificates
 
           docker --version
-
 
       - name: Verify Docker architecture
         env:
@@ -1208,7 +1148,6 @@ jobs:
             --platform "$PLATFORM" \
             "$IMAGE" \
             uname -m
-
 
       - name: Build .kuzpkg.tar.zst
         env:
@@ -1363,7 +1302,6 @@ jobs:
               ls -lh "$OUTPUT"
             '
 
-
       - name: Verify .kuzpkg.tar.zst
         run: |
           set -euxo pipefail
@@ -1384,7 +1322,6 @@ jobs:
           fi
 
           ls -lh "$PKG_FILE"
-
 
       - name: Upload .kuzpkg.tar.zst
         uses: actions/upload-artifact@v4
