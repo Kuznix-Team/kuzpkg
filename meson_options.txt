@@ -3,6 +3,8 @@ option('use-git-version', type : 'boolean', value : false,
        description : 'take version information from git')
 option('buildstatic', type : 'boolean', value : false,
        description : 'if true, build statically linked binaries')
+option('enable-o3', type : 'boolean', value : false,
+       description : 'enable -O3 optimization instead of the default -O2')
 
 # directories and filenames
 option('root-dir', type : 'string', value : '/',
