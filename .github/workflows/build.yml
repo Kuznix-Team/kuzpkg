@@ -12,57 +12,11 @@ permissions:
 env:
   DEBIAN_FRONTEND: noninteractive
 
-# ============================================================
-# PACKAGE TARGETS
-#
-# .deb:
-#   Ubuntu 26.04 native x86_64
-#   Ubuntu 26.04 native ARM64
-#   Debian unstable x86_64
-#   Debian unstable ARM64
-#   Generic Ubuntu 26.04 x86_64
-#   Generic Ubuntu 26.04 ARM64
-#   Generic Ubuntu 26.04 PPC64LE
-#   Generic Ubuntu 26.04 RISC-V64
-#   Generic Ubuntu 26.04 ARMv7
-#   Generic Ubuntu 26.04 S390X
-#
-# .rpm:
-#   Generic Ubuntu 26.04 x86_64
-#   Generic Ubuntu 26.04 ARM64
-#   Generic Ubuntu 26.04 PPC64LE
-#   Generic Ubuntu 26.04 RISC-V64
-#   Generic Ubuntu 26.04 ARMv7
-#   Generic Ubuntu 26.04 S390X
-#
-# .pkg.tar.zst:
-#   Generic Ubuntu 26.04 x86_64
-#   Generic Ubuntu 26.04 ARM64
-#   Generic Ubuntu 26.04 PPC64LE
-#   Generic Ubuntu 26.04 RISC-V64
-#   Generic Ubuntu 26.04 ARMv7
-#   Generic Ubuntu 26.04 S390X
-#
-# .kuzpkg.tar.zst:
-#   Generic Ubuntu 26.04 x86_64
-#   Generic Ubuntu 26.04 ARM64
-#   Generic Ubuntu 26.04 PPC64LE
-#   Generic Ubuntu 26.04 RISC-V64
-#   Generic Ubuntu 26.04 ARMv7
-#   Generic Ubuntu 26.04 S390X
-#
-# Generic foreign architectures use QEMU via:
-#   docker/setup-qemu-action@v4
-#
-# NO makepkg is used.
-# NO qemu-user-static APT package is used.
-# ============================================================
-
 
 jobs:
 
   # ==========================================================
-  # .DEB
+  # DEB
   # ==========================================================
 
   deb:
@@ -75,20 +29,12 @@ jobs:
       matrix:
         include:
 
-          # --------------------------------------------------
-          # Native Ubuntu 26.04 x86_64
-          # --------------------------------------------------
-
           - name: ubuntu-26.04
             runner: ubuntu-26.04
             mode: native
             image: ""
             platform: linux/amd64
             arch: amd64
-
-          # --------------------------------------------------
-          # Native Ubuntu 26.04 ARM64
-          # --------------------------------------------------
 
           - name: ubuntu-26.04-arm
             runner: ubuntu-26.04-arm
@@ -97,20 +43,12 @@ jobs:
             platform: linux/arm64
             arch: arm64
 
-          # --------------------------------------------------
-          # Debian unstable x86_64
-          # --------------------------------------------------
-
           - name: debian-unstable
             runner: ubuntu-26.04
             mode: docker
             image: debian:unstable
             platform: linux/amd64
             arch: amd64
-
-          # --------------------------------------------------
-          # Debian unstable ARM64
-          # --------------------------------------------------
 
           - name: debian-unstable-arm
             runner: ubuntu-26.04-arm
@@ -119,20 +57,12 @@ jobs:
             platform: linux/arm64
             arch: arm64
 
-          # --------------------------------------------------
-          # Generic Ubuntu 26.04 x86_64
-          # --------------------------------------------------
-
           - name: generic-amd64
             runner: ubuntu-26.04
             mode: docker
             image: ubuntu:26.04
             platform: linux/amd64
             arch: amd64
-
-          # --------------------------------------------------
-          # Generic Ubuntu 26.04 ARM64
-          # --------------------------------------------------
 
           - name: generic-arm64
             runner: ubuntu-26.04
@@ -141,20 +71,12 @@ jobs:
             platform: linux/arm64
             arch: arm64
 
-          # --------------------------------------------------
-          # Generic Ubuntu 26.04 PPC64LE
-          # --------------------------------------------------
-
           - name: generic-ppc64le
             runner: ubuntu-26.04
             mode: docker
             image: ppc64le/ubuntu:26.04
             platform: linux/ppc64le
             arch: ppc64el
-
-          # --------------------------------------------------
-          # Generic Ubuntu 26.04 RISC-V64
-          # --------------------------------------------------
 
           - name: generic-riscv64
             runner: ubuntu-26.04
@@ -163,20 +85,12 @@ jobs:
             platform: linux/riscv64
             arch: riscv64
 
-          # --------------------------------------------------
-          # Generic Ubuntu 26.04 ARMv7
-          # --------------------------------------------------
-
           - name: generic-armv7
             runner: ubuntu-26.04
             mode: docker
             image: arm32v7/ubuntu:26.04
             platform: linux/arm/v7
             arch: armhf
-
-          # --------------------------------------------------
-          # Generic Ubuntu 26.04 S390X
-          # --------------------------------------------------
 
           - name: generic-s390x
             runner: ubuntu-26.04
@@ -188,20 +102,12 @@ jobs:
 
     steps:
 
-      # ======================================================
-      # CHECKOUT
-      # ======================================================
-
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
 
-
-      # ======================================================
-      # VERSION
-      # ======================================================
 
       - name: Determine version
         id: version
@@ -232,11 +138,7 @@ jobs:
           fi
 
           TAG_VERSION="${GIT_TAG#v}"
-
-          DATE_VERSION="$(
-            date -u +%Y%m%d
-          )"
-
+          DATE_VERSION="$(date -u +%Y%m%d)"
           PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
 
           SAFE_TAG="$(
@@ -253,13 +155,6 @@ jobs:
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
 
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
-
-
-      # ======================================================
-      # QEMU
-      # ======================================================
 
       - name: Set up QEMU
         if: matrix.mode == 'docker'
@@ -267,10 +162,6 @@ jobs:
         with:
           platforms: all
 
-
-      # ======================================================
-      # NATIVE RUNNER DEPENDENCIES
-      # ======================================================
 
       - name: Install native dependencies
         if: matrix.mode == 'native'
@@ -298,11 +189,7 @@ jobs:
             dpkg-dev
 
 
-      # ======================================================
-      # DOCKER RUNNER DEPENDENCIES
-      # ======================================================
-
-      - name: Install Docker runner dependencies
+      - name: Prepare Docker runner
         if: matrix.mode == 'docker'
         run: |
           set -euxo pipefail
@@ -314,10 +201,6 @@ jobs:
 
           docker --version
 
-
-      # ======================================================
-      # VERIFY DOCKER ARCHITECTURE
-      # ======================================================
 
       - name: Verify Docker architecture
         if: matrix.mode == 'docker'
@@ -333,10 +216,6 @@ jobs:
             "$IMAGE" \
             uname -m
 
-
-      # ======================================================
-      # NATIVE DEB
-      # ======================================================
 
       - name: Build native .deb
         if: matrix.mode == 'native'
@@ -380,12 +259,27 @@ jobs:
             deb-root/usr/
 
           if [ -d staging/etc ]; then
-            mkdir -p \
-              deb-root/etc
+            mkdir -p deb-root/etc
 
             cp -a \
               staging/etc/. \
               deb-root/etc/
+          fi
+
+          if [ -d staging/var ]; then
+            mkdir -p deb-root/var
+
+            cp -a \
+              staging/var/. \
+              deb-root/var/
+          fi
+
+          if [ -d staging/usr/share ]; then
+            mkdir -p deb-root/usr/share
+
+            cp -a \
+              staging/usr/share/. \
+              deb-root/usr/share/
           fi
 
           printf '%s\n' \
@@ -415,14 +309,8 @@ jobs:
             --contents \
             "$DEB_FILE"
 
-          test \
-            -f \
-            "$DEB_FILE"
+          test -f "$DEB_FILE"
 
-
-      # ======================================================
-      # DOCKER DEB
-      # ======================================================
 
       - name: Build Docker .deb
         if: matrix.mode == 'docker'
@@ -503,12 +391,19 @@ jobs:
                 deb-root/usr/
 
               if [ -d staging/etc ]; then
-                mkdir -p \
-                  deb-root/etc
+                mkdir -p deb-root/etc
 
                 cp -a \
                   staging/etc/. \
                   deb-root/etc/
+              fi
+
+              if [ -d staging/var ]; then
+                mkdir -p deb-root/var
+
+                cp -a \
+                  staging/var/. \
+                  deb-root/var/
               fi
 
               printf "%s\n" \
@@ -538,15 +433,9 @@ jobs:
                 --contents \
                 "$DEB_FILE"
 
-              test \
-                -f \
-                "$DEB_FILE"
+              test -f "$DEB_FILE"
             '
 
-
-      # ======================================================
-      # UPLOAD DEB
-      # ======================================================
 
       - name: Upload .deb
         uses: actions/upload-artifact@v4
@@ -559,7 +448,7 @@ jobs:
 
 
   # ==========================================================
-  # .RPM
+  # RPM
   # ==========================================================
 
   rpm:
@@ -830,12 +719,13 @@ jobs:
                 "$RPM_FILE" \
                 "$OUTPUT"
 
-              rpm -qip "$RPM_FILE"
-              rpm -qlp "$RPM_FILE"
+              rpm -qip \
+                "$RPM_FILE"
 
-              test \
-                -f \
-                "$OUTPUT"
+              rpm -qlp \
+                "$RPM_FILE"
+
+              test -f "$OUTPUT"
             '
 
 
@@ -852,15 +742,11 @@ jobs:
   # ==========================================================
   # .PKG.TAR.ZST
   #
-  # NO makepkg.
+  # DIRECT PACKAGE CREATION
   #
-  # We directly create:
-  #
-  #   .PKGINFO
-  #   usr/...
-  #   etc/...
-  #
-  # and compress the whole staging directory with zstd.
+  # No makepkg.
+  # No PKGBUILD.
+  # No heredocs.
   # ==========================================================
 
   pkg-tar-zst:
@@ -941,10 +827,7 @@ jobs:
           fi
 
           TAG_VERSION="${GIT_TAG#v}"
-
-          DATE_VERSION="$(
-            date -u +%Y%m%d
-          )"
+          DATE_VERSION="$(date -u +%Y%m%d)"
 
           ARCH_TAG_VERSION="$(
             printf '%s' "$TAG_VERSION" |
@@ -961,7 +844,7 @@ jobs:
 
           {
             echo "git_tag=$GIT_TAG"
-            echo "arch_pkgver=$ARCH_PKGVER"
+            echo "pkgver=$ARCH_PKGVER"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
 
@@ -1004,7 +887,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
-          PKGVER: ${{ steps.version.outputs.arch_pkgver }}
+          PKGVER: ${{ steps.version.outputs.pkgver }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
@@ -1051,10 +934,6 @@ jobs:
               mkdir -p \
                 /tmp/pkg-root
 
-              # ------------------------------------------------
-              # Build
-              # ------------------------------------------------
-
               meson setup \
                 /tmp/kuzpkg-build \
                 --buildtype=release \
@@ -1063,55 +942,43 @@ jobs:
               meson compile \
                 -C /tmp/kuzpkg-build
 
-              # ------------------------------------------------
-              # Install into staging directory
-              # ------------------------------------------------
-
               meson install \
                 -C /tmp/kuzpkg-build \
                 --destdir /tmp/pkg-root \
                 --no-rebuild \
                 --strip
 
-              # ------------------------------------------------
-              # Basic validation
-              # ------------------------------------------------
-
               test \
                 -x \
                 /tmp/pkg-root/usr/bin/kuzpkg
 
-              # ------------------------------------------------
-              # Create .PKGINFO
-              # ------------------------------------------------
+              BUILD_DATE="$(date -u +%s)"
 
-              cat > /tmp/pkg-root/.PKGINFO <<PKGINFO
-              pkgname = kuzpkg
-              pkgbase = kuzpkg
-              pkgver = ${PKGVER}
-              pkgrel = 1
-              pkgdesc = kuzpkg package manager
-              arch = ${TARGET_ARCH}
-              license = GPL-2.0-or-later
-              packager = Kuznix Team
-              url = https://github.com/Kuznix-Team/kuzpkg
-              builddate = $(date -u +%s)
-              size = $(du -sb /tmp/pkg-root | awk "{print \$1}")
-              PKGINFO
+              PACKAGE_SIZE="$(
+                du -sb /tmp/pkg-root |
+                awk "{print \$1}"
+              )"
 
-              # ------------------------------------------------
-              # Optional package metadata
-              # ------------------------------------------------
+              printf "%s\n" \
+                "pkgname = kuzpkg" \
+                "pkgbase = kuzpkg" \
+                "pkgver = ${PKGVER}" \
+                "pkgrel = 1" \
+                "pkgdesc = kuzpkg package manager" \
+                "arch = ${TARGET_ARCH}" \
+                "license = GPL-2.0-or-later" \
+                "packager = Kuznix Team" \
+                "url = https://github.com/Kuznix-Team/kuzpkg" \
+                "builddate = ${BUILD_DATE}" \
+                "size = ${PACKAGE_SIZE}" \
+                > /tmp/pkg-root/.PKGINFO
 
-              cat > /tmp/pkg-root/.BUILDINFO <<BUILDINFO
-              builddate = $(date -u +%s)
-              builddir = /workspace
-              buildenv = kuzpkg-ci
-              BUILDINFO
-
-              # ------------------------------------------------
-              # File list for verification
-              # ------------------------------------------------
+              printf "%s\n" \
+                "builddate = ${BUILD_DATE}" \
+                "builddir = /workspace" \
+                "buildenv = kuzpkg-ci" \
+                "format = pkg.tar.zst" \
+                > /tmp/pkg-root/.BUILDINFO
 
               find \
                 /tmp/pkg-root \
@@ -1120,12 +987,6 @@ jobs:
                 -print \
                 | sort \
                 > /tmp/pkg-root/.FILELIST
-
-              # ------------------------------------------------
-              # Create package
-              #
-              # Archive root is the filesystem root.
-              # ------------------------------------------------
 
               OUTPUT="/workspace/dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}-${PKGVER}.pkg.tar.zst"
 
@@ -1143,10 +1004,6 @@ jobs:
                 -19 \
                 -o "$OUTPUT"
 
-              # ------------------------------------------------
-              # Verify
-              # ------------------------------------------------
-
               zstd \
                 -t \
                 "$OUTPUT"
@@ -1156,21 +1013,25 @@ jobs:
                 "$OUTPUT" |
               tar \
                 -tf - \
-                >/tmp/pkg-files.txt
+                > /tmp/package-files.txt
 
               grep \
                 -Fx \
                 "./.PKGINFO" \
-                /tmp/pkg-files.txt
+                /tmp/package-files.txt
+
+              grep \
+                -Fx \
+                "./.BUILDINFO" \
+                /tmp/package-files.txt
 
               grep \
                 -Fx \
                 "./usr/bin/kuzpkg" \
-                /tmp/pkg-files.txt
+                /tmp/package-files.txt
 
               echo "Created:"
-              ls -lh \
-                "$OUTPUT"
+              ls -lh "$OUTPUT"
             '
 
 
@@ -1187,12 +1048,13 @@ jobs:
             head -n 1
           )"
 
-          test \
-            -n \
-            "$PKG_FILE"
+          if [ -z "$PKG_FILE" ]; then
+            echo "ERROR: No .pkg.tar.zst artifact."
+            find dist -maxdepth 1 -type f -print
+            exit 1
+          fi
 
-          ls -lh \
-            "$PKG_FILE"
+          ls -lh "$PKG_FILE"
 
 
       - name: Upload .pkg.tar.zst
@@ -1208,12 +1070,11 @@ jobs:
   # ==========================================================
   # .KUZPKG.TAR.ZST
   #
-  # NO makepkg.
+  # DIRECT PACKAGE CREATION
   #
-  # Same direct archive method, but final format is:
-  #
-  #   kuzpkg-*.kuzpkg.tar.zst
-  #
+  # No makepkg.
+  # No PKGBUILD.
+  # No heredocs.
   # ==========================================================
 
   kuzpkg-tar-zst:
@@ -1295,10 +1156,7 @@ jobs:
           fi
 
           TAG_VERSION="${GIT_TAG#v}"
-
-          DATE_VERSION="$(
-            date -u +%Y%m%d
-          )"
+          DATE_VERSION="$(date -u +%Y%m%d)"
 
           ARCH_TAG_VERSION="$(
             printf '%s' "$TAG_VERSION" |
@@ -1315,7 +1173,7 @@ jobs:
 
           {
             echo "git_tag=$GIT_TAG"
-            echo "arch_pkgver=$ARCH_PKGVER"
+            echo "pkgver=$ARCH_PKGVER"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
 
@@ -1358,7 +1216,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
-          PKGVER: ${{ steps.version.outputs.arch_pkgver }}
+          PKGVER: ${{ steps.version.outputs.pkgver }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
@@ -1405,10 +1263,6 @@ jobs:
               mkdir -p \
                 /tmp/pkg-root
 
-              # ------------------------------------------------
-              # Build kuzpkg
-              # ------------------------------------------------
-
               meson setup \
                 /tmp/kuzpkg-build \
                 --buildtype=release \
@@ -1417,48 +1271,43 @@ jobs:
               meson compile \
                 -C /tmp/kuzpkg-build
 
-              # ------------------------------------------------
-              # Install into staging
-              # ------------------------------------------------
-
               meson install \
                 -C /tmp/kuzpkg-build \
                 --destdir /tmp/pkg-root \
                 --no-rebuild \
                 --strip
 
-              # ------------------------------------------------
-              # Verify executable
-              # ------------------------------------------------
-
               test \
                 -x \
                 /tmp/pkg-root/usr/bin/kuzpkg
 
-              # ------------------------------------------------
-              # Create package metadata
-              # ------------------------------------------------
+              BUILD_DATE="$(date -u +%s)"
 
-              cat > /tmp/pkg-root/.PKGINFO <<PKGINFO
-              pkgname = kuzpkg
-              pkgbase = kuzpkg
-              pkgver = ${PKGVER}
-              pkgrel = 1
-              pkgdesc = kuzpkg package manager
-              arch = ${TARGET_ARCH}
-              license = GPL-2.0-or-later
-              packager = Kuznix Team
-              url = https://github.com/Kuznix-Team/kuzpkg
-              builddate = $(date -u +%s)
-              size = $(du -sb /tmp/pkg-root | awk "{print \$1}")
-              PKGINFO
+              PACKAGE_SIZE="$(
+                du -sb /tmp/pkg-root |
+                awk "{print \$1}"
+              )"
 
-              cat > /tmp/pkg-root/.BUILDINFO <<BUILDINFO
-              builddate = $(date -u +%s)
-              builddir = /workspace
-              buildenv = kuzpkg-ci
-              format = kuzpkg-tar-zst
-              BUILDINFO
+              printf "%s\n" \
+                "pkgname = kuzpkg" \
+                "pkgbase = kuzpkg" \
+                "pkgver = ${PKGVER}" \
+                "pkgrel = 1" \
+                "pkgdesc = kuzpkg package manager" \
+                "arch = ${TARGET_ARCH}" \
+                "license = GPL-2.0-or-later" \
+                "packager = Kuznix Team" \
+                "url = https://github.com/Kuznix-Team/kuzpkg" \
+                "builddate = ${BUILD_DATE}" \
+                "size = ${PACKAGE_SIZE}" \
+                > /tmp/pkg-root/.PKGINFO
+
+              printf "%s\n" \
+                "builddate = ${BUILD_DATE}" \
+                "builddir = /workspace" \
+                "buildenv = kuzpkg-ci" \
+                "format = kuzpkg-tar-zst" \
+                > /tmp/pkg-root/.BUILDINFO
 
               find \
                 /tmp/pkg-root \
@@ -1467,10 +1316,6 @@ jobs:
                 -print \
                 | sort \
                 > /tmp/pkg-root/.FILELIST
-
-              # ------------------------------------------------
-              # Direct Kuzpkg archive
-              # ------------------------------------------------
 
               OUTPUT="/workspace/dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}-${PKGVER}.kuzpkg.tar.zst"
 
@@ -1488,10 +1333,6 @@ jobs:
                 -19 \
                 -o "$OUTPUT"
 
-              # ------------------------------------------------
-              # Verify compression
-              # ------------------------------------------------
-
               zstd \
                 -t \
                 "$OUTPUT"
@@ -1501,7 +1342,7 @@ jobs:
                 "$OUTPUT" |
               tar \
                 -tf - \
-                >/tmp/kuzpkg-files.txt
+                > /tmp/kuzpkg-files.txt
 
               grep \
                 -Fx \
@@ -1510,12 +1351,16 @@ jobs:
 
               grep \
                 -Fx \
+                "./.BUILDINFO" \
+                /tmp/kuzpkg-files.txt
+
+              grep \
+                -Fx \
                 "./usr/bin/kuzpkg" \
                 /tmp/kuzpkg-files.txt
 
               echo "Created:"
-              ls -lh \
-                "$OUTPUT"
+              ls -lh "$OUTPUT"
             '
 
 
@@ -1532,12 +1377,13 @@ jobs:
             head -n 1
           )"
 
-          test \
-            -n \
-            "$PKG_FILE"
+          if [ -z "$PKG_FILE" ]; then
+            echo "ERROR: No .kuzpkg.tar.zst artifact."
+            find dist -maxdepth 1 -type f -print
+            exit 1
+          fi
 
-          ls -lh \
-            "$PKG_FILE"
+          ls -lh "$PKG_FILE"
 
 
       - name: Upload .kuzpkg.tar.zst
