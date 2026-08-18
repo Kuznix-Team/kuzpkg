@@ -24,7 +24,6 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
         include:
 
@@ -105,37 +104,53 @@ jobs:
         run: |
           set -euxo pipefail
 
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          echo "Available tags:"
+          git tag --list
+
           GIT_TAG="$(
-            git describe \
-              --tags \
-              --abbrev=0 \
-              2>/dev/null || true
+            git tag \
+              --sort=-creatordate |
+            head -n 1
           )"
 
           if [ -z "$GIT_TAG" ]; then
+            GIT_TAG="$(
+              git describe \
+                --tags \
+                --abbrev=0 \
+                2>/dev/null || true
+            )"
+          fi
+
+          if [ -z "$GIT_TAG" ]; then
             echo "ERROR: Repository has no Git tag."
-            echo "A Git tag is required for package versioning."
-            git tag --list
             exit 1
           fi
 
           TAG_VERSION="${GIT_TAG#v}"
           DATE_VERSION="$(date -u +%Y%m%d)"
+
           PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
 
           SAFE_TAG="$(
             printf '%s' "$GIT_TAG" |
-              sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+              sed \
+                's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
-          echo "git_tag=$GIT_TAG" >> "$GITHUB_OUTPUT"
-          echo "tag_version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
-          echo "date_version=$DATE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "package_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
-
-          echo "Latest Git tag: $GIT_TAG"
+          echo "Git tag: $GIT_TAG"
           echo "Package version: $PACKAGE_VERSION"
+          echo "Date: $DATE_VERSION"
+
+          {
+            echo "git_tag=$GIT_TAG"
+            echo "tag_version=$TAG_VERSION"
+            echo "date_version=$DATE_VERSION"
+            echo "package_version=$PACKAGE_VERSION"
+            echo "safe_tag=$SAFE_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare runner
         run: |
@@ -176,20 +191,19 @@ jobs:
             ca-certificates \
             git
 
-      - name: Show package version
-        run: |
-          echo "Building kuzpkg ${{ steps.version.outputs.package_version }}"
-          echo "Git tag: ${{ steps.version.outputs.git_tag }}"
-
       - name: Build native .deb
         if: matrix.mode == 'native'
         env:
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
           PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
 
           rm -rf \
             build \
@@ -209,7 +223,8 @@ jobs:
             --buildtype=release \
             --prefix=/usr
 
-          meson compile -C build
+          meson compile \
+            -C build
 
           meson install \
             -C build \
@@ -223,7 +238,6 @@ jobs:
 
           if [ -d staging/etc ]; then
             mkdir -p deb-root/etc
-
             cp -a \
               staging/etc/. \
               deb-root/etc/
@@ -260,6 +274,7 @@ jobs:
           DEBIAN_IMAGE: ${{ matrix.image }}
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
           PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
@@ -267,6 +282,7 @@ jobs:
 
           docker run \
             --rm \
+            -e GIT_TAG \
             -e TARGET_NAME \
             -e TARGET_ARCH \
             -e PACKAGE_VERSION \
@@ -275,6 +291,11 @@ jobs:
             -w /workspace \
             "$DEBIAN_IMAGE" \
             bash -euxo pipefail -c '
+
+              git config --global --add safe.directory /workspace || true
+
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PACKAGE_VERSION}"
 
               apt-get update
 
@@ -314,7 +335,8 @@ jobs:
                 --buildtype=release \
                 --prefix=/usr
 
-              meson compile -C build
+              meson compile \
+                -C build
 
               meson install \
                 -C build \
@@ -363,7 +385,7 @@ jobs:
       - name: Upload .deb
         uses: actions/upload-artifact@v4
         with:
-          name: "kuzpkg-deb-${{ matrix.name }}"
+          name: kuzpkg-deb-${{ matrix.name }}
           path: dist/*.deb
           if-no-files-found: error
           compression-level: 0
@@ -461,12 +483,18 @@ jobs:
         run: |
           set -euxo pipefail
 
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
           GIT_TAG="$(
-            git describe \
-              --tags \
-              --abbrev=0 \
-              2>/dev/null || true
+            git tag --sort=-creatordate |
+            head -n 1
           )"
+
+          if [ -z "$GIT_TAG" ]; then
+            GIT_TAG="$(
+              git describe --tags --abbrev=0 2>/dev/null || true
+            )"
+          fi
 
           if [ -z "$GIT_TAG" ]; then
             echo "ERROR: Repository has no Git tag."
@@ -482,12 +510,14 @@ jobs:
               sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
-          echo "git_tag=$GIT_TAG" >> "$GITHUB_OUTPUT"
-          echo "package_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
-
-          echo "Latest Git tag: $GIT_TAG"
+          echo "Git tag: $GIT_TAG"
           echo "Package version: $PACKAGE_VERSION"
+
+          {
+            echo "git_tag=$GIT_TAG"
+            echo "package_version=$PACKAGE_VERSION"
+            echo "safe_tag=$SAFE_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare runner
         run: |
@@ -504,7 +534,7 @@ jobs:
             docker --version
           fi
 
-      - name: Install native O3 dependencies
+      - name: Install native O3 build dependencies
         if: matrix.mode == 'native'
         run: |
           set -euxo pipefail
@@ -533,6 +563,7 @@ jobs:
         env:
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
           PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
@@ -557,7 +588,8 @@ jobs:
             --prefix=/usr \
             -Denable-o3=true
 
-          meson compile -C build
+          meson compile \
+            -C build
 
           meson install \
             -C build \
@@ -599,6 +631,7 @@ jobs:
           DEBIAN_IMAGE: ${{ matrix.image }}
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
           PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
@@ -606,6 +639,7 @@ jobs:
 
           docker run \
             --rm \
+            -e GIT_TAG \
             -e TARGET_NAME \
             -e TARGET_ARCH \
             -e PACKAGE_VERSION \
@@ -614,6 +648,8 @@ jobs:
             -w /workspace \
             "$DEBIAN_IMAGE" \
             bash -euxo pipefail -c '
+
+              git config --global --add safe.directory /workspace || true
 
               apt-get update
 
@@ -635,11 +671,7 @@ jobs:
                 git \
                 dpkg-dev
 
-              rm -rf \
-                build \
-                staging \
-                deb-root \
-                dist
+              rm -rf build staging deb-root dist
 
               mkdir -p \
                 build \
@@ -694,7 +726,7 @@ jobs:
       - name: Upload .deb O3
         uses: actions/upload-artifact@v4
         with:
-          name: "kuzpkg-deb-${{ matrix.name }}-o3"
+          name: kuzpkg-deb-${{ matrix.name }}-o3
           path: dist/*-o3.deb
           if-no-files-found: error
           compression-level: 0
@@ -759,12 +791,18 @@ jobs:
         run: |
           set -euxo pipefail
 
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
           GIT_TAG="$(
-            git describe \
-              --tags \
-              --abbrev=0 \
-              2>/dev/null || true
+            git tag --sort=-creatordate |
+            head -n 1
           )"
+
+          if [ -z "$GIT_TAG" ]; then
+            GIT_TAG="$(
+              git describe --tags --abbrev=0 2>/dev/null || true
+            )"
+          fi
 
           if [ -z "$GIT_TAG" ]; then
             echo "ERROR: Repository has no Git tag."
@@ -773,19 +811,37 @@ jobs:
 
           TAG_VERSION="${GIT_TAG#v}"
           DATE_VERSION="$(date -u +%Y%m%d)"
+
           PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
+
+          # RPM does not allow '-' in Version.
+          # Example:
+          #   0.1.0-alpha-20260818
+          # becomes:
+          #   0.1.0~alpha.20260818
+
+          RPM_BASE="$(
+            printf '%s' "$TAG_VERSION" |
+              sed 's/-/~/g'
+          )"
+
+          RPM_VERSION="${RPM_BASE}.${DATE_VERSION}"
 
           SAFE_TAG="$(
             printf '%s' "$GIT_TAG" |
               sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
-          echo "git_tag=$GIT_TAG" >> "$GITHUB_OUTPUT"
-          echo "package_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
-
-          echo "Latest Git tag: $GIT_TAG"
+          echo "Git tag: $GIT_TAG"
           echo "Package version: $PACKAGE_VERSION"
+          echo "RPM version: $RPM_VERSION"
+
+          {
+            echo "git_tag=$GIT_TAG"
+            echo "package_version=$PACKAGE_VERSION"
+            echo "rpm_version=$RPM_VERSION"
+            echo "safe_tag=$SAFE_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare runner
         run: |
@@ -802,21 +858,27 @@ jobs:
           FEDORA_IMAGE: ${{ matrix.image }}
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
           PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
+          RPM_VERSION: ${{ steps.version.outputs.rpm_version }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
 
           docker run \
             --rm \
+            -e GIT_TAG \
             -e TARGET_NAME \
             -e TARGET_ARCH \
             -e PACKAGE_VERSION \
+            -e RPM_VERSION \
             -e SAFE_TAG \
             -v "$PWD:/workspace" \
             -w /workspace \
             "$FEDORA_IMAGE" \
             bash -euxo pipefail -c '
+
+              git config --global --add safe.directory /workspace || true
 
               dnf -y update
 
@@ -838,6 +900,10 @@ jobs:
                 gettext \
                 rpm-build \
                 rpmdevtools
+
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PACKAGE_VERSION}"
+              echo "RPM version: ${RPM_VERSION}"
 
               rm -rf \
                 build \
@@ -871,7 +937,7 @@ jobs:
 
               printf "%s\n" \
                 "Name:           kuzpkg" \
-                "Version:        ${PACKAGE_VERSION}" \
+                "Version:        ${RPM_VERSION}" \
                 "Release:        1%{?dist}" \
                 "Summary:        kuzpkg package manager" \
                 "License:        GPLv2+" \
@@ -897,7 +963,7 @@ jobs:
                 "%config(noreplace) /etc/makepkg.conf.d/rust.conf" \
                 "" \
                 "%changelog" \
-                "* $(date -u "+%a %b %d %Y") Kuznix Team - ${PACKAGE_VERSION}-1" \
+                "* $(date -u "+%a %b %d %Y") Kuznix Team - ${RPM_VERSION}-1" \
                 "- Daily Fedora build" \
                 > rpm-build/SPECS/kuzpkg.spec
 
@@ -915,7 +981,7 @@ jobs:
               )"
 
               if [ -z "$RPM_FILE" ]; then
-                echo "ERROR: RPM was not produced"
+                echo "ERROR: RPM was not produced."
                 find rpm-build/RPMS -type f -print
                 exit 1
               fi
@@ -934,7 +1000,7 @@ jobs:
       - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
-          name: "kuzpkg-rpm-${{ matrix.name }}"
+          name: kuzpkg-rpm-${{ matrix.name }}
           path: dist/*.rpm
           if-no-files-found: error
           compression-level: 0
@@ -999,12 +1065,18 @@ jobs:
         run: |
           set -euxo pipefail
 
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
           GIT_TAG="$(
-            git describe \
-              --tags \
-              --abbrev=0 \
-              2>/dev/null || true
+            git tag --sort=-creatordate |
+            head -n 1
           )"
+
+          if [ -z "$GIT_TAG" ]; then
+            GIT_TAG="$(
+              git describe --tags --abbrev=0 2>/dev/null || true
+            )"
+          fi
 
           if [ -z "$GIT_TAG" ]; then
             echo "ERROR: Repository has no Git tag."
@@ -1013,19 +1085,31 @@ jobs:
 
           TAG_VERSION="${GIT_TAG#v}"
           DATE_VERSION="$(date -u +%Y%m%d)"
+
           PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
+
+          RPM_BASE="$(
+            printf '%s' "$TAG_VERSION" |
+              sed 's/-/~/g'
+          )"
+
+          RPM_VERSION="${RPM_BASE}.${DATE_VERSION}"
 
           SAFE_TAG="$(
             printf '%s' "$GIT_TAG" |
               sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
-          echo "git_tag=$GIT_TAG" >> "$GITHUB_OUTPUT"
-          echo "package_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "safe_tag=$SAFE_TAG" >> "$GITHUB_OUTPUT"
-
-          echo "Latest Git tag: $GIT_TAG"
+          echo "Git tag: $GIT_TAG"
           echo "Package version: $PACKAGE_VERSION"
+          echo "RPM version: $RPM_VERSION"
+
+          {
+            echo "git_tag=$GIT_TAG"
+            echo "package_version=$PACKAGE_VERSION"
+            echo "rpm_version=$RPM_VERSION"
+            echo "safe_tag=$SAFE_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare runner
         run: |
@@ -1042,21 +1126,27 @@ jobs:
           FEDORA_IMAGE: ${{ matrix.image }}
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
           PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
+          RPM_VERSION: ${{ steps.version.outputs.rpm_version }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
 
           docker run \
             --rm \
+            -e GIT_TAG \
             -e TARGET_NAME \
             -e TARGET_ARCH \
             -e PACKAGE_VERSION \
+            -e RPM_VERSION \
             -e SAFE_TAG \
             -v "$PWD:/workspace" \
             -w /workspace \
             "$FEDORA_IMAGE" \
             bash -euxo pipefail -c '
+
+              git config --global --add safe.directory /workspace || true
 
               dnf -y update
 
@@ -1112,7 +1202,7 @@ jobs:
 
               printf "%s\n" \
                 "Name:           kuzpkg" \
-                "Version:        ${PACKAGE_VERSION}" \
+                "Version:        ${RPM_VERSION}" \
                 "Release:        1%{?dist}" \
                 "Summary:        kuzpkg package manager" \
                 "License:        GPLv2+" \
@@ -1138,7 +1228,7 @@ jobs:
                 "%config(noreplace) /etc/makepkg.conf.d/rust.conf" \
                 "" \
                 "%changelog" \
-                "* $(date -u "+%a %b %d %Y") Kuznix Team - ${PACKAGE_VERSION}-1" \
+                "* $(date -u "+%a %b %d %Y") Kuznix Team - ${RPM_VERSION}-1" \
                 "- Daily Fedora O3 build" \
                 > rpm-build/SPECS/kuzpkg.spec
 
@@ -1156,7 +1246,7 @@ jobs:
               )"
 
               if [ -z "$RPM_FILE" ]; then
-                echo "ERROR: RPM O3 was not produced"
+                echo "ERROR: RPM O3 was not produced."
                 find rpm-build/RPMS -type f -print
                 exit 1
               fi
@@ -1175,7 +1265,7 @@ jobs:
       - name: Upload RPM O3
         uses: actions/upload-artifact@v4
         with:
-          name: "kuzpkg-rpm-${{ matrix.name }}-o3"
+          name: kuzpkg-rpm-${{ matrix.name }}-o3
           path: dist/*-o3.rpm
           if-no-files-found: error
           compression-level: 0
@@ -1198,6 +1288,48 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          GIT_TAG="$(
+            git tag --sort=-creatordate |
+            head -n 1
+          )"
+
+          if [ -z "$GIT_TAG" ]; then
+            GIT_TAG="$(
+              git describe --tags --abbrev=0 2>/dev/null || true
+            )"
+          fi
+
+          if [ -z "$GIT_TAG" ]; then
+            echo "ERROR: Repository has no Git tag."
+            exit 1
+          fi
+
+          TAG_VERSION="${GIT_TAG#v}"
+          DATE_VERSION="$(date -u +%Y%m%d)"
+          PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
+
+          SAFE_TAG="$(
+            printf '%s' "$GIT_TAG" |
+              sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+          )"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
+
+          {
+            echo "git_tag=$GIT_TAG"
+            echo "package_version=$PACKAGE_VERSION"
+            echo "safe_tag=$SAFE_TAG"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Prepare runner
         run: |
           set -euxo pipefail
@@ -1209,15 +1341,24 @@ jobs:
           docker --version
 
       - name: Build Arch package
+        env:
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
+          SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
 
           docker run \
             --rm \
+            -e GIT_TAG \
+            -e PACKAGE_VERSION \
+            -e SAFE_TAG \
             -v "$PWD:/workspace" \
             -w /workspace \
             archlinux:latest \
             bash -euxo pipefail -c '
+
+              git config --global --add safe.directory /workspace || true
 
               pacman -Syu --noconfirm
 
@@ -1237,64 +1378,35 @@ jobs:
                 file \
                 gettext
 
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PACKAGE_VERSION}"
+
               rm -rf \
                 package-build \
-                dist
+                dist \
+                kuzpkg-source \
+                kuzpkg-source.tar.gz
 
               mkdir -p \
                 package-build \
-                dist
-
-              TAG="$(
-                git describe \
-                  --tags \
-                  --abbrev=0 \
-                  2>/dev/null || true
-              )"
-
-              if [ -z "$TAG" ]; then
-                echo "ERROR: Repository has no Git tag."
-                exit 1
-              fi
-
-              TAG_VERSION="${TAG#v}"
-              DATE_VERSION="$(date -u +%Y%m%d)"
-              PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
-
-              printf "%s\n" \
-                "pkgname=kuzpkg" \
-                "pkgver=${PACKAGE_VERSION}" \
-                "pkgrel=1" \
-                "pkgdesc=\"kuzpkg package manager\"" \
-                "arch=(x86_64)" \
-                "license=(GPL)" \
-                "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
-                "" \
-                "build() {" \
-                "    meson setup build --buildtype=release --prefix=/usr" \
-                "    meson compile -C build" \
-                "}" \
-                "" \
-                "package() {" \
-                "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
-                "}" \
-                > package-build/PKGBUILD
-
-              # The checked-out repository is mounted at /workspace.
-              # makepkg must have the source tree available.
+                dist \
+                kuzpkg-source
 
               cp -a \
-                /workspace \
-                /workspace/kuzpkg-source
+                /workspace/. \
+                kuzpkg-source/
 
               rm -rf \
-                /workspace/kuzpkg-source/.git \
-                /workspace/kuzpkg-source/package-build \
-                /workspace/kuzpkg-source/dist
+                kuzpkg-source/.git \
+                kuzpkg-source/package-build \
+                kuzpkg-source/dist \
+                kuzpkg-source/kuzpkg-source \
+                kuzpkg-source/kuzpkg-source.tar.gz
 
               tar \
                 -C /workspace \
-                -czf /workspace/kuzpkg-source.tar.gz \
+                -czf \
+                kuzpkg-source.tar.gz \
                 kuzpkg-source
 
               printf "%s\n" \
@@ -1321,18 +1433,14 @@ jobs:
                 > package-build/PKGBUILD
 
               cp \
-                /workspace/kuzpkg-source.tar.gz \
+                kuzpkg-source.tar.gz \
                 package-build/kuzpkg-source.tar.gz
 
               useradd -m builder
-
-              chown -R \
-                builder:builder \
-                /workspace
+              chown -R builder:builder /workspace
 
               su builder -c "
                 cd /workspace/package-build
-
                 makepkg \
                   --syncdeps \
                   --noconfirm \
@@ -1340,9 +1448,7 @@ jobs:
                   --clean
               "
 
-              chown -R \
-                root:root \
-                /workspace
+              chown -R root:root /workspace
 
               PKG_FILE="$(
                 find \
@@ -1359,13 +1465,15 @@ jobs:
                 exit 1
               fi
 
+              OUTPUT="dist/$(basename "$PKG_FILE")"
+
               cp \
                 "$PKG_FILE" \
-                "dist/$(basename "$PKG_FILE")"
+                "$OUTPUT"
 
               tar \
                 -tf \
-                "dist/$(basename "$PKG_FILE")" \
+                "$OUTPUT" \
                 >/dev/null
             '
 
@@ -1395,6 +1503,48 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          GIT_TAG="$(
+            git tag --sort=-creatordate |
+            head -n 1
+          )"
+
+          if [ -z "$GIT_TAG" ]; then
+            GIT_TAG="$(
+              git describe --tags --abbrev=0 2>/dev/null || true
+            )"
+          fi
+
+          if [ -z "$GIT_TAG" ]; then
+            echo "ERROR: Repository has no Git tag."
+            exit 1
+          fi
+
+          TAG_VERSION="${GIT_TAG#v}"
+          DATE_VERSION="$(date -u +%Y%m%d)"
+          PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
+
+          SAFE_TAG="$(
+            printf '%s' "$GIT_TAG" |
+              sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+          )"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
+
+          {
+            echo "git_tag=$GIT_TAG"
+            echo "package_version=$PACKAGE_VERSION"
+            echo "safe_tag=$SAFE_TAG"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Prepare runner
         run: |
           set -euxo pipefail
@@ -1406,15 +1556,24 @@ jobs:
           docker --version
 
       - name: Build Arch O3 package
+        env:
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
+          SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
 
           docker run \
             --rm \
+            -e GIT_TAG \
+            -e PACKAGE_VERSION \
+            -e SAFE_TAG \
             -v "$PWD:/workspace" \
             -w /workspace \
             archlinux:latest \
             bash -euxo pipefail -c '
+
+              git config --global --add safe.directory /workspace || true
 
               pacman -Syu --noconfirm
 
@@ -1436,40 +1595,30 @@ jobs:
 
               rm -rf \
                 package-build \
-                dist
+                dist \
+                kuzpkg-source \
+                kuzpkg-source.tar.gz
 
               mkdir -p \
                 package-build \
-                dist
-
-              TAG="$(
-                git describe \
-                  --tags \
-                  --abbrev=0 \
-                  2>/dev/null || true
-              )"
-
-              if [ -z "$TAG" ]; then
-                echo "ERROR: Repository has no Git tag."
-                exit 1
-              fi
-
-              TAG_VERSION="${TAG#v}"
-              DATE_VERSION="$(date -u +%Y%m%d)"
-              PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
+                dist \
+                kuzpkg-source
 
               cp -a \
-                /workspace \
-                /workspace/kuzpkg-source
+                /workspace/. \
+                kuzpkg-source/
 
               rm -rf \
-                /workspace/kuzpkg-source/.git \
-                /workspace/kuzpkg-source/package-build \
-                /workspace/kuzpkg-source/dist
+                kuzpkg-source/.git \
+                kuzpkg-source/package-build \
+                kuzpkg-source/dist \
+                kuzpkg-source/kuzpkg-source \
+                kuzpkg-source/kuzpkg-source.tar.gz
 
               tar \
                 -C /workspace \
-                -czf /workspace/kuzpkg-source.tar.gz \
+                -czf \
+                kuzpkg-source.tar.gz \
                 kuzpkg-source
 
               printf "%s\n" \
@@ -1496,18 +1645,14 @@ jobs:
                 > package-build/PKGBUILD
 
               cp \
-                /workspace/kuzpkg-source.tar.gz \
+                kuzpkg-source.tar.gz \
                 package-build/kuzpkg-source.tar.gz
 
               useradd -m builder
-
-              chown -R \
-                builder:builder \
-                /workspace
+              chown -R builder:builder /workspace
 
               su builder -c "
                 cd /workspace/package-build
-
                 makepkg \
                   --syncdeps \
                   --noconfirm \
@@ -1515,9 +1660,7 @@ jobs:
                   --clean
               "
 
-              chown -R \
-                root:root \
-                /workspace
+              chown -R root:root /workspace
 
               PKG_FILE="$(
                 find \
@@ -1564,10 +1707,6 @@ jobs:
 
   # ============================================================
   # .KUZPKG.TAR.ZST
-  #
-  # Build Kuzpkg first.
-  # Then use makepkg from that build.
-  # Version = GitTag-YYYYMMDD
   # ============================================================
 
   kuzpkg-tar-zst:
@@ -1582,6 +1721,48 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          GIT_TAG="$(
+            git tag --sort=-creatordate |
+            head -n 1
+          )"
+
+          if [ -z "$GIT_TAG" ]; then
+            GIT_TAG="$(
+              git describe --tags --abbrev=0 2>/dev/null || true
+            )"
+          fi
+
+          if [ -z "$GIT_TAG" ]; then
+            echo "ERROR: Repository has no Git tag."
+            exit 1
+          fi
+
+          TAG_VERSION="${GIT_TAG#v}"
+          DATE_VERSION="$(date -u +%Y%m%d)"
+          PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
+
+          SAFE_TAG="$(
+            printf '%s' "$GIT_TAG" |
+              sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+          )"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
+
+          {
+            echo "git_tag=$GIT_TAG"
+            echo "package_version=$PACKAGE_VERSION"
+            echo "safe_tag=$SAFE_TAG"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Prepare runner
         run: |
           set -euxo pipefail
@@ -1592,16 +1773,25 @@ jobs:
           command -v docker
           docker --version
 
-      - name: Build Kuzpkg makepkg
+      - name: Build Kuzpkg package
+        env:
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
+          SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
 
           docker run \
             --rm \
+            -e GIT_TAG \
+            -e PACKAGE_VERSION \
+            -e SAFE_TAG \
             -v "$PWD:/workspace" \
             -w /workspace \
             archlinux:latest \
             bash -euxo pipefail -c '
+
+              git config --global --add safe.directory /workspace || true
 
               pacman -Syu --noconfirm
 
@@ -1626,37 +1816,15 @@ jobs:
                 kuzpkg-install \
                 package-build \
                 dist \
-                kuzpkg-source
+                kuzpkg-source \
+                kuzpkg-source.tar.gz
 
               mkdir -p dist
 
-              # ------------------------------------------------
-              # Version
-              # ------------------------------------------------
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PACKAGE_VERSION}"
 
-              TAG="$(
-                git describe \
-                  --tags \
-                  --abbrev=0 \
-                  2>/dev/null || true
-              )"
-
-              if [ -z "$TAG" ]; then
-                echo "ERROR: Repository has no Git tag."
-                exit 1
-              fi
-
-              TAG_VERSION="${TAG#v}"
-              DATE_VERSION="$(date -u +%Y%m%d)"
-              PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
-
-              echo "Latest Git tag: $TAG"
-              echo "Package version: $PACKAGE_VERSION"
-
-              # ------------------------------------------------
-              # Build Kuzpkg from source.
-              # ------------------------------------------------
-
+              # Build Kuzpkg itself.
               meson setup \
                 source-build \
                 --buildtype=release \
@@ -1675,48 +1843,38 @@ jobs:
 
               if [ ! -x "$MAKEPKG_PATH" ]; then
                 echo "ERROR: source-built makepkg is missing."
-
                 find \
                   /workspace/kuzpkg-install \
                   -type f \
                   -o -type l
-
                 exit 1
               fi
 
-              echo "Source-built makepkg:"
               "$MAKEPKG_PATH" --version || true
 
-              # ------------------------------------------------
-              # Create source archive.
-              # ------------------------------------------------
+              # Make source archive.
+              mkdir -p kuzpkg-source
 
               cp -a \
-                /workspace \
-                /workspace/kuzpkg-source
+                /workspace/. \
+                kuzpkg-source/
 
               rm -rf \
-                /workspace/kuzpkg-source/.git \
-                /workspace/kuzpkg-source/source-build \
-                /workspace/kuzpkg-source/kuzpkg-install \
-                /workspace/kuzpkg-source/package-build \
-                /workspace/kuzpkg-source/dist \
-                /workspace/kuzpkg-source/kuzpkg-source
+                kuzpkg-source/.git \
+                kuzpkg-source/source-build \
+                kuzpkg-source/kuzpkg-install \
+                kuzpkg-source/package-build \
+                kuzpkg-source/dist \
+                kuzpkg-source/kuzpkg-source \
+                kuzpkg-source/kuzpkg-source.tar.gz
 
               tar \
                 -C /workspace \
-                -czf /workspace/kuzpkg-source.tar.gz \
+                -czf \
+                kuzpkg-source.tar.gz \
                 kuzpkg-source
 
-              test \
-                -f \
-                /workspace/kuzpkg-source.tar.gz
-
               mkdir -p package-build
-
-              # ------------------------------------------------
-              # PKGBUILD
-              # ------------------------------------------------
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -1742,21 +1900,11 @@ jobs:
                 > package-build/PKGBUILD
 
               cp \
-                /workspace/kuzpkg-source.tar.gz \
+                kuzpkg-source.tar.gz \
                 package-build/kuzpkg-source.tar.gz
 
-              useradd \
-                -m \
-                builder
-
-              chown \
-                -R \
-                builder:builder \
-                /workspace
-
-              # ------------------------------------------------
-              # Use the makepkg built from Kuzpkg.
-              # ------------------------------------------------
+              useradd -m builder
+              chown -R builder:builder /workspace
 
               su builder -c "
                 cd /workspace/package-build
@@ -1768,10 +1916,7 @@ jobs:
                   --clean
               "
 
-              chown \
-                -R \
-                root:root \
-                /workspace
+              chown -R root:root /workspace
 
               PKG_FILE="$(
                 find \
@@ -1784,13 +1929,11 @@ jobs:
 
               if [ -z "$PKG_FILE" ]; then
                 echo "ERROR: Kuzpkg makepkg generated no package."
-
                 find \
                   package-build \
                   -maxdepth 1 \
                   -type f \
                   -print
-
                 exit 1
               fi
 
@@ -1811,12 +1954,7 @@ jobs:
                 "$OUTPUT" \
                 >/dev/null
 
-              test \
-                -f \
-                "$OUTPUT"
-
-              echo "Created:"
-              ls -lh "$OUTPUT"
+              test -f "$OUTPUT"
             '
 
       - name: Upload Kuzpkg package
@@ -1845,6 +1983,48 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          GIT_TAG="$(
+            git tag --sort=-creatordate |
+            head -n 1
+          )"
+
+          if [ -z "$GIT_TAG" ]; then
+            GIT_TAG="$(
+              git describe --tags --abbrev=0 2>/dev/null || true
+            )"
+          fi
+
+          if [ -z "$GIT_TAG" ]; then
+            echo "ERROR: Repository has no Git tag."
+            exit 1
+          fi
+
+          TAG_VERSION="${GIT_TAG#v}"
+          DATE_VERSION="$(date -u +%Y%m%d)"
+          PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
+
+          SAFE_TAG="$(
+            printf '%s' "$GIT_TAG" |
+              sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+          )"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
+
+          {
+            echo "git_tag=$GIT_TAG"
+            echo "package_version=$PACKAGE_VERSION"
+            echo "safe_tag=$SAFE_TAG"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Prepare runner
         run: |
           set -euxo pipefail
@@ -1855,16 +2035,25 @@ jobs:
           command -v docker
           docker --version
 
-      - name: Build Kuzpkg O3 makepkg
+      - name: Build Kuzpkg O3 package
+        env:
+          GIT_TAG: ${{ steps.version.outputs.git_tag }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
+          SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
         run: |
           set -euxo pipefail
 
           docker run \
             --rm \
+            -e GIT_TAG \
+            -e PACKAGE_VERSION \
+            -e SAFE_TAG \
             -v "$PWD:/workspace" \
             -w /workspace \
             archlinux:latest \
             bash -euxo pipefail -c '
+
+              git config --global --add safe.directory /workspace || true
 
               pacman -Syu --noconfirm
 
@@ -1889,36 +2078,13 @@ jobs:
                 kuzpkg-install \
                 package-build \
                 dist \
-                kuzpkg-source
+                kuzpkg-source \
+                kuzpkg-source.tar.gz
 
               mkdir -p dist
 
-              # ------------------------------------------------
-              # Version from latest tag.
-              # ------------------------------------------------
-
-              TAG="$(
-                git describe \
-                  --tags \
-                  --abbrev=0 \
-                  2>/dev/null || true
-              )"
-
-              if [ -z "$TAG" ]; then
-                echo "ERROR: Repository has no Git tag."
-                exit 1
-              fi
-
-              TAG_VERSION="${TAG#v}"
-              DATE_VERSION="$(date -u +%Y%m%d)"
-              PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
-
-              echo "Latest Git tag: $TAG"
-              echo "Package version: $PACKAGE_VERSION"
-
-              # ------------------------------------------------
-              # Build Kuzpkg itself with O3.
-              # ------------------------------------------------
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PACKAGE_VERSION}"
 
               meson setup \
                 source-build \
@@ -1939,49 +2105,37 @@ jobs:
 
               if [ ! -x "$MAKEPKG_PATH" ]; then
                 echo "ERROR: O3 source-built makepkg is missing."
-
                 find \
                   /workspace/kuzpkg-install \
                   -type f \
                   -o -type l
-
                 exit 1
               fi
 
-              echo "O3 source-built makepkg:"
               "$MAKEPKG_PATH" --version || true
 
-              # ------------------------------------------------
-              # Source archive.
-              # ------------------------------------------------
+              mkdir -p kuzpkg-source
 
               cp -a \
-                /workspace \
-                /workspace/kuzpkg-source
+                /workspace/. \
+                kuzpkg-source/
 
               rm -rf \
-                /workspace/kuzpkg-source/.git \
-                /workspace/kuzpkg-source/source-build \
-                /workspace/kuzpkg-source/kuzpkg-install \
-                /workspace/kuzpkg-source/package-build \
-                /workspace/kuzpkg-source/dist \
-                /workspace/kuzpkg-source/kuzpkg-source
+                kuzpkg-source/.git \
+                kuzpkg-source/source-build \
+                kuzpkg-source/kuzpkg-install \
+                kuzpkg-source/package-build \
+                kuzpkg-source/dist \
+                kuzpkg-source/kuzpkg-source \
+                kuzpkg-source/kuzpkg-source.tar.gz
 
               tar \
                 -C /workspace \
                 -czf \
-                /workspace/kuzpkg-source.tar.gz \
+                kuzpkg-source.tar.gz \
                 kuzpkg-source
 
-              test \
-                -f \
-                /workspace/kuzpkg-source.tar.gz
-
               mkdir -p package-build
-
-              # ------------------------------------------------
-              # O3 PKGBUILD.
-              # ------------------------------------------------
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -2007,17 +2161,11 @@ jobs:
                 > package-build/PKGBUILD
 
               cp \
-                /workspace/kuzpkg-source.tar.gz \
+                kuzpkg-source.tar.gz \
                 package-build/kuzpkg-source.tar.gz
 
-              useradd \
-                -m \
-                builder
-
-              chown \
-                -R \
-                builder:builder \
-                /workspace
+              useradd -m builder
+              chown -R builder:builder /workspace
 
               su builder -c "
                 cd /workspace/package-build
@@ -2029,10 +2177,7 @@ jobs:
                   --clean
               "
 
-              chown \
-                -R \
-                root:root \
-                /workspace
+              chown -R root:root /workspace
 
               PKG_FILE="$(
                 find \
@@ -2045,13 +2190,11 @@ jobs:
 
               if [ -z "$PKG_FILE" ]; then
                 echo "ERROR: Kuzpkg O3 makepkg generated no package."
-
                 find \
                   package-build \
                   -maxdepth 1 \
                   -type f \
                   -print
-
                 exit 1
               fi
 
@@ -2072,12 +2215,7 @@ jobs:
                 "$OUTPUT" \
                 >/dev/null
 
-              test \
-                -f \
-                "$OUTPUT"
-
-              echo "Created:"
-              ls -lh "$OUTPUT"
+              test -f "$OUTPUT"
             '
 
       - name: Upload Kuzpkg O3 package
