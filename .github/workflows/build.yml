@@ -3,6 +3,7 @@ name: Build kuzpkg packages
 on:
   schedule:
     - cron: "0 0 * * *"
+
   workflow_dispatch:
 
 permissions:
@@ -23,6 +24,7 @@ jobs:
 
     strategy:
       fail-fast: false
+
       matrix:
         include:
 
@@ -112,7 +114,10 @@ jobs:
 
           if [ -z "$GIT_TAG" ]; then
             GIT_TAG="$(
-              git describe --tags --abbrev=0 2>/dev/null || true
+              git describe \
+                --tags \
+                --abbrev=0 \
+                2>/dev/null || true
             )"
           fi
 
@@ -134,7 +139,7 @@ jobs:
           )"
 
           echo "Git tag: $GIT_TAG"
-          echo "Debian package version: $PACKAGE_VERSION"
+          echo "Package version: $PACKAGE_VERSION"
 
           {
             echo "git_tag=$GIT_TAG"
@@ -212,7 +217,8 @@ jobs:
             --buildtype=release \
             --prefix=/usr
 
-          meson compile -C build
+          meson compile \
+            -C build
 
           meson install \
             -C build \
@@ -226,7 +232,10 @@ jobs:
 
           if [ -d staging/etc ]; then
             mkdir -p deb-root/etc
-            cp -a staging/etc/. deb-root/etc/
+
+            cp -a \
+              staging/etc/. \
+              deb-root/etc/
           fi
 
           printf '%s\n' \
@@ -248,7 +257,9 @@ jobs:
             deb-root \
             "$DEB_FILE"
 
-          dpkg-deb --info "$DEB_FILE"
+          dpkg-deb \
+            --info \
+            "$DEB_FILE"
 
           test -f "$DEB_FILE"
 
@@ -317,7 +328,8 @@ jobs:
                 --buildtype=release \
                 --prefix=/usr
 
-              meson compile -C build
+              meson compile \
+                -C build
 
               meson install \
                 -C build \
@@ -325,11 +337,16 @@ jobs:
                 --no-rebuild \
                 --strip
 
-              cp -a staging/usr/. deb-root/usr/
+              cp -a \
+                staging/usr/. \
+                deb-root/usr/
 
               if [ -d staging/etc ]; then
                 mkdir -p deb-root/etc
-                cp -a staging/etc/. deb-root/etc/
+
+                cp -a \
+                  staging/etc/. \
+                  deb-root/etc/
               fi
 
               printf "%s\n" \
@@ -351,7 +368,9 @@ jobs:
                 deb-root \
                 "$DEB_FILE"
 
-              dpkg-deb --info "$DEB_FILE"
+              dpkg-deb \
+                --info \
+                "$DEB_FILE"
 
               test -f "$DEB_FILE"
             '
@@ -376,6 +395,7 @@ jobs:
 
     strategy:
       fail-fast: false
+
       matrix:
         include:
 
@@ -465,7 +485,10 @@ jobs:
 
           if [ -z "$GIT_TAG" ]; then
             GIT_TAG="$(
-              git describe --tags --abbrev=0 2>/dev/null || true
+              git describe \
+                --tags \
+                --abbrev=0 \
+                2>/dev/null || true
             )"
           fi
 
@@ -543,7 +566,11 @@ jobs:
         run: |
           set -euxo pipefail
 
-          rm -rf build staging deb-root dist
+          rm -rf \
+            build \
+            staging \
+            deb-root \
+            dist
 
           mkdir -p \
             build \
@@ -558,7 +585,8 @@ jobs:
             --prefix=/usr \
             -Denable-o3=true
 
-          meson compile -C build
+          meson compile \
+            -C build
 
           meson install \
             -C build \
@@ -566,11 +594,16 @@ jobs:
             --no-rebuild \
             --strip
 
-          cp -a staging/usr/. deb-root/usr/
+          cp -a \
+            staging/usr/. \
+            deb-root/usr/
 
           if [ -d staging/etc ]; then
             mkdir -p deb-root/etc
-            cp -a staging/etc/. deb-root/etc/
+
+            cp -a \
+              staging/etc/. \
+              deb-root/etc/
           fi
 
           printf '%s\n' \
@@ -592,7 +625,9 @@ jobs:
             deb-root \
             "$DEB_FILE"
 
-          dpkg-deb --info "$DEB_FILE"
+          dpkg-deb \
+            --info \
+            "$DEB_FILE"
 
       - name: Build Debian Docker .deb O3
         if: matrix.mode == 'docker'
@@ -636,7 +671,11 @@ jobs:
                 git \
                 dpkg-dev
 
-              rm -rf build staging deb-root dist
+              rm -rf \
+                build \
+                staging \
+                deb-root \
+                dist
 
               mkdir -p \
                 build \
@@ -651,7 +690,8 @@ jobs:
                 --prefix=/usr \
                 -Denable-o3=true
 
-              meson compile -C build
+              meson compile \
+                -C build
 
               meson install \
                 -C build \
@@ -659,7 +699,9 @@ jobs:
                 --no-rebuild \
                 --strip
 
-              cp -a staging/usr/. deb-root/usr/
+              cp -a \
+                staging/usr/. \
+                deb-root/usr/
 
               if [ -d staging/etc ]; then
                 mkdir -p deb-root/etc
@@ -699,7 +741,7 @@ jobs:
 
 
   # ============================================================
-  # RPM
+  # .RPM
   # ============================================================
 
   rpm:
@@ -708,6 +750,7 @@ jobs:
 
     strategy:
       fail-fast: false
+
       matrix:
         include:
 
@@ -764,7 +807,10 @@ jobs:
 
           if [ -z "$GIT_TAG" ]; then
             GIT_TAG="$(
-              git describe --tags --abbrev=0 2>/dev/null || true
+              git describe \
+                --tags \
+                --abbrev=0 \
+                2>/dev/null || true
             )"
           fi
 
@@ -797,10 +843,6 @@ jobs:
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
 
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
-          echo "RPM version: $RPM_VERSION"
-
       - name: Prepare runner
         run: |
           set -euxo pipefail
@@ -816,7 +858,6 @@ jobs:
           FEDORA_IMAGE: ${{ matrix.image }}
           TARGET_NAME: ${{ matrix.name }}
           TARGET_ARCH: ${{ matrix.arch }}
-          GIT_TAG: ${{ steps.version.outputs.git_tag }}
           PACKAGE_VERSION: ${{ steps.version.outputs.package_version }}
           RPM_VERSION: ${{ steps.version.outputs.rpm_version }}
           SAFE_TAG: ${{ steps.version.outputs.safe_tag }}
@@ -825,7 +866,6 @@ jobs:
 
           docker run \
             --rm \
-            -e GIT_TAG \
             -e TARGET_NAME \
             -e TARGET_ARCH \
             -e PACKAGE_VERSION \
@@ -857,7 +897,11 @@ jobs:
                 rpm-build \
                 rpmdevtools
 
-              rm -rf build staging rpm-build dist
+              rm -rf \
+                build \
+                staging \
+                rpm-build \
+                dist
 
               mkdir -p \
                 build \
@@ -921,7 +965,8 @@ jobs:
                 rpm-build/SPECS/kuzpkg.spec
 
               RPM_FILE="$(
-                find rpm-build/RPMS \
+                find \
+                  rpm-build/RPMS \
                   -type f \
                   -name "*.rpm" |
                 head -n 1
@@ -929,17 +974,26 @@ jobs:
 
               if [ -z "$RPM_FILE" ]; then
                 echo "ERROR: RPM was not produced."
-                find rpm-build/RPMS -type f -print
+
+                find \
+                  rpm-build/RPMS \
+                  -type f \
+                  -print
+
                 exit 1
               fi
 
               OUTPUT="dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}-${PACKAGE_VERSION}.rpm"
 
-              cp "$RPM_FILE" "$OUTPUT"
+              cp \
+                "$RPM_FILE" \
+                "$OUTPUT"
 
               rpm -qip "$RPM_FILE"
 
-              test -f "$OUTPUT"
+              test \
+                -f \
+                "$OUTPUT"
             '
 
       - name: Upload RPM
@@ -962,6 +1016,7 @@ jobs:
 
     strategy:
       fail-fast: false
+
       matrix:
         include:
 
@@ -1018,7 +1073,10 @@ jobs:
 
           if [ -z "$GIT_TAG" ]; then
             GIT_TAG="$(
-              git describe --tags --abbrev=0 2>/dev/null || true
+              git describe \
+                --tags \
+                --abbrev=0 \
+                2>/dev/null || true
             )"
           fi
 
@@ -1049,10 +1107,6 @@ jobs:
             echo "rpm_version=$RPM_VERSION"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
-
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
-          echo "RPM version: $RPM_VERSION"
 
       - name: Prepare runner
         run: |
@@ -1108,7 +1162,11 @@ jobs:
                 rpm-build \
                 rpmdevtools
 
-              rm -rf build staging rpm-build dist
+              rm -rf \
+                build \
+                staging \
+                rpm-build \
+                dist
 
               mkdir -p \
                 build \
@@ -1127,7 +1185,8 @@ jobs:
                 --prefix=/usr \
                 -Denable-o3=true
 
-              meson compile -C build
+              meson compile \
+                -C build
 
               meson install \
                 -C build \
@@ -1173,7 +1232,8 @@ jobs:
                 rpm-build/SPECS/kuzpkg.spec
 
               RPM_FILE="$(
-                find rpm-build/RPMS \
+                find \
+                  rpm-build/RPMS \
                   -type f \
                   -name "*.rpm" |
                 head -n 1
@@ -1181,17 +1241,26 @@ jobs:
 
               if [ -z "$RPM_FILE" ]; then
                 echo "ERROR: RPM O3 was not produced."
-                find rpm-build/RPMS -type f -print
+
+                find \
+                  rpm-build/RPMS \
+                  -type f \
+                  -print
+
                 exit 1
               fi
 
               OUTPUT="dist/kuzpkg-${SAFE_TAG}-${TARGET_NAME}-${PACKAGE_VERSION}-o3.rpm"
 
-              cp "$RPM_FILE" "$OUTPUT"
+              cp \
+                "$RPM_FILE" \
+                "$OUTPUT"
 
               rpm -qip "$RPM_FILE"
 
-              test -f "$OUTPUT"
+              test \
+                -f \
+                "$OUTPUT"
             '
 
       - name: Upload RPM O3
@@ -1208,14 +1277,14 @@ jobs:
   # ARCH .PKG.TAR.ZST
   #
   # ARCH ONLY:
-  # Clone GitHub repository inside Arch Docker.
+  # Clone https://github.com/Kuznix-Team/kuzpkg.git
   #
   # Arch pkgver:
-  #   Git tag hyphens -> dots
-  #
-  # Example:
-  #   v0.1.0-alpha
+  #   v0.1.0-alpha + 20260818
   #   -> 0.1.0.alpha.20260818
+  #
+  # We use --nodeps because all dependencies are explicitly
+  # installed in the Arch container before makepkg runs.
   # ============================================================
 
   pkg-tar-zst:
@@ -1270,10 +1339,6 @@ jobs:
                 /tmp/kuzpkg \
                 /tmp/package-build
 
-              # ------------------------------------------------
-              # Clone repository INSIDE Arch Docker.
-              # ------------------------------------------------
-
               git clone \
                 https://github.com/Kuznix-Team/kuzpkg.git \
                 /tmp/kuzpkg
@@ -1308,10 +1373,9 @@ jobs:
               TAG_VERSION="${GIT_TAG#v}"
               DATE_VERSION="$(date -u +%Y%m%d)"
 
-              # Arch does not allow hyphens in pkgver.
               ARCH_TAG_VERSION="$(
-                printf "%s" "$TAG_VERSION" |
-                  tr "-" "."
+                printf '%s' "$TAG_VERSION" |
+                  tr '-' '.'
               )"
 
               ARCH_PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
@@ -1323,19 +1387,12 @@ jobs:
               mkdir -p \
                 /tmp/package-build
 
-              # ------------------------------------------------
-              # Source archive OUTSIDE the source tree.
-              # ------------------------------------------------
-
               tar \
                 --exclude=.git \
                 -C /tmp/kuzpkg \
-                -czf /tmp/package-build/kuzpkg-source.tar.gz \
+                -czf \
+                /tmp/package-build/kuzpkg-source.tar.gz \
                 .
-
-              # ------------------------------------------------
-              # PKGBUILD
-              # ------------------------------------------------
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -1372,8 +1429,8 @@ jobs:
               su builder -c "
                 cd /tmp/package-build
 
-                makepkg \
-                  --syncdeps \
+                /usr/bin/makepkg \
+                  --nodeps \
                   --noconfirm \
                   --cleanbuild \
                   --clean
@@ -1513,8 +1570,8 @@ jobs:
               DATE_VERSION="$(date -u +%Y%m%d)"
 
               ARCH_TAG_VERSION="$(
-                printf "%s" "$TAG_VERSION" |
-                  tr "-" "."
+                printf '%s' "$TAG_VERSION" |
+                  tr '-' '.'
               )"
 
               ARCH_PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
@@ -1567,8 +1624,8 @@ jobs:
               su builder -c "
                 cd /tmp/package-build
 
-                makepkg \
-                  --syncdeps \
+                /usr/bin/makepkg \
+                  --nodeps \
                   --noconfirm \
                   --cleanbuild \
                   --clean
@@ -1618,6 +1675,9 @@ jobs:
 
   # ============================================================
   # .KUZPKG.TAR.ZST
+  #
+  # Arch Docker clones the repository, builds Kuzpkg, then uses
+  # the makepkg produced by that build.
   # ============================================================
 
   kuzpkg-tar-zst:
@@ -1673,10 +1733,6 @@ jobs:
                 /tmp/kuzpkg-install \
                 /tmp/package-build
 
-              # ------------------------------------------------
-              # Clone GitHub repository.
-              # ------------------------------------------------
-
               git clone \
                 https://github.com/Kuznix-Team/kuzpkg.git \
                 /tmp/kuzpkg
@@ -1695,6 +1751,7 @@ jobs:
 
               if [ -z "$GIT_TAG" ]; then
                 echo "ERROR: Cloned repository has no Git tag."
+                git tag --list
                 exit 1
               fi
 
@@ -1702,17 +1759,18 @@ jobs:
               DATE_VERSION="$(date -u +%Y%m%d)"
 
               ARCH_TAG_VERSION="$(
-                printf "%s" "$TAG_VERSION" |
-                  tr "-" "."
+                printf '%s' "$TAG_VERSION" |
+                  tr '-' '.'
               )"
 
               ARCH_PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
 
+              echo "Repository: https://github.com/Kuznix-Team/kuzpkg.git"
               echo "Latest Git tag: ${GIT_TAG}"
               echo "Arch package version: ${ARCH_PKGVER}"
 
               # ------------------------------------------------
-              # Build Kuzpkg itself.
+              # Build Kuzpkg.
               # ------------------------------------------------
 
               meson setup \
@@ -1732,7 +1790,7 @@ jobs:
               MAKEPKG_PATH="/tmp/kuzpkg-install/usr/bin/makepkg"
 
               if [ ! -x "$MAKEPKG_PATH" ]; then
-                echo "ERROR: source-built makepkg was not installed."
+                echo "ERROR: Kuzpkg makepkg was not installed."
 
                 find \
                   /tmp/kuzpkg-install \
@@ -1748,20 +1806,12 @@ jobs:
               mkdir -p \
                 /tmp/package-build
 
-              # ------------------------------------------------
-              # Archive cloned repository outside its tree.
-              # ------------------------------------------------
-
               tar \
                 --exclude=.git \
                 -C /tmp/kuzpkg \
                 -czf \
                 /tmp/package-build/kuzpkg-source.tar.gz \
                 .
-
-              # ------------------------------------------------
-              # PKGBUILD
-              # ------------------------------------------------
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -1799,10 +1849,8 @@ jobs:
               su builder -c "
                 cd /tmp/package-build
 
-                PATH=/tmp/kuzpkg-install/usr/bin:\$PATH
-
                 /tmp/kuzpkg-install/usr/bin/makepkg \
-                  --syncdeps \
+                  --nodeps \
                   --noconfirm \
                   --cleanbuild \
                   --clean
@@ -1921,10 +1969,6 @@ jobs:
                 /tmp/kuzpkg-install \
                 /tmp/package-build
 
-              # ------------------------------------------------
-              # Clone repository.
-              # ------------------------------------------------
-
               git clone \
                 https://github.com/Kuznix-Team/kuzpkg.git \
                 /tmp/kuzpkg
@@ -1943,6 +1987,7 @@ jobs:
 
               if [ -z "$GIT_TAG" ]; then
                 echo "ERROR: Cloned repository has no Git tag."
+                git tag --list
                 exit 1
               fi
 
@@ -1950,17 +1995,18 @@ jobs:
               DATE_VERSION="$(date -u +%Y%m%d)"
 
               ARCH_TAG_VERSION="$(
-                printf "%s" "$TAG_VERSION" |
-                  tr "-" "."
+                printf '%s' "$TAG_VERSION" |
+                  tr '-' '.'
               )"
 
               ARCH_PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
 
+              echo "Repository: https://github.com/Kuznix-Team/kuzpkg.git"
               echo "Latest Git tag: ${GIT_TAG}"
               echo "Arch O3 package version: ${ARCH_PKGVER}"
 
               # ------------------------------------------------
-              # Build Kuzpkg itself with O3.
+              # O3 build.
               # ------------------------------------------------
 
               meson setup \
@@ -1981,7 +2027,7 @@ jobs:
               MAKEPKG_PATH="/tmp/kuzpkg-install/usr/bin/makepkg"
 
               if [ ! -x "$MAKEPKG_PATH" ]; then
-                echo "ERROR: O3 source-built makepkg was not installed."
+                echo "ERROR: Kuzpkg O3 makepkg was not installed."
 
                 find \
                   /tmp/kuzpkg-install \
@@ -1997,20 +2043,12 @@ jobs:
               mkdir -p \
                 /tmp/package-build
 
-              # ------------------------------------------------
-              # Archive cloned repository outside source tree.
-              # ------------------------------------------------
-
               tar \
                 --exclude=.git \
                 -C /tmp/kuzpkg \
                 -czf \
                 /tmp/package-build/kuzpkg-source.tar.gz \
                 .
-
-              # ------------------------------------------------
-              # O3 PKGBUILD
-              # ------------------------------------------------
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -2048,10 +2086,8 @@ jobs:
               su builder -c "
                 cd /tmp/package-build
 
-                PATH=/tmp/kuzpkg-install/usr/bin:\$PATH
-
                 /tmp/kuzpkg-install/usr/bin/makepkg \
-                  --syncdeps \
+                  --nodeps \
                   --noconfirm \
                   --cleanbuild \
                   --clean
