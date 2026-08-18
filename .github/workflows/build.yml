@@ -3,7 +3,6 @@ name: Build kuzpkg packages
 on:
   schedule:
     - cron: "0 0 * * *"
-
   workflow_dispatch:
 
 permissions:
@@ -15,7 +14,7 @@ env:
 jobs:
 
   # ============================================================
-  # .DEB
+  # DEB
   # ============================================================
 
   deb:
@@ -26,7 +25,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-
           - name: ubuntu-24.04
             runner: ubuntu-24.04
             mode: native
@@ -91,7 +89,6 @@ jobs:
             arch: arm64
 
     steps:
-
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
@@ -106,48 +103,37 @@ jobs:
 
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-          echo "Available tags:"
-          git tag --list
-
           GIT_TAG="$(
-            git tag \
-              --sort=-creatordate |
+            git tag --sort=-creatordate |
             head -n 1
           )"
 
           if [ -z "$GIT_TAG" ]; then
             GIT_TAG="$(
-              git describe \
-                --tags \
-                --abbrev=0 \
-                2>/dev/null || true
+              git describe --tags --abbrev=0 2>/dev/null || true
             )"
           fi
 
           if [ -z "$GIT_TAG" ]; then
             echo "ERROR: Repository has no Git tag."
+            git tag --list
             exit 1
           fi
 
           TAG_VERSION="${GIT_TAG#v}"
           DATE_VERSION="$(date -u +%Y%m%d)"
-
           PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
 
           SAFE_TAG="$(
             printf '%s' "$GIT_TAG" |
-              sed \
-                's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
+              sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
           echo "Git tag: $GIT_TAG"
           echo "Package version: $PACKAGE_VERSION"
-          echo "Date: $DATE_VERSION"
 
           {
             echo "git_tag=$GIT_TAG"
-            echo "tag_version=$TAG_VERSION"
-            echo "date_version=$DATE_VERSION"
             echo "package_version=$PACKAGE_VERSION"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
@@ -167,7 +153,7 @@ jobs:
             docker --version
           fi
 
-      - name: Install native build dependencies
+      - name: Install native dependencies
         if: matrix.mode == 'native'
         run: |
           set -euxo pipefail
@@ -202,8 +188,7 @@ jobs:
         run: |
           set -euxo pipefail
 
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
+          echo "Building ${PACKAGE_VERSION} from ${GIT_TAG}"
 
           rm -rf \
             build \
@@ -223,8 +208,7 @@ jobs:
             --buildtype=release \
             --prefix=/usr
 
-          meson compile \
-            -C build
+          meson compile -C build
 
           meson install \
             -C build \
@@ -238,6 +222,7 @@ jobs:
 
           if [ -d staging/etc ]; then
             mkdir -p deb-root/etc
+
             cp -a \
               staging/etc/. \
               deb-root/etc/
@@ -262,9 +247,7 @@ jobs:
             deb-root \
             "$DEB_FILE"
 
-          dpkg-deb \
-            --info \
-            "$DEB_FILE"
+          dpkg-deb --info "$DEB_FILE"
 
           test -f "$DEB_FILE"
 
@@ -292,11 +275,6 @@ jobs:
             "$DEBIAN_IMAGE" \
             bash -euxo pipefail -c '
 
-              git config --global --add safe.directory /workspace || true
-
-              echo "Git tag: ${GIT_TAG}"
-              echo "Package version: ${PACKAGE_VERSION}"
-
               apt-get update
 
               apt-get install -y \
@@ -317,6 +295,9 @@ jobs:
                 git \
                 dpkg-dev
 
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PACKAGE_VERSION}"
+
               rm -rf \
                 build \
                 staging \
@@ -335,8 +316,7 @@ jobs:
                 --buildtype=release \
                 --prefix=/usr
 
-              meson compile \
-                -C build
+              meson compile -C build
 
               meson install \
                 -C build \
@@ -375,9 +355,7 @@ jobs:
                 deb-root \
                 "$DEB_FILE"
 
-              dpkg-deb \
-                --info \
-                "$DEB_FILE"
+              dpkg-deb --info "$DEB_FILE"
 
               test -f "$DEB_FILE"
             '
@@ -393,7 +371,7 @@ jobs:
 
 
   # ============================================================
-  # .DEB O3
+  # DEB O3
   # ============================================================
 
   deb-o3:
@@ -402,10 +380,8 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
         include:
-
           - name: ubuntu-24.04
             runner: ubuntu-24.04
             mode: native
@@ -470,7 +446,6 @@ jobs:
             arch: arm64
 
     steps:
-
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
@@ -534,7 +509,7 @@ jobs:
             docker --version
           fi
 
-      - name: Install native O3 build dependencies
+      - name: Install native O3 dependencies
         if: matrix.mode == 'native'
         run: |
           set -euxo pipefail
@@ -588,8 +563,7 @@ jobs:
             --prefix=/usr \
             -Denable-o3=true
 
-          meson compile \
-            -C build
+          meson compile -C build
 
           meson install \
             -C build \
@@ -648,8 +622,6 @@ jobs:
             -w /workspace \
             "$DEBIAN_IMAGE" \
             bash -euxo pipefail -c '
-
-              git config --global --add safe.directory /workspace || true
 
               apt-get update
 
@@ -734,7 +706,7 @@ jobs:
 
 
   # ============================================================
-  # .RPM
+  # RPM
   # ============================================================
 
   rpm:
@@ -743,10 +715,8 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
         include:
-
           - name: fedora-43
             runner: ubuntu-24.04
             image: fedora:43
@@ -778,7 +748,6 @@ jobs:
             arch: aarch64
 
     steps:
-
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
@@ -811,21 +780,12 @@ jobs:
 
           TAG_VERSION="${GIT_TAG#v}"
           DATE_VERSION="$(date -u +%Y%m%d)"
-
           PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
 
-          # RPM does not allow '-' in Version.
-          # Example:
-          #   0.1.0-alpha-20260818
-          # becomes:
-          #   0.1.0~alpha.20260818
-
-          RPM_BASE="$(
+          RPM_VERSION="$(
             printf '%s' "$TAG_VERSION" |
               sed 's/-/~/g'
-          )"
-
-          RPM_VERSION="${RPM_BASE}.${DATE_VERSION}"
+          ).${DATE_VERSION}"
 
           SAFE_TAG="$(
             printf '%s' "$GIT_TAG" |
@@ -877,8 +837,6 @@ jobs:
             -w /workspace \
             "$FEDORA_IMAGE" \
             bash -euxo pipefail -c '
-
-              git config --global --add safe.directory /workspace || true
 
               dnf -y update
 
@@ -973,8 +931,7 @@ jobs:
                 rpm-build/SPECS/kuzpkg.spec
 
               RPM_FILE="$(
-                find \
-                  rpm-build/RPMS \
+                find rpm-build/RPMS \
                   -type f \
                   -name "*.rpm" |
                 head -n 1
@@ -1008,7 +965,7 @@ jobs:
 
 
   # ============================================================
-  # .RPM O3
+  # RPM O3
   # ============================================================
 
   rpm-o3:
@@ -1017,10 +974,8 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
         include:
-
           - name: fedora-43
             runner: ubuntu-24.04
             image: fedora:43
@@ -1052,7 +1007,6 @@ jobs:
             arch: aarch64
 
     steps:
-
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
@@ -1085,24 +1039,17 @@ jobs:
 
           TAG_VERSION="${GIT_TAG#v}"
           DATE_VERSION="$(date -u +%Y%m%d)"
-
           PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
 
-          RPM_BASE="$(
+          RPM_VERSION="$(
             printf '%s' "$TAG_VERSION" |
               sed 's/-/~/g'
-          )"
-
-          RPM_VERSION="${RPM_BASE}.${DATE_VERSION}"
+          ).${DATE_VERSION}"
 
           SAFE_TAG="$(
             printf '%s' "$GIT_TAG" |
               sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
-
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
-          echo "RPM version: $RPM_VERSION"
 
           {
             echo "git_tag=$GIT_TAG"
@@ -1110,6 +1057,10 @@ jobs:
             echo "rpm_version=$RPM_VERSION"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
+          echo "RPM version: $RPM_VERSION"
 
       - name: Prepare runner
         run: |
@@ -1145,8 +1096,6 @@ jobs:
             -w /workspace \
             "$FEDORA_IMAGE" \
             bash -euxo pipefail -c '
-
-              git config --global --add safe.directory /workspace || true
 
               dnf -y update
 
@@ -1238,8 +1187,7 @@ jobs:
                 rpm-build/SPECS/kuzpkg.spec
 
               RPM_FILE="$(
-                find \
-                  rpm-build/RPMS \
+                find rpm-build/RPMS \
                   -type f \
                   -name "*.rpm" |
                 head -n 1
@@ -1273,7 +1221,7 @@ jobs:
 
 
   # ============================================================
-  # .PKG.TAR.ZST
+  # ARCH .PKG.TAR.ZST
   # ============================================================
 
   pkg-tar-zst:
@@ -1281,7 +1229,6 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
@@ -1321,14 +1268,14 @@ jobs:
               sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
-
           {
             echo "git_tag=$GIT_TAG"
             echo "package_version=$PACKAGE_VERSION"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
 
       - name: Prepare runner
         run: |
@@ -1358,8 +1305,6 @@ jobs:
             archlinux:latest \
             bash -euxo pipefail -c '
 
-              git config --global --add safe.directory /workspace || true
-
               pacman -Syu --noconfirm
 
               pacman -S --noconfirm --needed \
@@ -1384,30 +1329,32 @@ jobs:
               rm -rf \
                 package-build \
                 dist \
-                kuzpkg-source \
                 kuzpkg-source.tar.gz
 
               mkdir -p \
                 package-build \
-                dist \
-                kuzpkg-source
+                dist
 
-              cp -a \
-                /workspace/. \
-                kuzpkg-source/
-
-              rm -rf \
-                kuzpkg-source/.git \
-                kuzpkg-source/package-build \
-                kuzpkg-source/dist \
-                kuzpkg-source/kuzpkg-source \
-                kuzpkg-source/kuzpkg-source.tar.gz
+              # IMPORTANT:
+              # Create the archive directly from /workspace.
+              # Do NOT create a source directory inside /workspace.
 
               tar \
+                --exclude=.git \
+                --exclude=package-build \
+                --exclude=dist \
+                --exclude=build \
+                --exclude=staging \
+                --exclude=deb-root \
+                --exclude=rpm-build \
+                --exclude=kuzpkg-source.tar.gz \
                 -C /workspace \
-                -czf \
-                kuzpkg-source.tar.gz \
-                kuzpkg-source
+                -czf /workspace/kuzpkg-source.tar.gz \
+                .
+
+              test \
+                -f \
+                /workspace/kuzpkg-source.tar.gz
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -1421,26 +1368,33 @@ jobs:
                 "sha256sums=(SKIP)" \
                 "" \
                 "build() {" \
-                "    cd \"\$srcdir/kuzpkg-source\"" \
+                "    cd \"\$srcdir\"" \
                 "    meson setup build --buildtype=release --prefix=/usr" \
                 "    meson compile -C build" \
                 "}" \
                 "" \
                 "package() {" \
-                "    cd \"\$srcdir/kuzpkg-source\"" \
+                "    cd \"\$srcdir\"" \
                 "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
                 "}" \
                 > package-build/PKGBUILD
 
               cp \
-                kuzpkg-source.tar.gz \
+                /workspace/kuzpkg-source.tar.gz \
                 package-build/kuzpkg-source.tar.gz
 
-              useradd -m builder
-              chown -R builder:builder /workspace
+              useradd \
+                -m \
+                builder
+
+              chown \
+                -R \
+                builder:builder \
+                /workspace
 
               su builder -c "
                 cd /workspace/package-build
+
                 makepkg \
                   --syncdeps \
                   --noconfirm \
@@ -1448,7 +1402,10 @@ jobs:
                   --clean
               "
 
-              chown -R root:root /workspace
+              chown \
+                -R \
+                root:root \
+                /workspace
 
               PKG_FILE="$(
                 find \
@@ -1461,7 +1418,13 @@ jobs:
 
               if [ -z "$PKG_FILE" ]; then
                 echo "ERROR: Arch package was not produced."
-                find package-build -maxdepth 1 -type f -print
+
+                find \
+                  package-build \
+                  -maxdepth 1 \
+                  -type f \
+                  -print
+
                 exit 1
               fi
 
@@ -1475,6 +1438,10 @@ jobs:
                 -tf \
                 "$OUTPUT" \
                 >/dev/null
+
+              test \
+                -f \
+                "$OUTPUT"
             '
 
       - name: Upload Arch package
@@ -1488,7 +1455,7 @@ jobs:
 
 
   # ============================================================
-  # .PKG.TAR.ZST O3
+  # ARCH .PKG.TAR.ZST O3
   # ============================================================
 
   pkg-tar-zst-o3:
@@ -1496,7 +1463,6 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-
       - name: Checkout kuzpkg
         uses: actions/checkout@v5
         with:
@@ -1536,14 +1502,14 @@ jobs:
               sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
-
           {
             echo "git_tag=$GIT_TAG"
             echo "package_version=$PACKAGE_VERSION"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
 
       - name: Prepare runner
         run: |
@@ -1573,8 +1539,6 @@ jobs:
             archlinux:latest \
             bash -euxo pipefail -c '
 
-              git config --global --add safe.directory /workspace || true
-
               pacman -Syu --noconfirm
 
               pacman -S --noconfirm --needed \
@@ -1596,30 +1560,28 @@ jobs:
               rm -rf \
                 package-build \
                 dist \
-                kuzpkg-source \
                 kuzpkg-source.tar.gz
 
               mkdir -p \
                 package-build \
-                dist \
-                kuzpkg-source
-
-              cp -a \
-                /workspace/. \
-                kuzpkg-source/
-
-              rm -rf \
-                kuzpkg-source/.git \
-                kuzpkg-source/package-build \
-                kuzpkg-source/dist \
-                kuzpkg-source/kuzpkg-source \
-                kuzpkg-source/kuzpkg-source.tar.gz
+                dist
 
               tar \
+                --exclude=.git \
+                --exclude=package-build \
+                --exclude=dist \
+                --exclude=build \
+                --exclude=staging \
+                --exclude=deb-root \
+                --exclude=rpm-build \
+                --exclude=kuzpkg-source.tar.gz \
                 -C /workspace \
-                -czf \
-                kuzpkg-source.tar.gz \
-                kuzpkg-source
+                -czf /workspace/kuzpkg-source.tar.gz \
+                .
+
+              test \
+                -f \
+                /workspace/kuzpkg-source.tar.gz
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -1633,26 +1595,33 @@ jobs:
                 "sha256sums=(SKIP)" \
                 "" \
                 "build() {" \
-                "    cd \"\$srcdir/kuzpkg-source\"" \
+                "    cd \"\$srcdir\"" \
                 "    meson setup build --buildtype=release --prefix=/usr -Denable-o3=true" \
                 "    meson compile -C build" \
                 "}" \
                 "" \
                 "package() {" \
-                "    cd \"\$srcdir/kuzpkg-source\"" \
+                "    cd \"\$srcdir\"" \
                 "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
                 "}" \
                 > package-build/PKGBUILD
 
               cp \
-                kuzpkg-source.tar.gz \
+                /workspace/kuzpkg-source.tar.gz \
                 package-build/kuzpkg-source.tar.gz
 
-              useradd -m builder
-              chown -R builder:builder /workspace
+              useradd \
+                -m \
+                builder
+
+              chown \
+                -R \
+                builder:builder \
+                /workspace
 
               su builder -c "
                 cd /workspace/package-build
+
                 makepkg \
                   --syncdeps \
                   --noconfirm \
@@ -1660,7 +1629,10 @@ jobs:
                   --clean
               "
 
-              chown -R root:root /workspace
+              chown \
+                -R \
+                root:root \
+                /workspace
 
               PKG_FILE="$(
                 find \
@@ -1673,7 +1645,13 @@ jobs:
 
               if [ -z "$PKG_FILE" ]; then
                 echo "ERROR: Arch O3 package was not produced."
-                find package-build -maxdepth 1 -type f -print
+
+                find \
+                  package-build \
+                  -maxdepth 1 \
+                  -type f \
+                  -print
+
                 exit 1
               fi
 
@@ -1693,6 +1671,10 @@ jobs:
                 -tf \
                 "$OUTPUT" \
                 >/dev/null
+
+              test \
+                -f \
+                "$OUTPUT"
             '
 
       - name: Upload Arch O3 package
@@ -1706,7 +1688,7 @@ jobs:
 
 
   # ============================================================
-  # .KUZPKG.TAR.ZST
+  # KUZPKG .KUZPKG.TAR.ZST
   # ============================================================
 
   kuzpkg-tar-zst:
@@ -1754,14 +1736,14 @@ jobs:
               sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
-
           {
             echo "git_tag=$GIT_TAG"
             echo "package_version=$PACKAGE_VERSION"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
 
       - name: Prepare runner
         run: |
@@ -1791,8 +1773,6 @@ jobs:
             archlinux:latest \
             bash -euxo pipefail -c '
 
-              git config --global --add safe.directory /workspace || true
-
               pacman -Syu --noconfirm
 
               pacman -S --noconfirm --needed \
@@ -1816,15 +1796,19 @@ jobs:
                 kuzpkg-install \
                 package-build \
                 dist \
-                kuzpkg-source \
                 kuzpkg-source.tar.gz
 
-              mkdir -p dist
+              mkdir -p \
+                package-build \
+                dist
 
               echo "Git tag: ${GIT_TAG}"
               echo "Package version: ${PACKAGE_VERSION}"
 
-              # Build Kuzpkg itself.
+              # ------------------------------------------------
+              # Build Kuzpkg first.
+              # ------------------------------------------------
+
               meson setup \
                 source-build \
                 --buildtype=release \
@@ -1843,38 +1827,49 @@ jobs:
 
               if [ ! -x "$MAKEPKG_PATH" ]; then
                 echo "ERROR: source-built makepkg is missing."
+
                 find \
                   /workspace/kuzpkg-install \
                   -type f \
                   -o -type l
+
                 exit 1
               fi
 
+              echo "Source-built makepkg:"
               "$MAKEPKG_PATH" --version || true
 
-              # Make source archive.
-              mkdir -p kuzpkg-source
-
-              cp -a \
-                /workspace/. \
-                kuzpkg-source/
-
-              rm -rf \
-                kuzpkg-source/.git \
-                kuzpkg-source/source-build \
-                kuzpkg-source/kuzpkg-install \
-                kuzpkg-source/package-build \
-                kuzpkg-source/dist \
-                kuzpkg-source/kuzpkg-source \
-                kuzpkg-source/kuzpkg-source.tar.gz
+              # ------------------------------------------------
+              # CRITICAL:
+              # Create archive DIRECTLY from /workspace.
+              # Never create a source directory inside /workspace.
+              # ------------------------------------------------
 
               tar \
+                --exclude=.git \
+                --exclude=source-build \
+                --exclude=kuzpkg-install \
+                --exclude=package-build \
+                --exclude=dist \
+                --exclude=build \
+                --exclude=staging \
+                --exclude=deb-root \
+                --exclude=rpm-build \
+                --exclude=kuzpkg-source.tar.gz \
                 -C /workspace \
-                -czf \
-                kuzpkg-source.tar.gz \
-                kuzpkg-source
+                -czf /workspace/kuzpkg-source.tar.gz \
+                .
 
-              mkdir -p package-build
+              test \
+                -f \
+                /workspace/kuzpkg-source.tar.gz
+
+              mkdir -p \
+                package-build
+
+              # ------------------------------------------------
+              # Build package from $srcdir.
+              # ------------------------------------------------
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -1888,27 +1883,35 @@ jobs:
                 "sha256sums=(SKIP)" \
                 "" \
                 "build() {" \
-                "    cd \"\$srcdir/kuzpkg-source\"" \
+                "    cd \"\$srcdir\"" \
                 "    meson setup build --buildtype=release --prefix=/usr" \
                 "    meson compile -C build" \
                 "}" \
                 "" \
                 "package() {" \
-                "    cd \"\$srcdir/kuzpkg-source\"" \
+                "    cd \"\$srcdir\"" \
                 "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
                 "}" \
                 > package-build/PKGBUILD
 
               cp \
-                kuzpkg-source.tar.gz \
+                /workspace/kuzpkg-source.tar.gz \
                 package-build/kuzpkg-source.tar.gz
 
-              useradd -m builder
-              chown -R builder:builder /workspace
+              useradd \
+                -m \
+                builder
+
+              chown \
+                -R \
+                builder:builder \
+                /workspace
 
               su builder -c "
                 cd /workspace/package-build
+
                 PATH=/workspace/kuzpkg-install/usr/bin:\$PATH
+
                 /workspace/kuzpkg-install/usr/bin/makepkg \
                   --syncdeps \
                   --noconfirm \
@@ -1916,7 +1919,10 @@ jobs:
                   --clean
               "
 
-              chown -R root:root /workspace
+              chown \
+                -R \
+                root:root \
+                /workspace
 
               PKG_FILE="$(
                 find \
@@ -1929,11 +1935,13 @@ jobs:
 
               if [ -z "$PKG_FILE" ]; then
                 echo "ERROR: Kuzpkg makepkg generated no package."
+
                 find \
                   package-build \
                   -maxdepth 1 \
                   -type f \
                   -print
+
                 exit 1
               fi
 
@@ -1954,7 +1962,12 @@ jobs:
                 "$OUTPUT" \
                 >/dev/null
 
-              test -f "$OUTPUT"
+              test \
+                -f \
+                "$OUTPUT"
+
+              echo "Created:"
+              ls -lh "$OUTPUT"
             '
 
       - name: Upload Kuzpkg package
@@ -1968,7 +1981,7 @@ jobs:
 
 
   # ============================================================
-  # .KUZPKG.TAR.ZST O3
+  # KUZPKG .KUZPKG.TAR.ZST O3
   # ============================================================
 
   kuzpkg-tar-zst-o3:
@@ -2016,14 +2029,14 @@ jobs:
               sed 's#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g'
           )"
 
-          echo "Git tag: $GIT_TAG"
-          echo "Package version: $PACKAGE_VERSION"
-
           {
             echo "git_tag=$GIT_TAG"
             echo "package_version=$PACKAGE_VERSION"
             echo "safe_tag=$SAFE_TAG"
           } >> "$GITHUB_OUTPUT"
+
+          echo "Git tag: $GIT_TAG"
+          echo "Package version: $PACKAGE_VERSION"
 
       - name: Prepare runner
         run: |
@@ -2053,8 +2066,6 @@ jobs:
             archlinux:latest \
             bash -euxo pipefail -c '
 
-              git config --global --add safe.directory /workspace || true
-
               pacman -Syu --noconfirm
 
               pacman -S --noconfirm --needed \
@@ -2078,13 +2089,18 @@ jobs:
                 kuzpkg-install \
                 package-build \
                 dist \
-                kuzpkg-source \
                 kuzpkg-source.tar.gz
 
-              mkdir -p dist
+              mkdir -p \
+                package-build \
+                dist
 
               echo "Git tag: ${GIT_TAG}"
               echo "Package version: ${PACKAGE_VERSION}"
+
+              # ------------------------------------------------
+              # O3 build of Kuzpkg itself.
+              # ------------------------------------------------
 
               meson setup \
                 source-build \
@@ -2105,37 +2121,43 @@ jobs:
 
               if [ ! -x "$MAKEPKG_PATH" ]; then
                 echo "ERROR: O3 source-built makepkg is missing."
+
                 find \
                   /workspace/kuzpkg-install \
                   -type f \
                   -o -type l
+
                 exit 1
               fi
 
+              echo "O3 source-built makepkg:"
               "$MAKEPKG_PATH" --version || true
 
-              mkdir -p kuzpkg-source
-
-              cp -a \
-                /workspace/. \
-                kuzpkg-source/
-
-              rm -rf \
-                kuzpkg-source/.git \
-                kuzpkg-source/source-build \
-                kuzpkg-source/kuzpkg-install \
-                kuzpkg-source/package-build \
-                kuzpkg-source/dist \
-                kuzpkg-source/kuzpkg-source \
-                kuzpkg-source/kuzpkg-source.tar.gz
+              # ------------------------------------------------
+              # Create source archive directly from workspace.
+              # ------------------------------------------------
 
               tar \
+                --exclude=.git \
+                --exclude=source-build \
+                --exclude=kuzpkg-install \
+                --exclude=package-build \
+                --exclude=dist \
+                --exclude=build \
+                --exclude=staging \
+                --exclude=deb-root \
+                --exclude=rpm-build \
+                --exclude=kuzpkg-source.tar.gz \
                 -C /workspace \
-                -czf \
-                kuzpkg-source.tar.gz \
-                kuzpkg-source
+                -czf /workspace/kuzpkg-source.tar.gz \
+                .
 
-              mkdir -p package-build
+              test \
+                -f \
+                /workspace/kuzpkg-source.tar.gz
+
+              mkdir -p \
+                package-build
 
               printf "%s\n" \
                 "pkgname=kuzpkg" \
@@ -2149,27 +2171,35 @@ jobs:
                 "sha256sums=(SKIP)" \
                 "" \
                 "build() {" \
-                "    cd \"\$srcdir/kuzpkg-source\"" \
+                "    cd \"\$srcdir\"" \
                 "    meson setup build --buildtype=release --prefix=/usr -Denable-o3=true" \
                 "    meson compile -C build" \
                 "}" \
                 "" \
                 "package() {" \
-                "    cd \"\$srcdir/kuzpkg-source\"" \
+                "    cd \"\$srcdir\"" \
                 "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
                 "}" \
                 > package-build/PKGBUILD
 
               cp \
-                kuzpkg-source.tar.gz \
+                /workspace/kuzpkg-source.tar.gz \
                 package-build/kuzpkg-source.tar.gz
 
-              useradd -m builder
-              chown -R builder:builder /workspace
+              useradd \
+                -m \
+                builder
+
+              chown \
+                -R \
+                builder:builder \
+                /workspace
 
               su builder -c "
                 cd /workspace/package-build
+
                 PATH=/workspace/kuzpkg-install/usr/bin:\$PATH
+
                 /workspace/kuzpkg-install/usr/bin/makepkg \
                   --syncdeps \
                   --noconfirm \
@@ -2177,7 +2207,10 @@ jobs:
                   --clean
               "
 
-              chown -R root:root /workspace
+              chown \
+                -R \
+                root:root \
+                /workspace
 
               PKG_FILE="$(
                 find \
@@ -2190,11 +2223,13 @@ jobs:
 
               if [ -z "$PKG_FILE" ]; then
                 echo "ERROR: Kuzpkg O3 makepkg generated no package."
+
                 find \
                   package-build \
                   -maxdepth 1 \
                   -type f \
                   -print
+
                 exit 1
               fi
 
@@ -2215,7 +2250,12 @@ jobs:
                 "$OUTPUT" \
                 >/dev/null
 
-              test -f "$OUTPUT"
+              test \
+                -f \
+                "$OUTPUT"
+
+              echo "Created:"
+              ls -lh "$OUTPUT"
             '
 
       - name: Upload Kuzpkg O3 package
