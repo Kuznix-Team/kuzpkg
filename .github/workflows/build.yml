@@ -1270,7 +1270,8 @@ jobs:
           set -euxo pipefail
 
           sudo apt-get update
-          sudo apt-get install -y ca-certificates
+          sudo apt-get install -y \
+            ca-certificates
 
           docker --version
 
@@ -1278,6 +1279,7 @@ jobs:
         run: |
           set -euxo pipefail
 
+          rm -rf dist
           mkdir -p dist
 
           docker run \
@@ -1285,6 +1287,11 @@ jobs:
             -v "$PWD/dist:/export" \
             archlinux:latest \
             bash -euxo pipefail -c '
+
+              # ------------------------------------------------
+              # Update Arch container
+              # ------------------------------------------------
+
               pacman -Syu --noconfirm
 
               pacman -S --noconfirm --needed \
@@ -1303,13 +1310,21 @@ jobs:
                 file \
                 gettext
 
+              # ------------------------------------------------
+              # Clean build directories
+              # ------------------------------------------------
+
               rm -rf \
                 /tmp/kuzpkg \
-                /tmp/package-build
+                /tmp/package-build \
+                /tmp/kuzpkg-source.tar.gz
 
               mkdir -p \
-                /tmp/package-build \
-                /tmp/package-build/source
+                /tmp/package-build
+
+              # ------------------------------------------------
+              # Clone repository
+              # ------------------------------------------------
 
               git clone \
                 --filter=blob:none \
@@ -1338,7 +1353,7 @@ jobs:
               fi
 
               if [ -z "$GIT_TAG" ]; then
-                echo "ERROR: Cloned repository has no Git tag."
+                echo "ERROR: Repository has no Git tag."
                 git tag --list
                 exit 1
               fi
@@ -1353,51 +1368,126 @@ jobs:
 
               ARCH_PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
 
-              echo "Repository: https://github.com/Kuznix-Team/kuzpkg.git"
               echo "Git tag: ${GIT_TAG}"
               echo "Arch pkgver: ${ARCH_PKGVER}"
+
+              # ------------------------------------------------
+              # Verify source tree
+              # ------------------------------------------------
 
               test \
                 -f \
                 /tmp/kuzpkg/meson.build
 
-              cp -a \
-                /tmp/kuzpkg/. \
-                /tmp/package-build/source/
+              # ------------------------------------------------
+              # Create source archive.
+              #
+              # The contents are stored at the ROOT of the
+              # archive, so makepkg extracts:
+              #
+              #   $srcdir/meson.build
+              #   $srcdir/src/...
+              #
+              # instead of:
+              #
+              #   $srcdir/source/...
+              #
+              # ------------------------------------------------
 
-              rm -rf \
-                /tmp/package-build/source/.git
+              tar \
+                --exclude=.git \
+                -C /tmp/kuzpkg \
+                -czf /tmp/kuzpkg-source.tar.gz \
+                .
 
-              printf "%s\n" \
-                "pkgname=kuzpkg" \
-                "pkgver=${ARCH_PKGVER}" \
-                "pkgrel=1" \
-                "pkgdesc=\"kuzpkg package manager\"" \
-                "arch=(x86_64)" \
-                "license=(GPL)" \
-                "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
-                "" \
-                "build() {" \
-                "    cd \"\$srcdir/source\"" \
-                "    test -f meson.build" \
-                "    meson setup build --buildtype=release --prefix=/usr" \
-                "    meson compile -C build" \
-                "}" \
-                "" \
-                "package() {" \
-                "    cd \"\$srcdir/source\"" \
-                "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
-                "}" \
-                > /tmp/package-build/PKGBUILD
+              test \
+                -f \
+                /tmp/kuzpkg-source.tar.gz
+
+              cp \
+                /tmp/kuzpkg-source.tar.gz \
+                /tmp/package-build/kuzpkg-source.tar.gz
+
+              # ------------------------------------------------
+              # Generate PKGBUILD
+              # ------------------------------------------------
+
+              cat > /tmp/package-build/PKGBUILD <<EOF
+              pkgname=kuzpkg
+              pkgver=${ARCH_PKGVER}
+              pkgrel=1
+              pkgdesc="kuzpkg package manager"
+              arch=(x86_64)
+              license=(GPL-2.0-or-later)
+              depends=(
+                bash
+                libarchive
+                curl
+                gpgme
+                openssl
+                nettle
+                libseccomp
+              )
+              makedepends=(
+                meson
+                ninja
+                pkgconf
+              )
+              source=(
+                kuzpkg-source.tar.gz
+              )
+              sha256sums=(
+                SKIP
+              )
+
+              build() {
+                  cd "\$srcdir"
+
+                  test -f meson.build
+
+                  meson setup \
+                    build \
+                    --buildtype=release \
+                    --prefix=/usr
+
+                  meson compile \
+                    -C build
+              }
+
+              package() {
+                  cd "\$srcdir"
+
+                  meson install \
+                    -C build \
+                    --destdir "\$pkgdir" \
+                    --no-rebuild \
+                    --strip
+              }
+              EOF
+
+              echo "Generated PKGBUILD:"
+              cat \
+                /tmp/package-build/PKGBUILD
+
+              # ------------------------------------------------
+              # Create unprivileged build user
+              # ------------------------------------------------
 
               useradd \
-                -m \
+                --create-home \
                 builder
 
               chown \
                 -R \
                 builder:builder \
                 /tmp/package-build
+
+              # ------------------------------------------------
+              # Build package
+              #
+              # --cleanbuild is SAFE here because the source is
+              # supplied through source=().
+              # ------------------------------------------------
 
               su builder -c "
                 cd /tmp/package-build
@@ -1408,6 +1498,10 @@ jobs:
                   --cleanbuild \
                   --clean
               "
+
+              # ------------------------------------------------
+              # Locate generated package
+              # ------------------------------------------------
 
               PKG_FILE="$(
                 find \
@@ -1423,15 +1517,27 @@ jobs:
 
                 find \
                   /tmp/package-build \
-                  -maxdepth 1 \
+                  -maxdepth 2 \
                   -type f \
                   -print
 
                 exit 1
               fi
 
+              echo "Generated Arch package:"
+              ls -lh \
+                "$PKG_FILE"
+
+              # ------------------------------------------------
+              # Copy artifact
+              # ------------------------------------------------
+
               cp \
                 "$PKG_FILE" \
+                "/export/$(basename "$PKG_FILE")"
+
+              test \
+                -f \
                 "/export/$(basename "$PKG_FILE")"
 
               tar \
@@ -1439,9 +1545,35 @@ jobs:
                 "/export/$(basename "$PKG_FILE")" \
                 >/dev/null
 
-              echo "Created:"
+              echo "Final artifact:"
               ls -lh /export
             '
+
+      - name: Verify Arch package
+        run: |
+          set -euxo pipefail
+
+          PKG_FILE="$(
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -name "*.pkg.tar.zst" |
+            head -n 1
+          )"
+
+          if [ -z "$PKG_FILE" ]; then
+            echo "ERROR: No Arch package found."
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -print
+            exit 1
+          fi
+
+          echo "Arch artifact:"
+          ls -lh "$PKG_FILE"
 
       - name: Upload Arch package
         uses: actions/upload-artifact@v4
@@ -1468,7 +1600,8 @@ jobs:
           set -euxo pipefail
 
           sudo apt-get update
-          sudo apt-get install -y ca-certificates
+          sudo apt-get install -y \
+            ca-certificates
 
           docker --version
 
@@ -1476,6 +1609,7 @@ jobs:
         run: |
           set -euxo pipefail
 
+          rm -rf dist
           mkdir -p dist
 
           docker run \
@@ -1483,6 +1617,7 @@ jobs:
             -v "$PWD/dist:/export" \
             archlinux:latest \
             bash -euxo pipefail -c '
+
               pacman -Syu --noconfirm
 
               pacman -S --noconfirm --needed \
@@ -1503,11 +1638,11 @@ jobs:
 
               rm -rf \
                 /tmp/kuzpkg \
-                /tmp/package-build
+                /tmp/package-build \
+                /tmp/kuzpkg-source.tar.gz
 
               mkdir -p \
-                /tmp/package-build \
-                /tmp/package-build/source
+                /tmp/package-build
 
               git clone \
                 --filter=blob:none \
@@ -1536,7 +1671,7 @@ jobs:
               fi
 
               if [ -z "$GIT_TAG" ]; then
-                echo "ERROR: Cloned repository has no Git tag."
+                echo "ERROR: Repository has no Git tag."
                 exit 1
               fi
 
@@ -1557,37 +1692,84 @@ jobs:
                 -f \
                 /tmp/kuzpkg/meson.build
 
-              cp -a \
-                /tmp/kuzpkg/. \
-                /tmp/package-build/source/
+              # ------------------------------------------------
+              # Source archive
+              # ------------------------------------------------
 
-              rm -rf \
-                /tmp/package-build/source/.git
+              tar \
+                --exclude=.git \
+                -C /tmp/kuzpkg \
+                -czf /tmp/kuzpkg-source.tar.gz \
+                .
 
-              printf "%s\n" \
-                "pkgname=kuzpkg" \
-                "pkgver=${ARCH_PKGVER}" \
-                "pkgrel=1" \
-                "pkgdesc=\"kuzpkg package manager\"" \
-                "arch=(x86_64)" \
-                "license=(GPL)" \
-                "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
-                "" \
-                "build() {" \
-                "    cd \"\$srcdir/source\"" \
-                "    test -f meson.build" \
-                "    meson setup build --buildtype=release --prefix=/usr -Denable-o3=true" \
-                "    meson compile -C build" \
-                "}" \
-                "" \
-                "package() {" \
-                "    cd \"\$srcdir/source\"" \
-                "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
-                "}" \
-                > /tmp/package-build/PKGBUILD
+              cp \
+                /tmp/kuzpkg-source.tar.gz \
+                /tmp/package-build/kuzpkg-source.tar.gz
+
+              # ------------------------------------------------
+              # O3 PKGBUILD
+              # ------------------------------------------------
+
+              cat > /tmp/package-build/PKGBUILD <<EOF
+              pkgname=kuzpkg
+              pkgver=${ARCH_PKGVER}
+              pkgrel=1
+              pkgdesc="kuzpkg package manager - O3 build"
+              arch=(x86_64)
+              license=(GPL-2.0-or-later)
+              depends=(
+                bash
+                libarchive
+                curl
+                gpgme
+                openssl
+                nettle
+                libseccomp
+              )
+              makedepends=(
+                meson
+                ninja
+                pkgconf
+              )
+              source=(
+                kuzpkg-source.tar.gz
+              )
+              sha256sums=(
+                SKIP
+              )
+
+              build() {
+                  cd "\$srcdir"
+
+                  test -f meson.build
+
+                  meson setup \
+                    build \
+                    --buildtype=release \
+                    --prefix=/usr \
+                    -Denable-o3=true
+
+                  meson compile \
+                    -C build
+              }
+
+              package() {
+                  cd "\$srcdir"
+
+                  meson install \
+                    -C build \
+                    --destdir "\$pkgdir" \
+                    --no-rebuild \
+                    --strip
+              }
+              EOF
+
+              echo "Generated O3 PKGBUILD:"
+              cat \
+                /tmp/package-build/PKGBUILD
 
               useradd \
-                -m \
+                --create-home \
                 builder
 
               chown \
@@ -1619,6 +1801,10 @@ jobs:
                 exit 1
               fi
 
+              echo "Generated Arch O3 package:"
+              ls -lh \
+                "$PKG_FILE"
+
               BASE="$(
                 basename \
                   "$PKG_FILE" \
@@ -1634,9 +1820,29 @@ jobs:
                 "/export/${BASE}-o3.pkg.tar.zst" \
                 >/dev/null
 
-              echo "Created:"
+              echo "Final Arch O3 artifact:"
               ls -lh /export
             '
+
+      - name: Verify Arch O3 package
+        run: |
+          set -euxo pipefail
+
+          PKG_FILE="$(
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -name "*-o3.pkg.tar.zst" |
+            head -n 1
+          )"
+
+          if [ -z "$PKG_FILE" ]; then
+            echo "ERROR: No Arch O3 package found."
+            exit 1
+          fi
+
+          ls -lh "$PKG_FILE"
 
       - name: Upload Arch O3 package
         uses: actions/upload-artifact@v4
@@ -1651,7 +1857,11 @@ jobs:
   # ============================================================
   # .KUZPKG.TAR.ZST
   #
-  # Build Kuzpkg -> use Kuzpkg's own makepkg -> package Kuzpkg
+  # Bootstrap:
+  #   1. Build kuzpkg with system make tools
+  #   2. Install kuzpkg into /tmp/kuzpkg-install
+  #   3. Use kuzpkg's own makepkg
+  #   4. Build kuzpkg again through that makepkg
   # ============================================================
 
   kuzpkg-tar-zst:
@@ -1665,7 +1875,8 @@ jobs:
           set -euxo pipefail
 
           sudo apt-get update
-          sudo apt-get install -y ca-certificates
+          sudo apt-get install -y \
+            ca-certificates
 
           docker --version
 
@@ -1673,6 +1884,7 @@ jobs:
         run: |
           set -euxo pipefail
 
+          rm -rf dist
           mkdir -p dist
 
           docker run \
@@ -1680,6 +1892,11 @@ jobs:
             -v "$PWD/dist:/export" \
             archlinux:latest \
             bash -euxo pipefail -c '
+
+              # ------------------------------------------------
+              # Host build dependencies
+              # ------------------------------------------------
+
               pacman -Syu --noconfirm
 
               pacman -S --noconfirm --needed \
@@ -1708,7 +1925,7 @@ jobs:
                 /tmp/package-build
 
               # ------------------------------------------------
-              # Clone repository.
+              # Clone repository
               # ------------------------------------------------
 
               git clone \
@@ -1738,7 +1955,7 @@ jobs:
               fi
 
               if [ -z "$GIT_TAG" ]; then
-                echo "ERROR: Cloned repository has no Git tag."
+                echo "ERROR: Repository has no Git tag."
                 git tag --list
                 exit 1
               fi
@@ -1753,17 +1970,16 @@ jobs:
 
               ARCH_PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
 
-              echo "Repository: https://github.com/Kuznix-Team/kuzpkg.git"
               echo "Git tag: ${GIT_TAG}"
               echo "Arch pkgver: ${ARCH_PKGVER}"
-
-              # ------------------------------------------------
-              # Build Kuzpkg itself.
-              # ------------------------------------------------
 
               test \
                 -f \
                 /tmp/kuzpkg/meson.build
+
+              # ------------------------------------------------
+              # Bootstrap kuzpkg with system Meson
+              # ------------------------------------------------
 
               meson setup \
                 /tmp/kuzpkg/source-build \
@@ -1786,19 +2002,24 @@ jobs:
 
                 find \
                   /tmp/kuzpkg-install \
-                  -type f \
-                  -o -type l
+                  -maxdepth 5 \
+                  \( -type f -o -type l \) \
+                  -print
 
                 exit 1
               fi
 
-              echo "Kuzpkg makepkg:"
+              echo "Bootstrapped Kuzpkg makepkg:"
               "$MAKEPKG_PATH" --version || true
 
               # ------------------------------------------------
-              # Create source archive OUTSIDE source tree.
+              # IMPORTANT:
               #
-              # makepkg must extract this normally.
+              # The source archive is separate from the build
+              # directory and is declared in source=().
+              #
+              # Therefore Kuzpkg makepkg can safely use
+              # --cleanbuild.
               # ------------------------------------------------
 
               tar \
@@ -1811,58 +2032,77 @@ jobs:
                 -czf /tmp/kuzpkg-source.tar.gz \
                 .
 
-              test \
-                -f \
-                /tmp/kuzpkg-source.tar.gz
-
               cp \
                 /tmp/kuzpkg-source.tar.gz \
                 /tmp/package-build/kuzpkg-source.tar.gz
 
               # ------------------------------------------------
-              # PKGBUILD.
-              #
-              # source=() causes makepkg to extract:
-              #
-              # $srcdir/...
-              #
-              # Therefore build() uses $srcdir directly.
+              # Kuzpkg PKGBUILD
               # ------------------------------------------------
 
-              printf "%s\n" \
-                "pkgname=kuzpkg" \
-                "pkgver=${ARCH_PKGVER}" \
-                "pkgrel=1" \
-                "pkgdesc=\"kuzpkg package manager\"" \
-                "arch=(x86_64)" \
-                "license=(GPL)" \
-                "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
-                "source=(kuzpkg-source.tar.gz)" \
-                "sha256sums=(SKIP)" \
-                "" \
-                "build() {" \
-                "    cd \"\$srcdir\"" \
-                "    test -f meson.build" \
-                "    meson setup build --buildtype=release --prefix=/usr" \
-                "    meson compile -C build" \
-                "}" \
-                "" \
-                "package() {" \
-                "    cd \"\$srcdir\"" \
-                "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
-                "}" \
-                > /tmp/package-build/PKGBUILD
+              cat > /tmp/package-build/PKGBUILD <<EOF
+              pkgname=kuzpkg
+              pkgver=${ARCH_PKGVER}
+              pkgrel=1
+              pkgdesc="kuzpkg package manager"
+              arch=(x86_64)
+              license=(GPL-2.0-or-later)
+              depends=(
+                bash
+                libarchive
+                curl
+                gpgme
+                openssl
+                nettle
+                libseccomp
+              )
+              makedepends=(
+                meson
+                ninja
+                pkgconf
+              )
+              source=(
+                kuzpkg-source.tar.gz
+              )
+              sha256sums=(
+                SKIP
+              )
 
-              echo "Generated PKGBUILD:"
+              build() {
+                  cd "\$srcdir"
+
+                  test -f meson.build
+
+                  meson setup \
+                    build \
+                    --buildtype=release \
+                    --prefix=/usr
+
+                  meson compile \
+                    -C build
+              }
+
+              package() {
+                  cd "\$srcdir"
+
+                  meson install \
+                    -C build \
+                    --destdir "\$pkgdir" \
+                    --no-rebuild \
+                    --strip
+              }
+              EOF
+
+              echo "Generated Kuzpkg PKGBUILD:"
               cat \
                 /tmp/package-build/PKGBUILD
 
               # ------------------------------------------------
-              # Builder
+              # Builder user
               # ------------------------------------------------
 
               useradd \
-                -m \
+                --create-home \
                 builder
 
               chown \
@@ -1872,12 +2112,7 @@ jobs:
                 /tmp/kuzpkg-install
 
               # ------------------------------------------------
-              # IMPORTANT:
-              # NO --noextract here.
-              #
-              # makepkg must extract kuzpkg-source.tar.gz.
-              #
-              # --nodeps avoids the dependency helper issue.
+              # Use Kuzpkg's own makepkg
               # ------------------------------------------------
 
               su builder -c "
@@ -1889,6 +2124,7 @@ jobs:
                   /tmp/kuzpkg-install/usr/bin/makepkg \
                   --nodeps \
                   --noconfirm \
+                  --cleanbuild \
                   --clean
               "
 
@@ -1922,7 +2158,7 @@ jobs:
                 "$PKG_FILE"
 
               # ------------------------------------------------
-              # Rename package format.
+              # Rename native Arch package to Kuzpkg format
               # ------------------------------------------------
 
               BASE="$(
@@ -1966,13 +2202,16 @@ jobs:
 
           if [ -z "$PKG_FILE" ]; then
             echo "ERROR: No .kuzpkg.tar.zst artifact found."
-            find dist -maxdepth 1 -type f -print
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -print
             exit 1
           fi
 
-          echo "Artifact:"
-          ls -lh \
-            "$PKG_FILE"
+          echo "Kuzpkg artifact:"
+          ls -lh "$PKG_FILE"
 
       - name: Upload Kuzpkg package
         uses: actions/upload-artifact@v4
@@ -1999,7 +2238,8 @@ jobs:
           set -euxo pipefail
 
           sudo apt-get update
-          sudo apt-get install -y ca-certificates
+          sudo apt-get install -y \
+            ca-certificates
 
           docker --version
 
@@ -2007,6 +2247,7 @@ jobs:
         run: |
           set -euxo pipefail
 
+          rm -rf dist
           mkdir -p dist
 
           docker run \
@@ -2014,6 +2255,7 @@ jobs:
             -v "$PWD/dist:/export" \
             archlinux:latest \
             bash -euxo pipefail -c '
+
               pacman -Syu --noconfirm
 
               pacman -S --noconfirm --needed \
@@ -2042,7 +2284,7 @@ jobs:
                 /tmp/package-build
 
               # ------------------------------------------------
-              # Clone repository.
+              # Clone repository
               # ------------------------------------------------
 
               git clone \
@@ -2072,7 +2314,7 @@ jobs:
               fi
 
               if [ -z "$GIT_TAG" ]; then
-                echo "ERROR: Cloned repository has no Git tag."
+                echo "ERROR: Repository has no Git tag."
                 exit 1
               fi
 
@@ -2086,12 +2328,11 @@ jobs:
 
               ARCH_PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
 
-              echo "Repository: https://github.com/Kuznix-Team/kuzpkg.git"
               echo "Git tag: ${GIT_TAG}"
               echo "Arch O3 pkgver: ${ARCH_PKGVER}"
 
               # ------------------------------------------------
-              # Build Kuzpkg with O3.
+              # Bootstrap Kuzpkg O3
               # ------------------------------------------------
 
               test \
@@ -2120,17 +2361,18 @@ jobs:
 
                 find \
                   /tmp/kuzpkg-install \
-                  -type f \
-                  -o -type l
+                  -maxdepth 5 \
+                  \( -type f -o -type l \) \
+                  -print
 
                 exit 1
               fi
 
-              echo "Kuzpkg O3 makepkg:"
+              echo "Bootstrapped Kuzpkg O3 makepkg:"
               "$MAKEPKG_PATH" --version || true
 
               # ------------------------------------------------
-              # Create source archive OUTSIDE source tree.
+              # Create source archive
               # ------------------------------------------------
 
               tar \
@@ -2143,48 +2385,74 @@ jobs:
                 -czf /tmp/kuzpkg-source.tar.gz \
                 .
 
-              test \
-                -f \
-                /tmp/kuzpkg-source.tar.gz
-
               cp \
                 /tmp/kuzpkg-source.tar.gz \
                 /tmp/package-build/kuzpkg-source.tar.gz
 
               # ------------------------------------------------
-              # O3 PKGBUILD.
+              # O3 PKGBUILD
               # ------------------------------------------------
 
-              printf "%s\n" \
-                "pkgname=kuzpkg" \
-                "pkgver=${ARCH_PKGVER}" \
-                "pkgrel=1" \
-                "pkgdesc=\"kuzpkg package manager\"" \
-                "arch=(x86_64)" \
-                "license=(GPL)" \
-                "depends=(bash libarchive curl gpgme openssl nettle libseccomp)" \
-                "source=(kuzpkg-source.tar.gz)" \
-                "sha256sums=(SKIP)" \
-                "" \
-                "build() {" \
-                "    cd \"\$srcdir\"" \
-                "    test -f meson.build" \
-                "    meson setup build --buildtype=release --prefix=/usr -Denable-o3=true" \
-                "    meson compile -C build" \
-                "}" \
-                "" \
-                "package() {" \
-                "    cd \"\$srcdir\"" \
-                "    meson install -C build --destdir \"\$pkgdir\" --no-rebuild --strip" \
-                "}" \
-                > /tmp/package-build/PKGBUILD
+              cat > /tmp/package-build/PKGBUILD <<EOF
+              pkgname=kuzpkg
+              pkgver=${ARCH_PKGVER}
+              pkgrel=1
+              pkgdesc="kuzpkg package manager - O3 build"
+              arch=(x86_64)
+              license=(GPL-2.0-or-later)
+              depends=(
+                bash
+                libarchive
+                curl
+                gpgme
+                openssl
+                nettle
+                libseccomp
+              )
+              makedepends=(
+                meson
+                ninja
+                pkgconf
+              )
+              source=(
+                kuzpkg-source.tar.gz
+              )
+              sha256sums=(
+                SKIP
+              )
 
-              echo "Generated O3 PKGBUILD:"
+              build() {
+                  cd "\$srcdir"
+
+                  test -f meson.build
+
+                  meson setup \
+                    build \
+                    --buildtype=release \
+                    --prefix=/usr \
+                    -Denable-o3=true
+
+                  meson compile \
+                    -C build
+              }
+
+              package() {
+                  cd "\$srcdir"
+
+                  meson install \
+                    -C build \
+                    --destdir "\$pkgdir" \
+                    --no-rebuild \
+                    --strip
+              }
+              EOF
+
+              echo "Generated Kuzpkg O3 PKGBUILD:"
               cat \
                 /tmp/package-build/PKGBUILD
 
               useradd \
-                -m \
+                --create-home \
                 builder
 
               chown \
@@ -2192,6 +2460,10 @@ jobs:
                 builder:builder \
                 /tmp/package-build \
                 /tmp/kuzpkg-install
+
+              # ------------------------------------------------
+              # Build with Kuzpkg's own makepkg
+              # ------------------------------------------------
 
               su builder -c "
                 cd /tmp/package-build
@@ -2202,8 +2474,13 @@ jobs:
                   /tmp/kuzpkg-install/usr/bin/makepkg \
                   --nodeps \
                   --noconfirm \
+                  --cleanbuild \
                   --clean
               "
+
+              # ------------------------------------------------
+              # Locate package
+              # ------------------------------------------------
 
               PKG_FILE="$(
                 find \
@@ -2265,25 +2542,28 @@ jobs:
               dist \
               -maxdepth 1 \
               -type f \
-              -name "*.kuzpkg.tar.zst" |
+              -name "*-o3.kuzpkg.tar.zst" |
             head -n 1
           )"
 
           if [ -z "$PKG_FILE" ]; then
             echo "ERROR: No Kuzpkg O3 artifact found."
-            find dist -maxdepth 1 -type f -print
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -print
             exit 1
           fi
 
-          echo "Artifact:"
-          ls -lh \
-            "$PKG_FILE"
+          echo "Kuzpkg O3 artifact:"
+          ls -lh "$PKG_FILE"
 
       - name: Upload Kuzpkg O3 package
         uses: actions/upload-artifact@v4
         with:
           name: kuzpkg-kuzpkg-tar-zst-o3
-          path: dist/*.kuzpkg.tar.zst
+          path: dist/*-o3.kuzpkg.tar.zst
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
