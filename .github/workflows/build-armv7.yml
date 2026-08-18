@@ -1,0 +1,969 @@
+name: Build kuzpkg ARMv7 packages
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 1 * * *"
+
+permissions:
+  contents: read
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  TARGET_IMAGE: arm32v7/ubuntu:26.04
+  TARGET_PLATFORM: linux/arm/v7
+  REPOSITORY: https://github.com/Kuznix-Team/kuzpkg.git
+
+jobs:
+
+  # ==========================================================
+  # ARMv7 RPM
+  #
+  # FIX:
+  #   - Entire source tree is cloned inside /tmp.
+  #   - Entire Meson build is under /tmp.
+  #   - Entire rpmbuild tree is under /tmp.
+  #   - /workspace is used ONLY for the final RPM.
+  #
+  # This avoids:
+  #
+  #   chmod: Value too large for defined data type
+  #
+  # caused by 32-bit ARM userspace operating on the host
+  # filesystem's large inode/device metadata.
+  # ==========================================================
+
+  rpm-armv7:
+    name: ".rpm - ARMv7"
+    runs-on: ubuntu-26.04
+
+    steps:
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+
+      - name: Prepare runner
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          docker --version
+
+      - name: Verify ARMv7 container
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
+            --platform "$TARGET_PLATFORM" \
+            "$TARGET_IMAGE" \
+            sh -c '
+              echo "Architecture:"
+              uname -m
+
+              echo "Userspace bits:"
+              getconf LONG_BIT
+            '
+
+      - name: Build ARMv7 RPM
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          rm -rf dist
+          mkdir -p dist
+
+          docker run \
+            --rm \
+            --platform "$TARGET_PLATFORM" \
+            -e REPOSITORY="$REPOSITORY" \
+            -v "$GITHUB_WORKSPACE/dist:/workspace" \
+            -w /workspace \
+            "$TARGET_IMAGE" \
+            bash -euxo pipefail -c '
+
+              # ------------------------------------------------
+              # Install dependencies.
+              # ------------------------------------------------
+
+              apt-get update
+
+              apt-get install -y \
+                ca-certificates \
+                git \
+                build-essential \
+                meson \
+                ninja-build \
+                pkg-config \
+                zstd \
+                libarchive-dev \
+                libcurl4-openssl-dev \
+                libgpgme-dev \
+                libssl-dev \
+                nettle-dev \
+                libseccomp-dev \
+                file \
+                gettext \
+                rpm
+
+              # ------------------------------------------------
+              # EVERYTHING IMPORTANT STAYS UNDER /tmp.
+              #
+              # Do not build from /workspace.
+              # ------------------------------------------------
+
+              rm -rf \
+                /tmp/kuzpkg \
+                /tmp/kuzpkg-build \
+                /tmp/kuzpkg-staging \
+                /tmp/rpm-build
+
+              mkdir -p \
+                /tmp/rpm-build/BUILD \
+                /tmp/rpm-build/BUILDROOT \
+                /tmp/rpm-build/RPMS \
+                /tmp/rpm-build/SOURCES \
+                /tmp/rpm-build/SPECS \
+                /tmp/rpm-build/SRPMS
+
+              # ------------------------------------------------
+              # Clone source directly inside ARMv7 container.
+              #
+              # This avoids copying the GitHub workspace into
+              # 32-bit userspace.
+              # ------------------------------------------------
+
+              git clone \
+                --depth 1 \
+                --filter=blob:none \
+                "$REPOSITORY" \
+                /tmp/kuzpkg
+
+              cd /tmp/kuzpkg
+
+              git fetch \
+                --tags \
+                --depth=1 \
+                origin
+
+              GIT_TAG="$(
+                git tag --sort=-creatordate |
+                head -n 1
+              )"
+
+              if [ -z "$GIT_TAG" ]; then
+                GIT_TAG="$(
+                  git describe \
+                    --tags \
+                    --abbrev=0 \
+                    2>/dev/null || true
+                )"
+              fi
+
+              if [ -z "$GIT_TAG" ]; then
+                echo "ERROR: Repository has no Git tag."
+
+                git tag --list
+
+                exit 1
+              fi
+
+              TAG_VERSION="${GIT_TAG#v}"
+
+              DATE_VERSION="$(
+                date -u +%Y%m%d
+              )"
+
+              RPM_VERSION="$(
+                printf "%s" "$TAG_VERSION" |
+                sed \
+                  "s/-/~/g; s/+/_/g"
+              ).${DATE_VERSION}"
+
+              SAFE_TAG="$(
+                printf "%s" "$GIT_TAG" |
+                sed \
+                  "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
+              )"
+
+              PACKAGE_VERSION="${TAG_VERSION}-${DATE_VERSION}"
+
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PACKAGE_VERSION}"
+              echo "RPM version: ${RPM_VERSION}"
+
+              # ------------------------------------------------
+              # Verify source.
+              # ------------------------------------------------
+
+              test \
+                -f \
+                /tmp/kuzpkg/meson.build
+
+              # ------------------------------------------------
+              # Build completely under /tmp.
+              # ------------------------------------------------
+
+              meson setup \
+                /tmp/kuzpkg-build \
+                /tmp/kuzpkg \
+                --buildtype=release \
+                --prefix=/usr
+
+              meson compile \
+                -C /tmp/kuzpkg-build
+
+              meson install \
+                -C /tmp/kuzpkg-build \
+                --destdir /tmp/kuzpkg-staging \
+                --no-rebuild \
+                --strip
+
+              test \
+                -x \
+                /tmp/kuzpkg-staging/usr/bin/kuzpkg
+
+              # ------------------------------------------------
+              # Generate RPM spec.
+              #
+              # No heredoc.
+              # ------------------------------------------------
+
+              printf "%s\n" \
+                "Name:           kuzpkg" \
+                "Version:        ${RPM_VERSION}" \
+                "Release:        1" \
+                "Summary:        kuzpkg package manager" \
+                "License:        GPL-2.0-or-later" \
+                "BuildArch:      armv7hl" \
+                "" \
+                "%description" \
+                "Package manager for Kuznix Linux." \
+                "" \
+                "%prep" \
+                "" \
+                "%build" \
+                "" \
+                "%install" \
+                "rm -rf %{buildroot}" \
+                "mkdir -p %{buildroot}" \
+                "cp -a /tmp/kuzpkg-staging/. %{buildroot}/" \
+                "" \
+                "%files" \
+                "/usr/*" \
+                "/etc/kuzpkg.conf" \
+                "/etc/makepkg.conf" \
+                "/etc/makepkg.conf.d/*" \
+                "/var/*" \
+                "" \
+                "%changelog" \
+                "* $(date -u "+%a %b %d %Y") Kuznix Team - ${RPM_VERSION}-1" \
+                "- ARMv7 build" \
+                > /tmp/rpm-build/SPECS/kuzpkg.spec
+
+              echo "Generated spec:"
+              cat \
+                /tmp/rpm-build/SPECS/kuzpkg.spec
+
+              # ------------------------------------------------
+              # rpmbuild EVERYTHING under /tmp.
+              #
+              # Most important ARMv7 fix.
+              # ------------------------------------------------
+
+              rpmbuild \
+                --define "_topdir /tmp/rpm-build" \
+                --define "_builddir /tmp/rpm-build/BUILD" \
+                --define "_buildrootdir /tmp/rpm-build/BUILDROOT" \
+                --define "_rpmdir /tmp/rpm-build/RPMS" \
+                --define "_sourcedir /tmp/rpm-build/SOURCES" \
+                --define "_specdir /tmp/rpm-build/SPECS" \
+                --define "_srcrpmdir /tmp/rpm-build/SRPMS" \
+                -bb \
+                /tmp/rpm-build/SPECS/kuzpkg.spec
+
+              RPM_FILE="$(
+                find \
+                  /tmp/rpm-build/RPMS \
+                  -type f \
+                  -name "*.rpm" |
+                head -n 1
+              )"
+
+              if [ -z "$RPM_FILE" ]; then
+                echo "ERROR: ARMv7 RPM was not produced."
+
+                find \
+                  /tmp/rpm-build/RPMS \
+                  -type f \
+                  -print
+
+                exit 1
+              fi
+
+              OUTPUT="/workspace/kuzpkg-${SAFE_TAG}-armv7-${PACKAGE_VERSION}.rpm"
+
+              cp \
+                "$RPM_FILE" \
+                "$OUTPUT"
+
+              test \
+                -f \
+                "$OUTPUT"
+
+              rpm -qip \
+                "$RPM_FILE"
+
+              rpm -qlp \
+                "$RPM_FILE"
+
+              echo "Created ARMv7 RPM:"
+              ls -lh \
+                "$OUTPUT"
+            '
+
+      - name: Verify ARMv7 RPM
+        run: |
+          set -euxo pipefail
+
+          RPM_FILE="$(
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -name "*.rpm" |
+            head -n 1
+          )"
+
+          if [ -z "$RPM_FILE" ]; then
+            echo "ERROR: No ARMv7 RPM artifact."
+
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -print
+
+            exit 1
+          fi
+
+          ls -lh "$RPM_FILE"
+
+      - name: Upload ARMv7 RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuzpkg-rpm-armv7
+          path: dist/*.rpm
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+
+  # ==========================================================
+  # ARMv7 .PKG.TAR.ZST
+  #
+  # FIX:
+  #   - No makepkg.
+  #   - No PKGBUILD.
+  #   - No du.
+  #   - Entire source/build/staging is under /tmp.
+  #   - Only final artifact touches /workspace.
+  #
+  # This eliminates:
+  #
+  #   du: ... Value too large for defined data type
+  # ==========================================================
+
+  pkg-tar-zst-armv7:
+    name: ".pkg.tar.zst - ARMv7"
+    runs-on: ubuntu-26.04
+
+    steps:
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+
+      - name: Prepare runner
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          docker --version
+
+      - name: Verify ARMv7 container
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
+            --platform "$TARGET_PLATFORM" \
+            "$TARGET_IMAGE" \
+            sh -c '
+              echo "Architecture:"
+              uname -m
+
+              echo "Userspace bits:"
+              getconf LONG_BIT
+            '
+
+      - name: Build ARMv7 .pkg.tar.zst
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          rm -rf dist
+          mkdir -p dist
+
+          docker run \
+            --rm \
+            --platform "$TARGET_PLATFORM" \
+            -e REPOSITORY="$REPOSITORY" \
+            -v "$GITHUB_WORKSPACE/dist:/workspace" \
+            -w /workspace \
+            "$TARGET_IMAGE" \
+            bash -euxo pipefail -c '
+
+              # ------------------------------------------------
+              # Dependencies.
+              # ------------------------------------------------
+
+              apt-get update
+
+              apt-get install -y \
+                ca-certificates \
+                git \
+                build-essential \
+                meson \
+                ninja-build \
+                pkg-config \
+                zstd \
+                libarchive-dev \
+                libcurl4-openssl-dev \
+                libgpgme-dev \
+                libssl-dev \
+                nettle-dev \
+                libseccomp-dev \
+                file \
+                gettext \
+                tar
+
+              # ------------------------------------------------
+              # Everything under /tmp.
+              # ------------------------------------------------
+
+              rm -rf \
+                /tmp/kuzpkg \
+                /tmp/kuzpkg-build \
+                /tmp/pkg-root
+
+              # ------------------------------------------------
+              # Clone source inside container.
+              # ------------------------------------------------
+
+              git clone \
+                --depth 1 \
+                --filter=blob:none \
+                "$REPOSITORY" \
+                /tmp/kuzpkg
+
+              cd /tmp/kuzpkg
+
+              git fetch \
+                --tags \
+                --depth=1 \
+                origin
+
+              GIT_TAG="$(
+                git tag --sort=-creatordate |
+                head -n 1
+              )"
+
+              if [ -z "$GIT_TAG" ]; then
+                GIT_TAG="$(
+                  git describe \
+                    --tags \
+                    --abbrev=0 \
+                    2>/dev/null || true
+                )"
+              fi
+
+              if [ -z "$GIT_TAG" ]; then
+                echo "ERROR: No Git tag found."
+                exit 1
+              fi
+
+              TAG_VERSION="${GIT_TAG#v}"
+
+              DATE_VERSION="$(
+                date -u +%Y%m%d
+              )"
+
+              ARCH_TAG_VERSION="$(
+                printf "%s" "$TAG_VERSION" |
+                tr "-" "."
+              )"
+
+              PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
+
+              SAFE_TAG="$(
+                printf "%s" "$GIT_TAG" |
+                sed \
+                  "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
+              )"
+
+              # ------------------------------------------------
+              # Build.
+              # ------------------------------------------------
+
+              meson setup \
+                /tmp/kuzpkg-build \
+                /tmp/kuzpkg \
+                --buildtype=release \
+                --prefix=/usr
+
+              meson compile \
+                -C /tmp/kuzpkg-build
+
+              mkdir -p \
+                /tmp/pkg-root
+
+              meson install \
+                -C /tmp/kuzpkg-build \
+                --destdir /tmp/pkg-root \
+                --no-rebuild \
+                --strip
+
+              test \
+                -x \
+                /tmp/pkg-root/usr/bin/kuzpkg
+
+              BUILD_DATE="$(
+                date -u +%s
+              )"
+
+              # ------------------------------------------------
+              # DO NOT use du.
+              #
+              # ARMv7 can overflow 32-bit stat/off_t-related
+              # interfaces against some filesystems.
+              # ------------------------------------------------
+
+              printf "%s\n" \
+                "pkgname = kuzpkg" \
+                "pkgbase = kuzpkg" \
+                "pkgver = ${PKGVER}" \
+                "pkgrel = 1" \
+                "pkgdesc = kuzpkg package manager" \
+                "arch = armv7" \
+                "license = GPL-2.0-or-later" \
+                "packager = Kuznix Team" \
+                "url = https://github.com/Kuznix-Team/kuzpkg" \
+                "builddate = ${BUILD_DATE}" \
+                > /tmp/pkg-root/.PKGINFO
+
+              printf "%s\n" \
+                "builddate = ${BUILD_DATE}" \
+                "buildenv = kuzpkg-ci" \
+                "format = pkg.tar.zst" \
+                "architecture = armv7" \
+                > /tmp/pkg-root/.BUILDINFO
+
+              find \
+                /tmp/pkg-root \
+                -mindepth 1 \
+                -maxdepth 6 \
+                -print \
+                | sort \
+                > /tmp/pkg-root/.FILELIST
+
+              OUTPUT="/workspace/kuzpkg-${SAFE_TAG}-armv7-${PKGVER}.pkg.tar.zst"
+
+              tar \
+                --sort=name \
+                --owner=0 \
+                --group=0 \
+                --numeric-owner \
+                --mtime="@0" \
+                -C /tmp/pkg-root \
+                -cf - \
+                . |
+              zstd \
+                -T0 \
+                -19 \
+                -o "$OUTPUT"
+
+              zstd \
+                -t \
+                "$OUTPUT"
+
+              zstd \
+                -dc \
+                "$OUTPUT" |
+              tar \
+                -tf - \
+                > /tmp/package-files.txt
+
+              grep \
+                -Fx \
+                "./.PKGINFO" \
+                /tmp/package-files.txt
+
+              grep \
+                -Fx \
+                "./.BUILDINFO" \
+                /tmp/package-files.txt
+
+              grep \
+                -Fx \
+                "./usr/bin/kuzpkg" \
+                /tmp/package-files.txt
+
+              echo "Created ARMv7 .pkg.tar.zst:"
+              ls -lh \
+                "$OUTPUT"
+            '
+
+      - name: Verify ARMv7 .pkg.tar.zst
+        run: |
+          set -euxo pipefail
+
+          PKG_FILE="$(
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -name "*.pkg.tar.zst" |
+            head -n 1
+          )"
+
+          if [ -z "$PKG_FILE" ]; then
+            echo "ERROR: No ARMv7 .pkg.tar.zst artifact."
+
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -print
+
+            exit 1
+          fi
+
+          ls -lh "$PKG_FILE"
+
+      - name: Upload ARMv7 .pkg.tar.zst
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuzpkg-pkg-tar-zst-armv7
+          path: dist/*.pkg.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+
+  # ==========================================================
+  # ARMv7 .KUZPKG.TAR.ZST
+  #
+  # FIX:
+  #   - No makepkg.
+  #   - No PKGBUILD.
+  #   - No du.
+  #   - Entire source/build/staging is under /tmp.
+  #   - Only final artifact touches /workspace.
+  # ==========================================================
+
+  kuzpkg-tar-zst-armv7:
+    name: ".kuzpkg.tar.zst - ARMv7"
+    runs-on: ubuntu-26.04
+
+    steps:
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+
+      - name: Prepare runner
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            ca-certificates
+
+          docker --version
+
+      - name: Verify ARMv7 container
+        run: |
+          set -euxo pipefail
+
+          docker run \
+            --rm \
+            --platform "$TARGET_PLATFORM" \
+            "$TARGET_IMAGE" \
+            sh -c '
+              echo "Architecture:"
+              uname -m
+
+              echo "Userspace bits:"
+              getconf LONG_BIT
+            '
+
+      - name: Build ARMv7 .kuzpkg.tar.zst
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          rm -rf dist
+          mkdir -p dist
+
+          docker run \
+            --rm \
+            --platform "$TARGET_PLATFORM" \
+            -e REPOSITORY="$REPOSITORY" \
+            -v "$GITHUB_WORKSPACE/dist:/workspace" \
+            -w /workspace \
+            "$TARGET_IMAGE" \
+            bash -euxo pipefail -c '
+
+              # ------------------------------------------------
+              # Dependencies.
+              # ------------------------------------------------
+
+              apt-get update
+
+              apt-get install -y \
+                ca-certificates \
+                git \
+                build-essential \
+                meson \
+                ninja-build \
+                pkg-config \
+                zstd \
+                libarchive-dev \
+                libcurl4-openssl-dev \
+                libgpgme-dev \
+                libssl-dev \
+                nettle-dev \
+                libseccomp-dev \
+                file \
+                gettext \
+                tar
+
+              # ------------------------------------------------
+              # Everything except final output under /tmp.
+              # ------------------------------------------------
+
+              rm -rf \
+                /tmp/kuzpkg \
+                /tmp/kuzpkg-build \
+                /tmp/pkg-root
+
+              # ------------------------------------------------
+              # Clone inside ARMv7 container.
+              # ------------------------------------------------
+
+              git clone \
+                --depth 1 \
+                --filter=blob:none \
+                "$REPOSITORY" \
+                /tmp/kuzpkg
+
+              cd /tmp/kuzpkg
+
+              git fetch \
+                --tags \
+                --depth=1 \
+                origin
+
+              GIT_TAG="$(
+                git tag --sort=-creatordate |
+                head -n 1
+              )"
+
+              if [ -z "$GIT_TAG" ]; then
+                GIT_TAG="$(
+                  git describe \
+                    --tags \
+                    --abbrev=0 \
+                    2>/dev/null || true
+                )"
+              fi
+
+              if [ -z "$GIT_TAG" ]; then
+                echo "ERROR: No Git tag found."
+                exit 1
+              fi
+
+              TAG_VERSION="${GIT_TAG#v}"
+
+              DATE_VERSION="$(
+                date -u +%Y%m%d
+              )"
+
+              ARCH_TAG_VERSION="$(
+                printf "%s" "$TAG_VERSION" |
+                tr "-" "."
+              )"
+
+              PKGVER="${ARCH_TAG_VERSION}.${DATE_VERSION}"
+
+              SAFE_TAG="$(
+                printf "%s" "$GIT_TAG" |
+                sed \
+                  "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
+              )"
+
+              # ------------------------------------------------
+              # Build.
+              # ------------------------------------------------
+
+              meson setup \
+                /tmp/kuzpkg-build \
+                /tmp/kuzpkg \
+                --buildtype=release \
+                --prefix=/usr
+
+              meson compile \
+                -C /tmp/kuzpkg-build
+
+              mkdir -p \
+                /tmp/pkg-root
+
+              meson install \
+                -C /tmp/kuzpkg-build \
+                --destdir /tmp/pkg-root \
+                --no-rebuild \
+                --strip
+
+              test \
+                -x \
+                /tmp/pkg-root/usr/bin/kuzpkg
+
+              BUILD_DATE="$(
+                date -u +%s
+              )"
+
+              printf "%s\n" \
+                "pkgname = kuzpkg" \
+                "pkgbase = kuzpkg" \
+                "pkgver = ${PKGVER}" \
+                "pkgrel = 1" \
+                "pkgdesc = kuzpkg package manager" \
+                "arch = armv7" \
+                "license = GPL-2.0-or-later" \
+                "packager = Kuznix Team" \
+                "url = https://github.com/Kuznix-Team/kuzpkg" \
+                "builddate = ${BUILD_DATE}" \
+                > /tmp/pkg-root/.PKGINFO
+
+              printf "%s\n" \
+                "builddate = ${BUILD_DATE}" \
+                "buildenv = kuzpkg-ci" \
+                "format = kuzpkg-tar-zst" \
+                "architecture = armv7" \
+                > /tmp/pkg-root/.BUILDINFO
+
+              find \
+                /tmp/pkg-root \
+                -mindepth 1 \
+                -maxdepth 6 \
+                -print \
+                | sort \
+                > /tmp/pkg-root/.FILELIST
+
+              OUTPUT="/workspace/kuzpkg-${SAFE_TAG}-armv7-${PKGVER}.kuzpkg.tar.zst"
+
+              tar \
+                --sort=name \
+                --owner=0 \
+                --group=0 \
+                --numeric-owner \
+                --mtime="@0" \
+                -C /tmp/pkg-root \
+                -cf - \
+                . |
+              zstd \
+                -T0 \
+                -19 \
+                -o "$OUTPUT"
+
+              zstd \
+                -t \
+                "$OUTPUT"
+
+              zstd \
+                -dc \
+                "$OUTPUT" |
+              tar \
+                -tf - \
+                > /tmp/kuzpkg-files.txt
+
+              grep \
+                -Fx \
+                "./.PKGINFO" \
+                /tmp/kuzpkg-files.txt
+
+              grep \
+                -Fx \
+                "./.BUILDINFO" \
+                /tmp/kuzpkg-files.txt
+
+              grep \
+                -Fx \
+                "./usr/bin/kuzpkg" \
+                /tmp/kuzpkg-files.txt
+
+              echo "Created ARMv7 .kuzpkg.tar.zst:"
+              ls -lh \
+                "$OUTPUT"
+            '
+
+      - name: Verify ARMv7 .kuzpkg.tar.zst
+        run: |
+          set -euxo pipefail
+
+          PKG_FILE="$(
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -name "*.kuzpkg.tar.zst" |
+            head -n 1
+          )"
+
+          if [ -z "$PKG_FILE" ]; then
+            echo "ERROR: No ARMv7 .kuzpkg.tar.zst artifact."
+
+            find \
+              dist \
+              -maxdepth 1 \
+              -type f \
+              -print
+
+            exit 1
+          fi
+
+          ls -lh "$PKG_FILE"
+
+      - name: Upload ARMv7 .kuzpkg.tar.zst
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuzpkg-kuzpkg-tar-zst-armv7
+          path: dist/*.kuzpkg.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
