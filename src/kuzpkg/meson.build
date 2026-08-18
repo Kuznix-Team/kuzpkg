@@ -1,3 +1,7 @@
+# Favor runtime performance for the package manager and its command-line tools.
+# Keep this portable: do not use -march=native so binaries remain distributable.
+add_project_arguments('-O3', language : 'c')
+
 kuzpkg_sources = files('''
   check.h check.c
   conf.h conf.c
