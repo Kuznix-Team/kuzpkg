@@ -1,4 +1,4 @@
-name: Build kuzpkg ARMv7 packages
+name: Build kuzpkg ARMv7 packages (for .rpm,.pkg.tar.zst and .kuzpkg.tar.zst)
 
 on:
   workflow_dispatch:
@@ -20,18 +20,17 @@ jobs:
   # ==========================================================
   # ARMv7 RPM
   #
-  # FIX:
-  #   - Entire source tree is cloned inside /tmp.
-  #   - Entire Meson build is under /tmp.
-  #   - Entire rpmbuild tree is under /tmp.
-  #   - /workspace is used ONLY for the final RPM.
+  # Produces:
+  #   *.rpm
   #
-  # This avoids:
+  # RPM FIX:
+  #   rpmbuild successfully creates the RPM, but its automatic
+  #   rmbuild cleanup invokes recursive chmod and ARMv7/QEMU
+  #   can fail with:
   #
-  #   chmod: Value too large for defined data type
+  #     chmod: Value too large for defined data type
   #
-  # caused by 32-bit ARM userspace operating on the host
-  # filesystem's large inode/device metadata.
+  #   We override %__chmod only for this rpmbuild invocation.
   # ==========================================================
 
   rpm-armv7:
@@ -114,9 +113,8 @@ jobs:
                 rpm
 
               # ------------------------------------------------
-              # EVERYTHING IMPORTANT STAYS UNDER /tmp.
-              #
-              # Do not build from /workspace.
+              # Everything important stays under /tmp.
+              # /workspace is only for the final artifact.
               # ------------------------------------------------
 
               rm -rf \
@@ -134,10 +132,7 @@ jobs:
                 /tmp/rpm-build/SRPMS
 
               # ------------------------------------------------
-              # Clone source directly inside ARMv7 container.
-              #
-              # This avoids copying the GitHub workspace into
-              # 32-bit userspace.
+              # Clone source inside ARMv7 container.
               # ------------------------------------------------
 
               git clone \
@@ -208,7 +203,7 @@ jobs:
                 /tmp/kuzpkg/meson.build
 
               # ------------------------------------------------
-              # Build completely under /tmp.
+              # Meson configure.
               # ------------------------------------------------
 
               meson setup \
@@ -217,8 +212,16 @@ jobs:
                 --buildtype=release \
                 --prefix=/usr
 
+              # ------------------------------------------------
+              # Compile.
+              # ------------------------------------------------
+
               meson compile \
                 -C /tmp/kuzpkg-build
+
+              # ------------------------------------------------
+              # Install to DESTDIR.
+              # ------------------------------------------------
 
               meson install \
                 -C /tmp/kuzpkg-build \
@@ -232,8 +235,6 @@ jobs:
 
               # ------------------------------------------------
               # Generate RPM spec.
-              #
-              # No heredoc.
               # ------------------------------------------------
 
               printf "%s\n" \
@@ -273,9 +274,13 @@ jobs:
                 /tmp/rpm-build/SPECS/kuzpkg.spec
 
               # ------------------------------------------------
-              # rpmbuild EVERYTHING under /tmp.
+              # Build RPM.
               #
-              # Most important ARMv7 fix.
+              # The RPM itself is successfully written before
+              # the failing rmbuild chmod stage.
+              #
+              # Override %__chmod so the cleanup cannot trigger
+              # the ARMv7/QEMU large-file-metadata error.
               # ------------------------------------------------
 
               rpmbuild \
@@ -286,8 +291,13 @@ jobs:
                 --define "_sourcedir /tmp/rpm-build/SOURCES" \
                 --define "_specdir /tmp/rpm-build/SPECS" \
                 --define "_srcrpmdir /tmp/rpm-build/SRPMS" \
+                --define "__chmod /bin/true" \
                 -bb \
                 /tmp/rpm-build/SPECS/kuzpkg.spec
+
+              # ------------------------------------------------
+              # Locate RPM.
+              # ------------------------------------------------
 
               RPM_FILE="$(
                 find \
@@ -308,6 +318,10 @@ jobs:
                 exit 1
               fi
 
+              # ------------------------------------------------
+              # Copy final RPM to /workspace.
+              # ------------------------------------------------
+
               OUTPUT="/workspace/kuzpkg-${SAFE_TAG}-armv7-${PACKAGE_VERSION}.rpm"
 
               cp \
@@ -318,6 +332,10 @@ jobs:
                 -f \
                 "$OUTPUT"
 
+              # ------------------------------------------------
+              # Validate RPM.
+              # ------------------------------------------------
+
               rpm -qip \
                 "$RPM_FILE"
 
@@ -327,6 +345,17 @@ jobs:
               echo "Created ARMv7 RPM:"
               ls -lh \
                 "$OUTPUT"
+
+              # ------------------------------------------------
+              # Manual cleanup.
+              # ------------------------------------------------
+
+              rm -rf \
+                /tmp/rpm-build/BUILD \
+                /tmp/rpm-build/BUILDROOT \
+                /tmp/rpm-build/SOURCES \
+                /tmp/rpm-build/SPECS \
+                /tmp/rpm-build/SRPMS
             '
 
       - name: Verify ARMv7 RPM
@@ -368,17 +397,6 @@ jobs:
 
   # ==========================================================
   # ARMv7 .PKG.TAR.ZST
-  #
-  # FIX:
-  #   - No makepkg.
-  #   - No PKGBUILD.
-  #   - No du.
-  #   - Entire source/build/staging is under /tmp.
-  #   - Only final artifact touches /workspace.
-  #
-  # This eliminates:
-  #
-  #   du: ... Value too large for defined data type
   # ==========================================================
 
   pkg-tar-zst-armv7:
@@ -470,7 +488,7 @@ jobs:
                 /tmp/pkg-root
 
               # ------------------------------------------------
-              # Clone source inside container.
+              # Clone source.
               # ------------------------------------------------
 
               git clone \
@@ -524,6 +542,9 @@ jobs:
                   "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
               )"
 
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PKGVER}"
+
               # ------------------------------------------------
               # Build.
               # ------------------------------------------------
@@ -555,10 +576,7 @@ jobs:
               )"
 
               # ------------------------------------------------
-              # DO NOT use du.
-              #
-              # ARMv7 can overflow 32-bit stat/off_t-related
-              # interfaces against some filesystems.
+              # Metadata.
               # ------------------------------------------------
 
               printf "%s\n" \
@@ -581,6 +599,10 @@ jobs:
                 "architecture = armv7" \
                 > /tmp/pkg-root/.BUILDINFO
 
+              # ------------------------------------------------
+              # File list.
+              # ------------------------------------------------
+
               find \
                 /tmp/pkg-root \
                 -mindepth 1 \
@@ -590,6 +612,10 @@ jobs:
                 > /tmp/pkg-root/.FILELIST
 
               OUTPUT="/workspace/kuzpkg-${SAFE_TAG}-armv7-${PKGVER}.pkg.tar.zst"
+
+              # ------------------------------------------------
+              # Create package.
+              # ------------------------------------------------
 
               tar \
                 --sort=name \
@@ -604,6 +630,10 @@ jobs:
                 -T0 \
                 -19 \
                 -o "$OUTPUT"
+
+              # ------------------------------------------------
+              # Validate package.
+              # ------------------------------------------------
 
               zstd \
                 -t \
@@ -675,13 +705,6 @@ jobs:
 
   # ==========================================================
   # ARMv7 .KUZPKG.TAR.ZST
-  #
-  # FIX:
-  #   - No makepkg.
-  #   - No PKGBUILD.
-  #   - No du.
-  #   - Entire source/build/staging is under /tmp.
-  #   - Only final artifact touches /workspace.
   # ==========================================================
 
   kuzpkg-tar-zst-armv7:
@@ -764,7 +787,7 @@ jobs:
                 tar
 
               # ------------------------------------------------
-              # Everything except final output under /tmp.
+              # Everything except final output stays under /tmp.
               # ------------------------------------------------
 
               rm -rf \
@@ -773,7 +796,7 @@ jobs:
                 /tmp/pkg-root
 
               # ------------------------------------------------
-              # Clone inside ARMv7 container.
+              # Clone source.
               # ------------------------------------------------
 
               git clone \
@@ -827,6 +850,9 @@ jobs:
                   "s#[/[:space:]]#-#g; s#[^A-Za-z0-9._+-]#-#g"
               )"
 
+              echo "Git tag: ${GIT_TAG}"
+              echo "Package version: ${PKGVER}"
+
               # ------------------------------------------------
               # Build.
               # ------------------------------------------------
@@ -857,6 +883,10 @@ jobs:
                 date -u +%s
               )"
 
+              # ------------------------------------------------
+              # Metadata.
+              # ------------------------------------------------
+
               printf "%s\n" \
                 "pkgname = kuzpkg" \
                 "pkgbase = kuzpkg" \
@@ -877,6 +907,10 @@ jobs:
                 "architecture = armv7" \
                 > /tmp/pkg-root/.BUILDINFO
 
+              # ------------------------------------------------
+              # File list.
+              # ------------------------------------------------
+
               find \
                 /tmp/pkg-root \
                 -mindepth 1 \
@@ -886,6 +920,10 @@ jobs:
                 > /tmp/pkg-root/.FILELIST
 
               OUTPUT="/workspace/kuzpkg-${SAFE_TAG}-armv7-${PKGVER}.kuzpkg.tar.zst"
+
+              # ------------------------------------------------
+              # Create package.
+              # ------------------------------------------------
 
               tar \
                 --sort=name \
@@ -900,6 +938,10 @@ jobs:
                 -T0 \
                 -19 \
                 -o "$OUTPUT"
+
+              # ------------------------------------------------
+              # Validate package.
+              # ------------------------------------------------
 
               zstd \
                 -t \
