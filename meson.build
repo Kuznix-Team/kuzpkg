@@ -117,6 +117,10 @@ elif want_crypto == 'nettle'
     not_found_message : 'nettle support requested but not found')
   crypto_provider = libnettle
   conf.set10('HAVE_LIBNETTLE', true)
+elif want_crypto == 'none'
+  crypto_provider = []
+  conf.set10('HAVE_LIBSSL', false)
+  conf.set10('HAVE_LIBNETTLE', false)
 else
   error('unhandled crypto value @0@'.format(want_crypto))
 endif
@@ -335,7 +339,10 @@ libcommon = static_library(
   gnu_symbol_visibility : 'hidden',
   install : false)
 
-klpm_deps = [crypto_provider, libarchive, libcurl, libintl, libseccomp, gpgme]
+klpm_deps = [libarchive, libcurl, libintl, libseccomp, gpgme]
+if want_crypto != 'none'
+  klpm_deps += [crypto_provider]
+endif
 
 libkuzpkg_a = static_library(
   'klpm_objlib',
