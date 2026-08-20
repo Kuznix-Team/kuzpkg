@@ -29,7 +29,7 @@ option('datarootdir', type : 'string', value : 'share',
        description : 'FIXME')
 
 option('keyringdir', type : 'string', value: 'kuzpkg/keyrings',
-	description : 'Where to look for keyring files under datarootdir')
+       description : 'Where to look for keyring files under datarootdir')
 
 option('makepkg-template-dir', type : 'string', value : '/usr/share/makepkg-template',
        description : 'template dir used by makepkg-template')
@@ -47,7 +47,7 @@ option('doxygen', type : 'feature', value : 'disabled',
 option('curl', type : 'feature', value : 'auto',
        description : 'use curl to download files')
 
-option('crypto', type : 'combo', choices : ['openssl', 'nettle'],
+option('crypto', type : 'combo', choices : ['none', 'openssl', 'nettle'], value : 'none',
        description : 'select crypto implementation')
 
 option('gpgme', type : 'feature', value : 'auto',
@@ -58,4 +58,4 @@ option('i18n', type : 'boolean', value : true,
 
 # tools
 option('file-seccomp', type: 'feature', value: 'auto',
-	   description: 'determine whether file is seccomp-enabled')
+       description: 'determine whether file is seccomp-enabled')
