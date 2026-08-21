@@ -1,49 +1,22 @@
 /*
  * packinstall.c - build, stage, package and optionally install a source tree.
  *
- * This utility is intended to replace the shell packInstall helper used by
- * bootstrap/LFS-style builds. It deliberately uses native build tools instead
- * of requiring a PKGBUILD for every upstream build system.
- *
  * Supported build systems:
- *   Autotools
- *   Make
- *   Ninja
- *   Meson
- *   CMake
- *   Cargo
- *   Python
- *   Perl
- *   Go
- *   Ruby/RubyGems
- *   Bundler
+ *   Autotools, Make, Ninja, Meson, CMake, Cargo, Python,
+ *   Perl, Go, Ruby/RubyGems and Bundler.
  *
  * Target support:
- *   Linux
- *   historical Linux
- *   NetBSD
- *   FreeBSD
- *   OpenBSD
- *   DragonFly BSD
- *   Solaris
- *   Darwin
- *   generic/other
+ *   Linux, historical Linux, NetBSD, FreeBSD, OpenBSD,
+ *   DragonFly BSD, Solaris, Darwin and generic targets.
  *
  * Multilib support:
- *   lib32
- *   lib64
- *   libx32
- *   MIPS o32
- *   MIPS n32
- *   MIPS n64
- *   MIPS soft-float
- *   MIPS hard-float
- *   PowerPC 32-bit
- *   PowerPC 64-bit
- *   ARM 32-bit
- *   ARM 64-bit
+ *   lib32, lib64, libx32,
+ *   MIPS o32/n32/n64,
+ *   MIPS soft/hard-float,
+ *   PowerPC 32/64,
+ *   ARM 32/64.
  *
- * Wildcard targets:
+ * Wildcard target support:
  *   *-*-elf
  *   *-*-eabi
  *   riscv64-*-elf
@@ -51,13 +24,6 @@
  *   *-*-linux-*
  *   *-*-netbsd*
  *   *-*-freebsd*
- *
- * Copyright (C) 2026 Kuznix
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 or (at your option) any
- * later version.
  */
 
 #define _GNU_SOURCE
@@ -75,18 +41,8 @@
 
 #define REL "1"
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-
-/*
- * Forward declarations.
- *
- * wildcard_match() is used by target detection functions that appear
- * earlier in the source file, so declare it before those functions.
- */
-static int wildcard_match(const char *pattern, const char *string);
-
 /* -------------------------------------------------------------------------
- * Target operating systems
+ * Target OS
  * ------------------------------------------------------------------------- */
 
 enum target_os {
@@ -104,35 +60,7 @@ enum target_os {
 	TARGET_OS_OTHER
 };
 
-static const char *target_os_name(enum target_os os)
-{
-	switch(os) {
-		case TARGET_OS_LINUX:
-			return "linux";
-		case TARGET_OS_NETBSD:
-			return "netbsd";
-		case TARGET_OS_FREEBSD:
-			return "freebsd";
-		case TARGET_OS_OPENBSD:
-			return "openbsd";
-		case TARGET_OS_DRAGONFLY:
-			return "dragonfly";
-		case TARGET_OS_SOLARIS:
-			return "solaris";
-		case TARGET_OS_AIX:
-			return "aix";
-		case TARGET_OS_HPUX:
-			return "hpux";
-		case TARGET_OS_DARWIN:
-			return "darwin";
-		case TARGET_OS_NONE:
-			return "none";
-		case TARGET_OS_OTHER:
-			return "other";
-		default:
-			return "unknown";
-	}
-}
+static const char *target_os_name(enum target_os os);
 
 /* -------------------------------------------------------------------------
  * Architecture database
@@ -148,1014 +76,528 @@ struct architecture {
 	int historical;
 };
 
+/*
+ * These are package/target identities. Historical architectures are retained
+ * so that package metadata can represent old systems even when they are not
+ * usable on the current host.
+ */
 static const struct architecture architectures[] = {
 	/* Linux x86 */
 	{
-		"x86_64",
-		"x86_64",
-		"x86_64-unknown-linux-gnu",
-		"x86",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"x86_64", "x86_64", "x86_64-unknown-linux-gnu",
+		"x86", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"i686",
-		"i686",
-		"i686-unknown-linux-gnu",
-		"x86",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"i686", "i686", "i686-unknown-linux-gnu",
+		"x86", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"i586",
-		"i586",
-		"i586-unknown-linux-gnu",
-		"x86",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"i586", "i586", "i586-unknown-linux-gnu",
+		"x86", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"i486",
-		"i486",
-		"i486-unknown-linux-gnu",
-		"x86",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"i486", "i486", "i486-unknown-linux-gnu",
+		"x86", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"i386",
-		"i386",
-		"i386-unknown-linux-gnu",
-		"x86",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"i386", "i386", "i386-unknown-linux-gnu",
+		"x86", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"x32",
-		"x86_64",
-		"x86_64-unknown-linux-gnux32",
-		"x86",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"x32", "x86_64", "x86_64-unknown-linux-gnux32",
+		"x86", TARGET_OS_LINUX, 1, 0
 	},
 
 	/* Linux ARM */
 	{
-		"aarch64",
-		"aarch64",
-		"aarch64-unknown-linux-gnu",
-		"arm",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"aarch64", "aarch64", "aarch64-unknown-linux-gnu",
+		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"aarch64_be",
-		"aarch64_be",
-		"aarch64_be-unknown-linux-gnu",
-		"arm",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"aarch64_be", "aarch64_be", "aarch64_be-unknown-linux-gnu",
+		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"arm",
-		"arm",
-		"arm-unknown-linux-gnueabi",
-		"arm",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"arm", "arm", "arm-unknown-linux-gnueabi",
+		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"armel",
-		"arm",
-		"arm-unknown-linux-gnueabi",
-		"arm",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"armel", "arm", "arm-unknown-linux-gnueabi",
+		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"armhf",
-		"arm",
-		"arm-unknown-linux-gnueabihf",
-		"arm",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"armhf", "arm", "arm-unknown-linux-gnueabihf",
+		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"armv6",
-		"arm",
-		"arm-unknown-linux-gnueabi",
-		"arm",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"armv6", "arm", "arm-unknown-linux-gnueabi",
+		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"armv7",
-		"arm",
-		"arm-unknown-linux-gnueabihf",
-		"arm",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"armv7", "arm", "arm-unknown-linux-gnueabihf",
+		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"armeb",
-		"armeb",
-		"armeb-unknown-linux-gnueabi",
-		"arm",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"armeb", "armeb", "armeb-unknown-linux-gnueabi",
+		"arm", TARGET_OS_LINUX, 1, 0
 	},
 
 	/* Linux MIPS */
 	{
-		"mips",
-		"mips",
-		"mips-unknown-linux-gnu",
-		"mips",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"mips", "mips", "mips-unknown-linux-gnu",
+		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"mipsel",
-		"mipsel",
-		"mipsel-unknown-linux-gnu",
-		"mips",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"mipsel", "mipsel", "mipsel-unknown-linux-gnu",
+		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"mips64",
-		"mips64",
-		"mips64-unknown-linux-gnuabi64",
-		"mips",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"mips64", "mips64", "mips64-unknown-linux-gnuabi64",
+		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"mips64el",
-		"mips64el",
-		"mips64el-unknown-linux-gnuabi64",
-		"mips",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"mips64el", "mips64el", "mips64el-unknown-linux-gnuabi64",
+		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"mips64n32",
-		"mips64",
-		"mips64-unknown-linux-gnuabin32",
-		"mips",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"mips64n32", "mips64", "mips64-unknown-linux-gnuabin32",
+		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"mips64n32el",
-		"mips64el",
+		"mips64n32el", "mips64el",
 		"mips64el-unknown-linux-gnuabin32",
-		"mips",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"mips", TARGET_OS_LINUX, 1, 0
 	},
 
 	/* Linux PowerPC */
 	{
-		"powerpc",
-		"ppc",
-		"powerpc-unknown-linux-gnu",
-		"powerpc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"powerpc", "ppc", "powerpc-unknown-linux-gnu",
+		"powerpc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"powerpcle",
-		"ppcle",
-		"powerpcle-unknown-linux-gnu",
-		"powerpc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"powerpcle", "ppcle", "powerpcle-unknown-linux-gnu",
+		"powerpc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"powerpc64",
-		"ppc64",
-		"powerpc64-unknown-linux-gnu",
-		"powerpc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"powerpc64", "ppc64", "powerpc64-unknown-linux-gnu",
+		"powerpc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"powerpc64le",
-		"ppc64le",
+		"powerpc64le", "ppc64le",
 		"powerpc64le-unknown-linux-gnu",
-		"powerpc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"powerpc", TARGET_OS_LINUX, 1, 0
 	},
 
 	/* Linux RISC-V */
 	{
-		"riscv32",
-		"riscv32",
-		"riscv32-unknown-linux-gnu",
-		"riscv",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"riscv32", "riscv32", "riscv32-unknown-linux-gnu",
+		"riscv", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"riscv32be",
-		"riscv32be",
+		"riscv32be", "riscv32be",
 		"riscv32be-unknown-linux-gnu",
-		"riscv",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"riscv", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"riscv64",
-		"riscv64",
-		"riscv64-unknown-linux-gnu",
-		"riscv",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"riscv64", "riscv64", "riscv64-unknown-linux-gnu",
+		"riscv", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"riscv64be",
-		"riscv64be",
+		"riscv64be", "riscv64be",
 		"riscv64be-unknown-linux-gnu",
-		"riscv",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"riscv", TARGET_OS_LINUX, 1, 0
 	},
 
-	/* Linux IBM/SPARC */
+	/* Linux IBM / SPARC */
 	{
-		"s390",
-		"s390",
-		"s390-ibm-linux-gnu",
-		"s390",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"s390", "s390", "s390-ibm-linux-gnu",
+		"s390", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"s390x",
-		"s390x",
-		"s390x-ibm-linux-gnu",
-		"s390",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"s390x", "s390x", "s390x-ibm-linux-gnu",
+		"s390", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"sparc",
-		"sparc",
-		"sparc-unknown-linux-gnu",
-		"sparc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"sparc", "sparc", "sparc-unknown-linux-gnu",
+		"sparc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"sparc64",
-		"sparc64",
-		"sparc64-unknown-linux-gnu",
-		"sparc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"sparc64", "sparc64", "sparc64-unknown-linux-gnu",
+		"sparc", TARGET_OS_LINUX, 1, 0
 	},
 
 	/* Linux other modern */
 	{
-		"alpha",
-		"alpha",
-		"alpha-unknown-linux-gnu",
-		"alpha",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"alpha", "alpha", "alpha-unknown-linux-gnu",
+		"alpha", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"arc",
-		"arc",
-		"arc-unknown-linux-gnu",
-		"arc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"arc", "arc", "arc-unknown-linux-gnu",
+		"arc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"arceb",
-		"arceb",
-		"arceb-unknown-linux-gnu",
-		"arc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"arceb", "arceb", "arceb-unknown-linux-gnu",
+		"arc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"csky",
-		"csky",
-		"csky-unknown-linux-gnuabiv2",
-		"csky",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"csky", "csky", "csky-unknown-linux-gnuabiv2",
+		"csky", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"hexagon",
-		"hexagon",
-		"hexagon-unknown-linux-musl",
-		"hexagon",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"hexagon", "hexagon", "hexagon-unknown-linux-musl",
+		"hexagon", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"loongarch64",
-		"loongarch64",
+		"loongarch64", "loongarch64",
 		"loongarch64-unknown-linux-gnu",
-		"loongarch",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"loongarch", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"m68k",
-		"m68k",
-		"m68k-unknown-linux-gnu",
-		"m68k",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"m68k", "m68k", "m68k-unknown-linux-gnu",
+		"m68k", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"microblaze",
-		"microblaze",
+		"microblaze", "microblaze",
 		"microblaze-unknown-linux-gnu",
-		"microblaze",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"microblaze", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"microblazeel",
-		"microblazeel",
+		"microblazeel", "microblazeel",
 		"microblazeel-unknown-linux-gnu",
-		"microblaze",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"microblaze", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"nios2",
-		"nios2",
-		"nios2-unknown-linux-gnu",
-		"nios2",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"nios2", "nios2", "nios2-unknown-linux-gnu",
+		"nios2", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"openrisc",
-		"or1k",
-		"or1k-unknown-linux-gnu",
-		"openrisc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"openrisc", "or1k", "or1k-unknown-linux-gnu",
+		"openrisc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"or1k",
-		"or1k",
-		"or1k-unknown-linux-gnu",
-		"openrisc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"or1k", "or1k", "or1k-unknown-linux-gnu",
+		"openrisc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"parisc",
-		"hppa",
-		"hppa-unknown-linux-gnu",
-		"parisc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"parisc", "hppa", "hppa-unknown-linux-gnu",
+		"parisc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"parisc64",
-		"hppa64",
-		"hppa64-unknown-linux-gnu",
-		"parisc",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"parisc64", "hppa64", "hppa64-unknown-linux-gnu",
+		"parisc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"sh",
-		"sh",
-		"sh-unknown-linux-gnu",
-		"sh",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"sh", "sh", "sh-unknown-linux-gnu",
+		"sh", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"sh4",
-		"sh4",
-		"sh4-unknown-linux-gnu",
-		"sh",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"sh4", "sh4", "sh4-unknown-linux-gnu",
+		"sh", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"sh4eb",
-		"sh4eb",
-		"sh4eb-unknown-linux-gnu",
-		"sh",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"sh4eb", "sh4eb", "sh4eb-unknown-linux-gnu",
+		"sh", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"xtensa",
-		"xtensa",
-		"xtensa-unknown-linux-gnu",
-		"xtensa",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"xtensa", "xtensa", "xtensa-unknown-linux-gnu",
+		"xtensa", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"xtensaeb",
-		"xtensa",
-		"xtensaeb-unknown-linux-gnu",
-		"xtensa",
-		TARGET_OS_LINUX,
-		1,
-		0
+		"xtensaeb", "xtensa", "xtensaeb-unknown-linux-gnu",
+		"xtensa", TARGET_OS_LINUX, 1, 0
 	},
 
 	/* Historical Linux */
 	{
-		"ia64",
-		"ia64",
-		"ia64-unknown-linux-gnu",
-		"ia64",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"ia64", "ia64", "ia64-unknown-linux-gnu",
+		"ia64", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"cris",
-		"cris",
-		"cris-unknown-linux-gnu",
-		"cris",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"cris", "cris", "cris-unknown-linux-gnu",
+		"cris", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"frv",
-		"frv",
-		"frv-unknown-linux-gnu",
-		"frv",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"frv", "frv", "frv-unknown-linux-gnu",
+		"frv", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"h8300",
-		"h8300",
-		"h8300-unknown-linux-gnu",
-		"h8300",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"h8300", "h8300", "h8300-unknown-linux-gnu",
+		"h8300", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"m32r",
-		"m32r",
-		"m32r-unknown-linux-gnu",
-		"m32r",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"m32r", "m32r", "m32r-unknown-linux-gnu",
+		"m32r", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"mn10300",
-		"mn10300",
-		"mn10300-unknown-linux-gnu",
-		"mn10300",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"mn10300", "mn10300", "mn10300-unknown-linux-gnu",
+		"mn10300", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"metag",
-		"metag",
-		"metag-unknown-linux-gnu",
-		"metag",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"metag", "metag", "metag-unknown-linux-gnu",
+		"metag", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"blackfin",
-		"bfin",
-		"bfin-unknown-linux-gnu",
-		"blackfin",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"blackfin", "bfin", "bfin-unknown-linux-gnu",
+		"blackfin", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"tile",
-		"tile",
-		"tile-unknown-linux-gnu",
-		"tile",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"tile", "tile", "tile-unknown-linux-gnu",
+		"tile", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"avr32",
-		"avr32",
-		"avr32-unknown-linux-gnu",
-		"avr32",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"avr32", "avr32", "avr32-unknown-linux-gnu",
+		"avr32", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"c6x",
-		"tic6x",
-		"tic6x-unknown-linux-gnu",
-		"c6x",
-		TARGET_OS_LINUX,
-		0,
-		1
+		"c6x", "tic6x", "tic6x-unknown-linux-gnu",
+		"c6x", TARGET_OS_LINUX, 0, 1
 	},
 
 	/* NetBSD */
 	{
-		"netbsd-amd64",
-		"x86_64",
+		"netbsd-amd64", "x86_64",
 		"x86_64-unknown-netbsd",
-		"x86",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"x86", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-i386",
-		"i386",
+		"netbsd-i386", "i386",
 		"i386-unknown-netbsd",
-		"x86",
-		TARGET_OS_NETBSD,
-		0,
-		1
+		"x86", TARGET_OS_NETBSD, 0, 1
 	},
 	{
-		"netbsd-alpha",
-		"alpha",
+		"netbsd-alpha", "alpha",
 		"alpha-unknown-netbsd",
-		"alpha",
-		TARGET_OS_NETBSD,
-		0,
-		1
+		"alpha", TARGET_OS_NETBSD, 0, 1
 	},
 	{
-		"netbsd-arm",
-		"arm",
+		"netbsd-arm", "arm",
 		"arm-unknown-netbsd",
-		"arm",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"arm", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-earm",
-		"arm",
+		"netbsd-earm", "arm",
 		"earm-unknown-netbsd",
-		"arm",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"arm", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-hppa",
-		"hppa",
+		"netbsd-hppa", "hppa",
 		"hppa-unknown-netbsd",
-		"parisc",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"parisc", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-m68k",
-		"m68k",
+		"netbsd-m68k", "m68k",
 		"m68k-unknown-netbsd",
-		"m68k",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"m68k", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-mipseb",
-		"mipseb",
+		"netbsd-mipseb", "mipseb",
 		"mipseb-unknown-netbsd",
-		"mips",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"mips", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-mipsel",
-		"mipsel",
+		"netbsd-mipsel", "mipsel",
 		"mipsel-unknown-netbsd",
-		"mips",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"mips", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-powerpc",
-		"powerpc",
+		"netbsd-powerpc", "powerpc",
 		"powerpc-unknown-netbsd",
-		"powerpc",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"powerpc", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-sh3eb",
-		"sh3eb",
+		"netbsd-sh3eb", "sh3eb",
 		"sh3eb-unknown-netbsd",
-		"sh",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"sh", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-sh3el",
-		"sh3el",
+		"netbsd-sh3el", "sh3el",
 		"sh3el-unknown-netbsd",
-		"sh",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"sh", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-sparc",
-		"sparc",
+		"netbsd-sparc", "sparc",
 		"sparc-unknown-netbsd",
-		"sparc",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"sparc", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-sparc64",
-		"sparc64",
+		"netbsd-sparc64", "sparc64",
 		"sparc64-unknown-netbsd",
-		"sparc",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"sparc", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-vax",
-		"vax",
+		"netbsd-vax", "vax",
 		"vax-unknown-netbsd",
-		"vax",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"vax", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-evbarm",
-		"arm",
+		"netbsd-evbarm", "arm",
 		"arm-unknown-netbsd",
-		"arm",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"arm", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-evbmips",
-		"mips",
+		"netbsd-evbmips", "mips",
 		"mips-unknown-netbsd",
-		"mips",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"mips", TARGET_OS_NETBSD, 1, 0
 	},
 	{
-		"netbsd-evbppc",
-		"powerpc",
+		"netbsd-evbppc", "powerpc",
 		"powerpc-unknown-netbsd",
-		"powerpc",
-		TARGET_OS_NETBSD,
-		1,
-		0
+		"powerpc", TARGET_OS_NETBSD, 1, 0
 	},
 
 	/* FreeBSD */
 	{
-		"freebsd-amd64",
-		"amd64",
+		"freebsd-amd64", "amd64",
 		"x86_64-unknown-freebsd",
-		"x86",
-		TARGET_OS_FREEBSD,
-		1,
-		0
+		"x86", TARGET_OS_FREEBSD, 1, 0
 	},
 	{
-		"freebsd-aarch64",
-		"aarch64",
+		"freebsd-aarch64", "aarch64",
 		"aarch64-unknown-freebsd",
-		"arm",
-		TARGET_OS_FREEBSD,
-		1,
-		0
+		"arm", TARGET_OS_FREEBSD, 1, 0
 	},
 	{
-		"freebsd-armv7",
-		"armv7",
+		"freebsd-armv7", "armv7",
 		"armv7-unknown-freebsd",
-		"arm",
-		TARGET_OS_FREEBSD,
-		1,
-		0
+		"arm", TARGET_OS_FREEBSD, 1, 0
 	},
 	{
-		"freebsd-armv6",
-		"armv6",
+		"freebsd-armv6", "armv6",
 		"armv6-unknown-freebsd",
-		"arm",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"arm", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-i386",
-		"i386",
+		"freebsd-i386", "i386",
 		"i386-unknown-freebsd",
-		"x86",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"x86", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-powerpc",
-		"powerpc",
+		"freebsd-powerpc", "powerpc",
 		"powerpc-unknown-freebsd",
-		"powerpc",
-		TARGET_OS_FREEBSD,
-		1,
-		0
+		"powerpc", TARGET_OS_FREEBSD, 1, 0
 	},
 	{
-		"freebsd-powerpc64",
-		"powerpc64",
+		"freebsd-powerpc64", "powerpc64",
 		"powerpc64-unknown-freebsd",
-		"powerpc",
-		TARGET_OS_FREEBSD,
-		1,
-		0
+		"powerpc", TARGET_OS_FREEBSD, 1, 0
 	},
 	{
-		"freebsd-powerpc64le",
-		"powerpc64le",
+		"freebsd-powerpc64le", "powerpc64le",
 		"powerpc64le-unknown-freebsd",
-		"powerpc",
-		TARGET_OS_FREEBSD,
-		1,
-		0
+		"powerpc", TARGET_OS_FREEBSD, 1, 0
 	},
 	{
-		"freebsd-powerpcspe",
-		"powerpcspe",
+		"freebsd-powerpcspe", "powerpcspe",
 		"powerpcspe-unknown-freebsd",
-		"powerpc",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"powerpc", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-riscv64",
-		"riscv64",
+		"freebsd-riscv64", "riscv64",
 		"riscv64-unknown-freebsd",
-		"riscv",
-		TARGET_OS_FREEBSD,
-		1,
-		0
+		"riscv", TARGET_OS_FREEBSD, 1, 0
 	},
 	{
-		"freebsd-mips",
-		"mips",
+		"freebsd-mips", "mips",
 		"mips-unknown-freebsd",
-		"mips",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"mips", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-mipsel",
-		"mipsel",
+		"freebsd-mipsel", "mipsel",
 		"mipsel-unknown-freebsd",
-		"mips",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"mips", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-mips64",
-		"mips64",
+		"freebsd-mips64", "mips64",
 		"mips64-unknown-freebsd",
-		"mips",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"mips", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-mips64el",
-		"mips64el",
+		"freebsd-mips64el", "mips64el",
 		"mips64el-unknown-freebsd",
-		"mips",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"mips", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-mipsn32",
-		"mipsn32",
+		"freebsd-mipsn32", "mipsn32",
 		"mipsn32-unknown-freebsd",
-		"mips",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"mips", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-sparc64",
-		"sparc64",
+		"freebsd-sparc64", "sparc64",
 		"sparc64-unknown-freebsd",
-		"sparc",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"sparc", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-alpha",
-		"alpha",
+		"freebsd-alpha", "alpha",
 		"alpha-unknown-freebsd",
-		"alpha",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"alpha", TARGET_OS_FREEBSD, 0, 1
 	},
 	{
-		"freebsd-ia64",
-		"ia64",
+		"freebsd-ia64", "ia64",
 		"ia64-unknown-freebsd",
-		"ia64",
-		TARGET_OS_FREEBSD,
-		0,
-		1
+		"ia64", TARGET_OS_FREEBSD, 0, 1
 	},
 
 	/* OpenBSD */
 	{
-		"openbsd-amd64",
-		"amd64",
+		"openbsd-amd64", "amd64",
 		"x86_64-unknown-openbsd",
-		"x86",
-		TARGET_OS_OPENBSD,
-		1,
-		0
+		"x86", TARGET_OS_OPENBSD, 1, 0
 	},
 	{
-		"openbsd-i386",
-		"i386",
+		"openbsd-i386", "i386",
 		"i386-unknown-openbsd",
-		"x86",
-		TARGET_OS_OPENBSD,
-		1,
-		0
+		"x86", TARGET_OS_OPENBSD, 1, 0
 	},
 	{
-		"openbsd-aarch64",
-		"arm64",
+		"openbsd-aarch64", "arm64",
 		"aarch64-unknown-openbsd",
-		"arm",
-		TARGET_OS_OPENBSD,
-		1,
-		0
+		"arm", TARGET_OS_OPENBSD, 1, 0
 	},
 	{
-		"openbsd-armv7",
-		"armv7",
+		"openbsd-armv7", "armv7",
 		"armv7-unknown-openbsd",
-		"arm",
-		TARGET_OS_OPENBSD,
-		1,
-		0
+		"arm", TARGET_OS_OPENBSD, 1, 0
 	},
 	{
-		"openbsd-mips64",
-		"mips64",
+		"openbsd-mips64", "mips64",
 		"mips64-unknown-openbsd",
-		"mips",
-		TARGET_OS_OPENBSD,
-		0,
-		1
+		"mips", TARGET_OS_OPENBSD, 0, 1
 	},
 	{
-		"openbsd-powerpc64",
-		"powerpc64",
+		"openbsd-powerpc64", "powerpc64",
 		"powerpc64-unknown-openbsd",
-		"powerpc",
-		TARGET_OS_OPENBSD,
-		0,
-		1
+		"powerpc", TARGET_OS_OPENBSD, 0, 1
 	},
 
 	/* DragonFly */
 	{
-		"dragonfly-amd64",
-		"x86_64",
+		"dragonfly-amd64", "x86_64",
 		"x86_64-unknown-dragonfly",
-		"x86",
-		TARGET_OS_DRAGONFLY,
-		1,
-		0
+		"x86", TARGET_OS_DRAGONFLY, 1, 0
 	},
 
 	/* Solaris */
 	{
-		"solaris-amd64",
-		"i86pc",
+		"solaris-amd64", "i86pc",
 		"x86_64-pc-solaris2",
-		"x86",
-		TARGET_OS_SOLARIS,
-		1,
-		0
+		"x86", TARGET_OS_SOLARIS, 1, 0
 	},
 	{
-		"solaris-sparc64",
-		"sparc64",
+		"solaris-sparc64", "sparc64",
 		"sparc64-sun-solaris2",
-		"sparc",
-		TARGET_OS_SOLARIS,
-		1,
-		0
+		"sparc", TARGET_OS_SOLARIS, 1, 0
 	},
 
 	/* Darwin */
 	{
-		"darwin-arm64",
-		"arm64",
+		"darwin-arm64", "arm64",
 		"aarch64-apple-darwin",
-		"arm",
-		TARGET_OS_DARWIN,
-		1,
-		0
+		"arm", TARGET_OS_DARWIN, 1, 0
 	},
 	{
-		"darwin-x86_64",
-		"x86_64",
+		"darwin-x86_64", "x86_64",
 		"x86_64-apple-darwin",
-		"x86",
-		TARGET_OS_DARWIN,
-		1,
-		0
+		"x86", TARGET_OS_DARWIN, 1, 0
 	},
 
 	{
@@ -1202,127 +644,75 @@ struct multilib_variant {
 
 static const struct multilib_variant multilib_variants[] = {
 	{
-		"lib32",
-		"lib32",
-		"-m32",
-		"i386",
+		"lib32", "lib32", "-m32", "i386",
 		MULTILIB_LIB32
 	},
 	{
-		"lib64",
-		"lib64",
-		"-m64",
-		"x86_64",
+		"lib64", "lib64", "-m64", "x86_64",
 		MULTILIB_LIB64
 	},
 	{
-		"libx32",
-		"libx32",
-		"-mx32",
-		"x32",
+		"libx32", "libx32", "-mx32", "x32",
 		MULTILIB_LIBX32
 	},
+
 	{
-		"mips-o32",
-		"mips32",
-		"-mabi=32",
-		"o32",
+		"mips-o32", "mips32", "-mabi=32", "o32",
 		MULTILIB_MIPS_O32
 	},
 	{
-		"mips-n32",
-		"mipsn32",
-		"-mabi=n32",
-		"n32",
+		"mips-n32", "mipsn32", "-mabi=n32", "n32",
 		MULTILIB_MIPS_N32
 	},
 	{
-		"mips-n64",
-		"mips64",
-		"-mabi=64",
-		"n64",
+		"mips-n64", "mips64", "-mabi=64", "n64",
 		MULTILIB_MIPS_N64
 	},
 	{
-		"mips-softfloat",
-		"mips-softfloat",
-		"-msoft-float",
-		"softfloat",
+		"mips-softfloat", "mips-softfloat",
+		"-msoft-float", "softfloat",
 		MULTILIB_MIPS_SOFTFLOAT
 	},
 	{
-		"mips-hardfloat",
-		"mips-hardfloat",
-		"-mhard-float",
-		"hardfloat",
+		"mips-hardfloat", "mips-hardfloat",
+		"-mhard-float", "hardfloat",
 		MULTILIB_MIPS_HARDFLOAT
 	},
+
 	{
-		"ppc32",
-		"lib32",
-		"-m32",
-		"32",
+		"ppc32", "lib32", "-m32", "32",
 		MULTILIB_PPC32
 	},
 	{
-		"ppc64",
-		"lib64",
-		"-m64",
-		"64",
+		"ppc64", "lib64", "-m64", "64",
 		MULTILIB_PPC64
 	},
 	{
-		"ppc32-abi",
-		"ppc32-abi",
-		"-m32",
-		"ppc32",
-		MULTILIB_PPC32_ABI
+		"ppc32-abi", "ppc32-abi", "-m32",
+		"ppc32", MULTILIB_PPC32_ABI
 	},
 	{
-		"ppc64-abi",
-		"ppc64-abi",
-		"-m64",
-		"ppc64",
-		MULTILIB_PPC64_ABI
+		"ppc64-abi", "ppc64-abi", "-m64",
+		"ppc64", MULTILIB_PPC64_ABI
 	},
+
 	{
-		"arm32",
-		"arm",
-		"-marm",
-		"32",
+		"arm32", "arm", "-marm", "32",
 		MULTILIB_ARM32
 	},
 	{
-		"arm64",
-		"aarch64",
-		"",
-		"64",
+		"arm64", "aarch64", "", "64",
 		MULTILIB_ARM64
 	},
+
 	{
-		NULL,
-		NULL,
-		NULL,
-		NULL,
+		NULL, NULL, NULL, NULL,
 		MULTILIB_NONE
 	}
 };
 
-static const struct multilib_variant *find_multilib(
-	const char *name)
-{
-	for(size_t i = 0; multilib_variants[i].name; i++) {
-		if(strcmp(
-			multilib_variants[i].name,
-			name) == 0)
-			return &multilib_variants[i];
-	}
-
-	return NULL;
-}
-
 /* -------------------------------------------------------------------------
- * Target parser
+ * Target spec
  * ------------------------------------------------------------------------- */
 
 struct target_spec {
@@ -1340,91 +730,302 @@ struct target_spec {
 	int known;
 };
 
-static void free_target(struct target_spec *t)
+/* -------------------------------------------------------------------------
+ * Build options
+ * ------------------------------------------------------------------------- */
+
+struct build_options {
+	const char *arch_name;
+	const char *target_pattern;
+	const char *build_triplet;
+	const char *host_triplet;
+
+	const struct multilib_variant *multilib;
+
+	int do_install;
+	int all_multilib;
+	int list_architectures;
+	int list_multilib;
+};
+
+/* =========================================================================
+ * Helper implementations
+ * ========================================================================= */
+
+/* -------------------------------------------------------------------------
+ * Wildcard matcher
+ * ------------------------------------------------------------------------- */
+
+static int wildcard_match(
+	const char *pattern,
+	const char *string)
 {
-	if(!t)
-		return;
+	const char *star = NULL;
+	const char *mark = NULL;
 
-	free(t->triplet);
-	free(t->cpu);
-	free(t->vendor);
-	free(t->system);
-	free(t->abi);
+	if(!pattern || !string)
+		return 0;
 
-	memset(t, 0, sizeof(*t));
-}
+	while(*string) {
 
-static int split_target(
-	const char *triplet,
-	char **cpu,
-	char **vendor,
-	char **system)
-{
-	char *copy;
-	char *p;
-	char *q;
+		if(*pattern == '*') {
+			star = pattern++;
+			mark = string;
+			continue;
+		}
 
-	if(!triplet ||
-	   !cpu ||
-	   !vendor ||
-	   !system)
-		return -1;
+		if(*pattern == '?' ||
+		   *pattern == *string) {
 
-	copy = strdup(triplet);
+			pattern++;
+			string++;
 
-	if(!copy)
-		return -1;
+			continue;
+		}
 
-	p = strchr(copy, '-');
+		if(star) {
 
-	if(!p) {
-		free(copy);
-		return -1;
+			pattern = star + 1;
+			string = ++mark;
+
+			continue;
+		}
+
+		return 0;
 	}
 
-	*p++ = '\0';
+	while(*pattern == '*')
+		pattern++;
 
-	q = strchr(p, '-');
-
-	if(!q) {
-		free(copy);
-		return -1;
-	}
-
-	*q++ = '\0';
-
-	*cpu = strdup(copy);
-	*vendor = strdup(p);
-	*system = strdup(q);
-
-	free(copy);
-
-	if(!*cpu ||
-	   !*vendor ||
-	   !*system) {
-
-		free(*cpu);
-		free(*vendor);
-		free(*system);
-
-		*cpu = NULL;
-		*vendor = NULL;
-		*system = NULL;
-
-		return -1;
-	}
-
-	return 0;
+	return *pattern == '\0';
 }
 
 /* -------------------------------------------------------------------------
- * Target detection
+ * Shell execution
+ * ------------------------------------------------------------------------- */
+
+static char *shell_quote(const char *s)
+{
+	size_t n = 2;
+	char *out;
+	char *p;
+	const char *q;
+
+	if(!s)
+		return NULL;
+
+	for(q = s; *q; q++)
+		n += (*q == '\'') ? 4 : 1;
+
+	out = malloc(n + 1);
+
+	if(!out)
+		return NULL;
+
+	p = out;
+
+	*p++ = '\'';
+
+	for(q = s; *q; q++) {
+
+		if(*q == '\'') {
+
+			memcpy(p, "'\\''", 4);
+			p += 4;
+
+		} else {
+
+			*p++ = *q;
+		}
+	}
+
+	*p++ = '\'';
+	*p = '\0';
+
+	return out;
+}
+
+static int run_command(const char *command)
+{
+	int status;
+
+	if(!command)
+		return -1;
+
+	fprintf(
+		stderr,
+		"packinstall: %s\n",
+		command);
+
+	status = system(command);
+
+	if(status == -1) {
+
+		fprintf(
+			stderr,
+			"packinstall: cannot execute command: %s\n",
+			strerror(errno));
+
+		return -1;
+	}
+
+	if(WIFEXITED(status))
+		return WEXITSTATUS(status);
+
+	if(WIFSIGNALED(status)) {
+
+		fprintf(
+			stderr,
+			"packinstall: command terminated by signal %d\n",
+			WTERMSIG(status));
+
+		return 128;
+	}
+
+	return 128;
+}
+
+/* -------------------------------------------------------------------------
+ * Filesystem helpers
+ * ------------------------------------------------------------------------- */
+
+static int exists(const char *path)
+{
+	return path && access(path, F_OK) == 0;
+}
+
+static int is_dir(const char *path)
+{
+	struct stat st;
+
+	if(!path)
+		return 0;
+
+	return stat(path, &st) == 0 &&
+	       S_ISDIR(st.st_mode);
+}
+
+static const char *base_name(const char *path)
+{
+	const char *p;
+
+	if(!path)
+		return "";
+
+	p = strrchr(path, '/');
+
+	return p ? p + 1 : path;
+}
+
+/* -------------------------------------------------------------------------
+ * Staging cleanup
+ * ------------------------------------------------------------------------- */
+
+static int clean_stage(const char *stage)
+{
+	char *q;
+	char *cmd;
+	int ret;
+
+	if(!stage || !*stage)
+		return -1;
+
+	if(strcmp(stage, "/") == 0 ||
+	   strcmp(stage, ".") == 0 ||
+	   strcmp(stage, "..") == 0) {
+
+		fprintf(
+			stderr,
+			"packinstall: refusing to clean unsafe "
+			"staging directory '%s'\n",
+			stage);
+
+		return -1;
+	}
+
+	q = shell_quote(stage);
+
+	if(!q)
+		return -1;
+
+	if(asprintf(
+		&cmd,
+		"rm -rf -- %s && mkdir -p -- %s",
+		q,
+		q) < 0) {
+
+		free(q);
+
+		return -1;
+	}
+
+	ret = run_command(cmd);
+
+	free(q);
+	free(cmd);
+
+	return ret;
+}
+
+/* -------------------------------------------------------------------------
+ * OS helpers
+ * ------------------------------------------------------------------------- */
+
+static const char *target_os_name(
+	enum target_os os)
+{
+	switch(os) {
+		case TARGET_OS_LINUX:
+			return "linux";
+
+		case TARGET_OS_NETBSD:
+			return "netbsd";
+
+		case TARGET_OS_FREEBSD:
+			return "freebsd";
+
+		case TARGET_OS_OPENBSD:
+			return "openbsd";
+
+		case TARGET_OS_DRAGONFLY:
+			return "dragonfly";
+
+		case TARGET_OS_SOLARIS:
+			return "solaris";
+
+		case TARGET_OS_AIX:
+			return "aix";
+
+		case TARGET_OS_HPUX:
+			return "hpux";
+
+		case TARGET_OS_DARWIN:
+			return "darwin";
+
+		case TARGET_OS_NONE:
+			return "none";
+
+		case TARGET_OS_OTHER:
+			return "other";
+
+		default:
+			return "unknown";
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Architecture lookup
  * ------------------------------------------------------------------------- */
 
 static const struct architecture *find_architecture(
 	const char *name)
 {
-	for(size_t i = 0; architectures[i].name; i++) {
+	size_t i;
+
+	if(!name)
+		return NULL;
+
+	for(i = 0; architectures[i].name; i++) {
 
 		if(strcmp(
 			architectures[i].name,
@@ -1438,7 +1039,12 @@ static const struct architecture *find_architecture(
 static const struct architecture *find_architecture_triplet(
 	const char *triplet)
 {
-	for(size_t i = 0; architectures[i].name; i++) {
+	size_t i;
+
+	if(!triplet)
+		return NULL;
+
+	for(i = 0; architectures[i].name; i++) {
 
 		if(strcmp(
 			architectures[i].triplet,
@@ -1449,14 +1055,16 @@ static const struct architecture *find_architecture_triplet(
 	return NULL;
 }
 
-static const struct architecture *detect_host_architecture(void)
+static const struct architecture *
+detect_host_architecture(void)
 {
 	struct utsname u;
+	size_t i;
 
 	if(uname(&u) != 0)
 		return NULL;
 
-	for(size_t i = 0; architectures[i].name; i++) {
+	for(i = 0; architectures[i].name; i++) {
 
 		if(strcmp(
 			architectures[i].uname_name,
@@ -1471,6 +1079,10 @@ static const struct architecture *detect_host_architecture(void)
 
 	return NULL;
 }
+
+/* -------------------------------------------------------------------------
+ * Target detection
+ * ------------------------------------------------------------------------- */
 
 static enum target_os detect_target_os(
 	const char *target)
@@ -1530,7 +1142,8 @@ static enum target_os detect_target_os(
 	return TARGET_OS_OTHER;
 }
 
-static int target_is_elf(const char *target)
+static int target_is_elf(
+	const char *target)
 {
 	if(!target)
 		return 0;
@@ -1585,11 +1198,100 @@ static int target_is_bare_metal(
 	return 0;
 }
 
+/* -------------------------------------------------------------------------
+ * Target parsing
+ * ------------------------------------------------------------------------- */
+
+static int split_target(
+	const char *triplet,
+	char **cpu,
+	char **vendor,
+	char **system)
+{
+	char *copy;
+	char *p;
+	char *q;
+
+	if(!triplet ||
+	   !cpu ||
+	   !vendor ||
+	   !system)
+		return -1;
+
+	*cpu = NULL;
+	*vendor = NULL;
+	*system = NULL;
+
+	copy = strdup(triplet);
+
+	if(!copy)
+		return -1;
+
+	p = strchr(copy, '-');
+
+	if(!p) {
+		free(copy);
+		return -1;
+	}
+
+	*p++ = '\0';
+
+	q = strchr(p, '-');
+
+	if(!q) {
+		free(copy);
+		return -1;
+	}
+
+	*q++ = '\0';
+
+	*cpu = strdup(copy);
+	*vendor = strdup(p);
+	*system = strdup(q);
+
+	free(copy);
+
+	if(!*cpu ||
+	   !*vendor ||
+	   !*system) {
+
+		free(*cpu);
+		free(*vendor);
+		free(*system);
+
+		*cpu = NULL;
+		*vendor = NULL;
+		*system = NULL;
+
+		return -1;
+	}
+
+	return 0;
+}
+
+static void free_target(
+	struct target_spec *t)
+{
+	if(!t)
+		return;
+
+	free(t->triplet);
+	free(t->cpu);
+	free(t->vendor);
+	free(t->system);
+	free(t->abi);
+
+	memset(t, 0, sizeof(*t));
+}
+
 static int parse_target(
 	const char *triplet,
 	struct target_spec *out)
 {
 	struct target_spec t;
+
+	if(!triplet || !out)
+		return -1;
 
 	memset(&t, 0, sizeof(t));
 
@@ -1630,7 +1332,9 @@ static int parse_target(
 		strdup(t.system);
 
 	if(!t.abi) {
+
 		free_target(&t);
+
 		return -1;
 	}
 
@@ -1642,11 +1346,16 @@ static int parse_target(
 static char *resolve_target_pattern(
 	const char *pattern)
 {
+	size_t i;
+
+	if(!pattern)
+		return NULL;
+
 	if(!strchr(pattern, '*') &&
 	   !strchr(pattern, '?'))
 		return strdup(pattern);
 
-	for(size_t i = 0; architectures[i].name; i++) {
+	for(i = 0; architectures[i].name; i++) {
 
 		if(wildcard_match(
 			pattern,
@@ -1655,13 +1364,36 @@ static char *resolve_target_pattern(
 				architectures[i].triplet);
 	}
 
-	for(size_t i = 0; architectures[i].name; i++) {
+	for(i = 0; architectures[i].name; i++) {
 
 		if(wildcard_match(
 			pattern,
 			architectures[i].name))
 			return strdup(
 				architectures[i].triplet);
+	}
+
+	return NULL;
+}
+
+/* -------------------------------------------------------------------------
+ * Multilib
+ * ------------------------------------------------------------------------- */
+
+static const struct multilib_variant *
+find_multilib(const char *name)
+{
+	size_t i;
+
+	if(!name)
+		return NULL;
+
+	for(i = 0; multilib_variants[i].name; i++) {
+
+		if(strcmp(
+			multilib_variants[i].name,
+			name) == 0)
+			return &multilib_variants[i];
 	}
 
 	return NULL;
@@ -1689,6 +1421,7 @@ static int command_exists(
 		q) < 0) {
 
 		free(q);
+
 		return 0;
 	}
 
@@ -1784,25 +1517,26 @@ static int configure_cross_environment(
 	if(multilib_flags &&
 	   *multilib_flags) {
 
-		const char *old_cflags =
-			getenv("CFLAGS");
-
-		const char *old_cxxflags =
-			getenv("CXXFLAGS");
-
-		const char *old_ldflags =
-			getenv("LDFLAGS");
+		const char *old_cflags;
+		const char *old_cxxflags;
+		const char *old_ldflags;
 
 		char *cflags = NULL;
 		char *cxxflags = NULL;
 		char *ldflags = NULL;
 
+		old_cflags = getenv("CFLAGS");
+		old_cxxflags = getenv("CXXFLAGS");
+		old_ldflags = getenv("LDFLAGS");
+
 		if(asprintf(
 			&cflags,
 			"%s%s%s",
-			old_cflags ? old_cflags : "",
+			old_cflags ?
+				old_cflags : "",
 			old_cflags &&
-			*old_cflags ? " " : "",
+			*old_cflags ?
+				" " : "",
 			multilib_flags) < 0)
 			return -1;
 
@@ -1812,7 +1546,8 @@ static int configure_cross_environment(
 			old_cxxflags ?
 				old_cxxflags : "",
 			old_cxxflags &&
-			*old_cxxflags ? " " : "",
+			*old_cxxflags ?
+				" " : "",
 			multilib_flags) < 0) {
 
 			free(cflags);
@@ -1826,7 +1561,8 @@ static int configure_cross_environment(
 			old_ldflags ?
 				old_ldflags : "",
 			old_ldflags &&
-			*old_ldflags ? " " : "",
+			*old_ldflags ?
+				" " : "",
 			multilib_flags) < 0) {
 
 			free(cflags);
@@ -1864,16 +1600,18 @@ static int configure_cross_environment(
 }
 
 /* -------------------------------------------------------------------------
- * Package naming
+ * Package name/version
  * ------------------------------------------------------------------------- */
 
 static char *package_version(
 	const char *tree)
 {
-	const char *b = base_name(tree);
+	const char *b;
 	const char *p;
 	const char *dash;
 	char *v;
+
+	b = base_name(tree);
 
 	if(strncmp(
 		b,
@@ -1928,8 +1666,7 @@ static char *package_version(
 	dash = strrchr(b, '_');
 
 	if(dash &&
-	   (!p ||
-	    dash > p))
+	   (!p || dash > p))
 		p = dash;
 
 	if(p &&
@@ -1968,9 +1705,12 @@ static char *package_version(
 static char *package_name(
 	const char *tree)
 {
-	const char *b = base_name(tree);
-	const char *p = b;
+	const char *b;
+	const char *p;
 	char *name;
+
+	b = base_name(tree);
+	p = b;
 
 	while(*p >= '0' &&
 	      *p <= '9')
@@ -2001,6 +1741,7 @@ static char *package_name(
 			   *q == 'v') {
 
 				name[i] = '\0';
+
 				break;
 			}
 		}
@@ -2010,7 +1751,7 @@ static char *package_name(
 }
 
 /* -------------------------------------------------------------------------
- * RubyGems
+ * Ruby
  * ------------------------------------------------------------------------- */
 
 static char *find_gemspec(void)
@@ -2020,8 +1761,7 @@ static char *find_gemspec(void)
 
 	p = popen(
 		"find . -maxdepth 1 -type f "
-		"-name '*.gemspec' "
-		"-print -quit",
+		"-name '*.gemspec' -print -quit",
 		"r");
 
 	if(!p)
@@ -2062,8 +1802,7 @@ static char *find_gem_package(void)
 
 	p = popen(
 		"find . -maxdepth 1 -type f "
-		"-name '*.gem' "
-		"-print -quit",
+		"-name '*.gem' -print -quit",
 		"r");
 
 	if(!p)
@@ -2111,17 +1850,20 @@ static int build_ruby_gem(
 
 	(void)multilib;
 
-	qstage = shell_quote(stage);
+	qstage =
+		shell_quote(stage);
 
 	if(!qstage)
 		goto out;
 
-	gemspec = find_gemspec();
+	gemspec =
+		find_gemspec();
 
 	if(gemspec) {
 
 		qgemspec =
-			shell_quote(gemspec);
+			shell_quote(
+				gemspec);
 
 		if(!qgemspec)
 			goto out;
@@ -2132,7 +1874,8 @@ static int build_ruby_gem(
 			qgemspec) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		free(cmd);
 		cmd = NULL;
@@ -2141,11 +1884,13 @@ static int build_ruby_gem(
 			goto out;
 	}
 
-	gem = find_gem_package();
+	gem =
+		find_gem_package();
 
 	if(!gem) {
 
-		fprintf(stderr,
+		fprintf(
+			stderr,
 			"packinstall: no Ruby .gem package found\n");
 
 		ret = 1;
@@ -2153,7 +1898,8 @@ static int build_ruby_gem(
 		goto out;
 	}
 
-	qgem = shell_quote(gem);
+	qgem =
+		shell_quote(gem);
 
 	if(!qgem)
 		goto out;
@@ -2175,10 +1921,10 @@ static int build_ruby_gem(
 		qstage) < 0)
 		goto out;
 
-	ret = run_command(cmd);
+	ret =
+		run_command(cmd);
 
 out:
-
 	free(cmd);
 	free(qstage);
 	free(gemspec);
@@ -2188,24 +1934,6 @@ out:
 
 	return ret;
 }
-
-/* -------------------------------------------------------------------------
- * Build options
- * ------------------------------------------------------------------------- */
-
-struct build_options {
-	const char *arch_name;
-	const char *target_pattern;
-	const char *build_triplet;
-	const char *host_triplet;
-
-	const struct multilib_variant *multilib;
-
-	int do_install;
-	int all_multilib;
-	int list_architectures;
-	int list_multilib;
-};
 
 /* -------------------------------------------------------------------------
  * Build project
@@ -2221,13 +1949,16 @@ static int build_project(
 	char *cmd = NULL;
 	int ret = -1;
 
-	qstage = shell_quote(stage);
+	qstage =
+		shell_quote(stage);
 
 	if(!qstage)
 		return -1;
 
 	if(configure_cross_environment(
-		target ? target->triplet : NULL,
+		target ?
+			target->triplet :
+			NULL,
 		opts->multilib ?
 			opts->multilib->flags :
 			NULL) != 0)
@@ -2269,7 +2000,8 @@ static int build_project(
 				goto out;
 		}
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2292,7 +2024,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2315,7 +2048,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2335,7 +2069,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2356,7 +2091,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2374,9 +2110,10 @@ static int build_project(
 
 			free(gemspec);
 
-			ret = build_ruby_gem(
-				stage,
-				opts->multilib);
+			ret =
+				build_ruby_gem(
+					stage,
+					opts->multilib);
 
 			if(ret == 0)
 				goto out;
@@ -2400,7 +2137,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2420,7 +2158,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2444,7 +2183,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2466,7 +2206,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2487,7 +2228,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2508,7 +2250,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2530,7 +2273,8 @@ static int build_project(
 			qstage) < 0)
 			goto out;
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		if(ret == 0)
 			goto out;
@@ -2565,7 +2309,8 @@ static int remove_info_dir(
 	char *cmd;
 	int ret;
 
-	q = shell_quote(stage);
+	q =
+		shell_quote(stage);
 
 	if(!q)
 		return -1;
@@ -2580,7 +2325,8 @@ static int remove_info_dir(
 		return -1;
 	}
 
-	ret = run_command(cmd);
+	ret =
+		run_command(cmd);
 
 	free(q);
 	free(cmd);
@@ -2599,7 +2345,8 @@ static int normalize_multilib_layout(
 	if(!multilib)
 		return 0;
 
-	qstage = shell_quote(stage);
+	qstage =
+		shell_quote(stage);
 
 	if(!qstage)
 		return -1;
@@ -2623,7 +2370,8 @@ static int normalize_multilib_layout(
 		return -1;
 	}
 
-	ret = run_command(cmd);
+	ret =
+		run_command(cmd);
 
 	free(qstage);
 	free(cmd);
@@ -2632,7 +2380,7 @@ static int normalize_multilib_layout(
 }
 
 /* -------------------------------------------------------------------------
- * PKGBUILD
+ * PKGBUILD generation
  * ------------------------------------------------------------------------- */
 
 static int write_pkgbuild(
@@ -2649,7 +2397,8 @@ static int write_pkgbuild(
 	FILE *f;
 	int ret = -1;
 
-	qstage = shell_quote(stage);
+	qstage =
+		shell_quote(stage);
 
 	if(!qstage)
 		goto out;
@@ -2660,7 +2409,8 @@ static int write_pkgbuild(
 		work) < 0)
 		goto out;
 
-	f = fopen(cmd, "w");
+	f =
+		fopen(cmd, "w");
 
 	if(!f) {
 
@@ -2725,7 +2475,7 @@ out:
 }
 
 /* -------------------------------------------------------------------------
- * Package
+ * Package and install
  * ------------------------------------------------------------------------- */
 
 static int package_and_install(
@@ -2746,7 +2496,8 @@ static int package_and_install(
 
 	int ret;
 
-	work = mkdtemp(templ);
+	work =
+		mkdtemp(templ);
 
 	if(!work) {
 
@@ -2768,7 +2519,8 @@ static int package_and_install(
 		multilib) != 0)
 		return 1;
 
-	qwork = shell_quote(work);
+	qwork =
+		shell_quote(work);
 
 	if(!qwork)
 		return 1;
@@ -2784,7 +2536,8 @@ static int package_and_install(
 		return 1;
 	}
 
-	ret = run_command(cmd);
+	ret =
+		run_command(cmd);
 
 	free(cmd);
 	free(qwork);
@@ -2813,7 +2566,8 @@ static int package_and_install(
 			work) < 0)
 			return 1;
 
-		p = popen(q, "r");
+		p =
+			popen(q, "r");
 
 		free(q);
 
@@ -2838,7 +2592,8 @@ static int package_and_install(
 				"\n")
 		] = '\0';
 
-		q = shell_quote(pkg);
+		q =
+			shell_quote(pkg);
 
 		if(!q)
 			return 1;
@@ -2853,7 +2608,8 @@ static int package_and_install(
 			return 1;
 		}
 
-		ret = run_command(cmd);
+		ret =
+			run_command(cmd);
 
 		free(cmd);
 		free(q);
@@ -2868,8 +2624,10 @@ static int package_and_install(
 
 static void list_architectures(void)
 {
+	size_t i;
+
 	printf(
-		"%-28s %-38s %-12s %-11s %-12s\n",
+		"%-24s %-38s %-12s %-12s %-12s\n",
 		"ARCH",
 		"TARGET",
 		"OS",
@@ -2877,14 +2635,12 @@ static void list_architectures(void)
 		"FAMILY");
 
 	printf(
-		"------------------------------------------------------------------------------------------------\n");
+		"--------------------------------------------------------------------------------------------\n");
 
-	for(size_t i = 0;
-	    architectures[i].name;
-	    i++) {
+	for(i = 0; architectures[i].name; i++) {
 
 		printf(
-			"%-28s %-38s %-12s %-11s %-12s\n",
+			"%-24s %-38s %-12s %-12s %-12s\n",
 			architectures[i].name,
 			architectures[i].triplet,
 			target_os_name(
@@ -2899,7 +2655,7 @@ static void list_architectures(void)
 
 	printf(
 		"\n"
-		"Wildcard target examples:\n"
+		"Wildcard examples:\n"
 		"  *-*-elf\n"
 		"  riscv64-*-elf\n"
 		"  arm-*-eabi\n"
@@ -2911,6 +2667,8 @@ static void list_architectures(void)
 
 static void list_multilib(void)
 {
+	size_t i;
+
 	printf(
 		"%-20s %-16s %-16s %s\n",
 		"MULTILIB",
@@ -2921,9 +2679,7 @@ static void list_multilib(void)
 	printf(
 		"---------------------------------------------------------------\n");
 
-	for(size_t i = 0;
-	    multilib_variants[i].name;
-	    i++) {
+	for(i = 0; multilib_variants[i].name; i++) {
 
 		printf(
 			"%-20s %-16s %-16s %s\n",
@@ -2940,7 +2696,8 @@ static void list_multilib(void)
  * Usage
  * ------------------------------------------------------------------------- */
 
-static void usage(const char *argv0)
+static void usage(
+	const char *argv0)
 {
 	fprintf(
 		stderr,
@@ -2985,6 +2742,8 @@ static void usage(const char *argv0)
 			"./foo-1.0 /tmp/foo\n"
 		"  %s --arch mips64el --multilib mips-n32 "
 			"./foo-1.0 /tmp/foo\n"
+		"  %s --arch mips64el --multilib mips-n64 "
+			"./foo-1.0 /tmp/foo\n"
 		"  %s --arch powerpc64le --multilib ppc32 "
 			"./foo-1.0 /tmp/foo\n"
 		"  %s --target 'riscv64-*-elf' "
@@ -3001,6 +2760,8 @@ static void usage(const char *argv0)
 		argv0,
 		argv0,
 		argv0,
+		argv0,
+		argv0,
 		argv0);
 }
 
@@ -3008,7 +2769,9 @@ static void usage(const char *argv0)
  * Main
  * ------------------------------------------------------------------------- */
 
-int main(int argc, char **argv)
+int main(
+	int argc,
+	char **argv)
 {
 	const char *src = NULL;
 	const char *stage = NULL;
@@ -3031,16 +2794,14 @@ int main(int argc, char **argv)
 
 	char cwd[PATH_MAX];
 
-	int ret = 1;
+	int ret;
 
 	memset(&target, 0, sizeof(target));
 	memset(&opts, 0, sizeof(opts));
 
 	opts.do_install = 1;
 
-	/*
-	 * Parse command line.
-	 */
+	/* Parse command line. */
 	for(int i = 1; i < argc; i++) {
 
 		const char *arg = argv[i];
@@ -3052,25 +2813,19 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		if(strcmp(
-			arg,
-			"--all-multilib") == 0) {
+		if(strcmp(arg, "--all-multilib") == 0) {
 
 			opts.all_multilib = 1;
 			continue;
 		}
 
-		if(strcmp(
-			arg,
-			"--list-architectures") == 0) {
+		if(strcmp(arg, "--list-architectures") == 0) {
 
 			opts.list_architectures = 1;
 			continue;
 		}
 
-		if(strcmp(
-			arg,
-			"--list-multilib") == 0) {
+		if(strcmp(arg, "--list-multilib") == 0) {
 
 			opts.list_multilib = 1;
 			continue;
@@ -3086,7 +2841,6 @@ int main(int argc, char **argv)
 
 			arch_name = argv[++i];
 			opts.arch_name = arch_name;
-
 			continue;
 		}
 
@@ -3097,7 +2851,6 @@ int main(int argc, char **argv)
 
 			arch_name = arg + 7;
 			opts.arch_name = arch_name;
-
 			continue;
 		}
 
@@ -3111,7 +2864,6 @@ int main(int argc, char **argv)
 
 			target_pattern = argv[++i];
 			opts.target_pattern = target_pattern;
-
 			continue;
 		}
 
@@ -3122,7 +2874,6 @@ int main(int argc, char **argv)
 
 			target_pattern = arg + 9;
 			opts.target_pattern = target_pattern;
-
 			continue;
 		}
 
@@ -3136,7 +2887,6 @@ int main(int argc, char **argv)
 
 			build_triplet = argv[++i];
 			opts.build_triplet = build_triplet;
-
 			continue;
 		}
 
@@ -3147,7 +2897,6 @@ int main(int argc, char **argv)
 
 			build_triplet = arg + 8;
 			opts.build_triplet = build_triplet;
-
 			continue;
 		}
 
@@ -3161,7 +2910,6 @@ int main(int argc, char **argv)
 
 			host_triplet = argv[++i];
 			opts.host_triplet = host_triplet;
-
 			continue;
 		}
 
@@ -3172,7 +2920,6 @@ int main(int argc, char **argv)
 
 			host_triplet = arg + 7;
 			opts.host_triplet = host_triplet;
-
 			continue;
 		}
 
@@ -3185,7 +2932,6 @@ int main(int argc, char **argv)
 			}
 
 			multilib_name = argv[++i];
-
 			continue;
 		}
 
@@ -3195,7 +2941,6 @@ int main(int argc, char **argv)
 			11) == 0) {
 
 			multilib_name = arg + 11;
-
 			continue;
 		}
 
@@ -3225,9 +2970,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/*
-	 * Listing.
-	 */
+	/* Listing commands. */
 	if(opts.list_architectures)
 		list_architectures();
 
@@ -3240,9 +2983,6 @@ int main(int argc, char **argv)
 	   !stage)
 		return 0;
 
-	/*
-	 * Validate positional args.
-	 */
 	if(!src || !stage) {
 
 		usage(argv[0]);
@@ -3250,9 +2990,7 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
-	/*
-	 * Source directory.
-	 */
+	/* Validate source directory. */
 	if(!is_dir(src)) {
 
 		fprintf(
@@ -3287,21 +3025,16 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	/*
-	 * Architecture.
-	 */
+	/* Architecture selection. */
 	if(arch_name) {
 
 		arch_entry =
-			find_architecture(
-				arch_name);
+			find_architecture(arch_name);
 
-		if(!arch_entry) {
-
+		if(!arch_entry)
 			arch_entry =
 				find_architecture_triplet(
 					arch_name);
-		}
 
 		if(!arch_entry) {
 
@@ -3319,9 +3052,7 @@ int main(int argc, char **argv)
 			detect_host_architecture();
 	}
 
-	/*
-	 * Resolve target.
-	 */
+	/* Resolve target. */
 	if(target_pattern) {
 
 		resolved_target =
@@ -3355,12 +3086,12 @@ int main(int argc, char **argv)
 	if(!resolved_target)
 		goto fail;
 
-	/*
-	 * Build triplet.
-	 */
+	/* Build triplet defaults to current host. */
 	if(!build_triplet) {
 
-		const struct architecture *host =
+		const struct architecture *host;
+
+		host =
 			detect_host_architecture();
 
 		build_triplet =
@@ -3372,9 +3103,7 @@ int main(int argc, char **argv)
 			build_triplet;
 	}
 
-	/*
-	 * Host defaults to the selected target during cross builds.
-	 */
+	/* Cross host defaults to selected target. */
 	if(!host_triplet &&
 	   target_pattern) {
 
@@ -3385,9 +3114,7 @@ int main(int argc, char **argv)
 			host_triplet;
 	}
 
-	/*
-	 * Parse target.
-	 */
+	/* Parse target. */
 	if(parse_target(
 		resolved_target,
 		&target) != 0) {
@@ -3400,9 +3127,7 @@ int main(int argc, char **argv)
 		goto fail;
 	}
 
-	/*
-	 * Multilib.
-	 */
+	/* Multilib. */
 	if(multilib_name) {
 
 		multilib =
@@ -3423,9 +3148,7 @@ int main(int argc, char **argv)
 			multilib;
 	}
 
-	/*
-	 * Package metadata.
-	 */
+	/* Package metadata. */
 	name =
 		package_name(src);
 
@@ -3474,51 +3197,43 @@ int main(int argc, char **argv)
 			"packinstall: target type: bare-metal\n");
 	}
 
-	/*
-	 * Clean staging directory.
-	 */
+	/* Clean staging. */
 	if(clean_stage(stage) != 0)
 		goto fail;
 
-	/*
-	 * Build.
-	 */
-	ret = build_project(
-		src,
-		stage,
-		&opts,
-		&target);
+	/* Build. */
+	ret =
+		build_project(
+			src,
+			stage,
+			&opts,
+			&target);
 
 	if(ret != 0)
 		goto fail;
 
-	/*
-	 * Remove system info/dir.
-	 */
+	/* Remove generated info directory. */
 	if(remove_info_dir(stage) != 0)
 		goto fail;
 
-	/*
-	 * Add multilib metadata.
-	 */
+	/* Record multilib metadata. */
 	if(normalize_multilib_layout(
 		stage,
 		multilib) != 0)
 		goto fail;
 
-	/*
-	 * Package.
-	 */
-	ret = package_and_install(
-		stage,
-		name,
-		version,
-		arch_entry ?
-			arch_entry->name :
-			"any",
-		target.triplet,
-		multilib,
-		opts.do_install);
+	/* Create/install package. */
+	ret =
+		package_and_install(
+			stage,
+			name,
+			version,
+			arch_entry ?
+				arch_entry->name :
+				"any",
+			target.triplet,
+			multilib,
+			opts.do_install);
 
 	if(ret != 0)
 		goto fail;
