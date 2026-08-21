@@ -207,7 +207,8 @@ cleanup:
  * @param suffix suffix
  * @return file path
 */
-char *_klpm_get_fullpath(const char *path, const char *filename, const char *suffix)
+char *_klpm_get_fullpath(const char *path, const char *filename,
+		const char *suffix)
 {
 	char *filepath;
 	/* len = localpath len + filename len + suffix len + null */
@@ -288,7 +289,8 @@ int _klpm_open_archive(klpm_handle_t *handle, const char *path,
 #endif
 
 	if(archive_read_open_fd(*archive, fd, bufsize) != ARCHIVE_OK) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not open file %s: %s\n"),
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not open file %s: %s\n"),
 				path, archive_error_string(*archive));
 		goto error;
 	}
@@ -304,37 +306,26 @@ error:
 	RET_ERR(handle, error, -1);
 }
 
-/** Unpack a specific file in an archive.
- * @param handle the context handle
- * @param archive the archive to unpack
- * @param prefix where to extract the files
- * @param filename a file within the archive to unpack
- * @return 0 on success, 1 on failure
- */
+/** Unpack a specific file in an archive. */
 int _klpm_unpack_single(klpm_handle_t *handle, const char *archive,
 		const char *prefix, const char *filename)
 {
 	klpm_list_t *list = NULL;
 	int ret = 0;
+
 	if(filename == NULL) {
 		return 1;
 	}
+
 	list = klpm_list_add(list, (void *)filename);
 	ret = _klpm_unpack(handle, archive, prefix, list, 1);
 	klpm_list_free(list);
 	return ret;
 }
 
-/** Unpack a list of files in an archive.
- * @param handle the context handle
- * @param path the archive to unpack
- * @param prefix where to extract the files
- * @param list a list of files within the archive to unpack or NULL for all
- * @param breakfirst break after the first entry found
- * @return 0 on success, 1 on failure
- */
-int _klpm_unpack(klpm_handle_t *handle, const char *path, const char *prefix,
-		klpm_list_t *list, int breakfirst)
+/** Unpack a list of files in an archive. */
+int _klpm_unpack(klpm_handle_t *handle, const char *path,
+		const char *prefix, klpm_list_t *list, int breakfirst)
 {
 	int ret = 0;
 	mode_t oldmask;
@@ -343,7 +334,8 @@ int _klpm_unpack(klpm_handle_t *handle, const char *path, const char *prefix,
 	struct stat buf;
 	int fd, cwdfd;
 
-	fd = _klpm_open_archive(handle, path, &buf, &archive, KUZPKG_ERR_PKG_OPEN);
+	fd = _klpm_open_archive(handle, path, &buf, &archive,
+			KUZPKG_ERR_PKG_OPEN);
 	if(fd < 0) {
 		return 1;
 	}
@@ -353,12 +345,14 @@ int _klpm_unpack(klpm_handle_t *handle, const char *path, const char *prefix,
 	/* save the cwd so we can restore it later */
 	OPEN(cwdfd, ".", O_RDONLY | O_CLOEXEC);
 	if(cwdfd < 0) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not get current working directory\n"));
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not get current working directory\n"));
 	}
 
 	/* just in case our cwd was removed in the upgrade operation */
 	if(chdir(prefix) != 0) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not change directory to %s (%s)\n"),
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not change directory to %s (%s)\n"),
 				prefix, strerror(errno));
 		ret = 1;
 		goto cleanup;
@@ -378,13 +372,18 @@ int _klpm_unpack(klpm_handle_t *handle, const char *path, const char *prefix,
 		/* If specific files were requested, skip entries that don't match. */
 		if(list) {
 			char *entry_prefix = NULL;
-			STRDUP(entry_prefix, entryname, ret = 1; goto cleanup);
-			char *p = strstr(entry_prefix,"/");
+
+			STRDUP(entry_prefix, entryname,
+					ret = 1; goto cleanup);
+
+			char *p = strstr(entry_prefix, "/");
 			if(p) {
 				*(p + 1) = '\0';
 			}
+
 			char *found = klpm_list_find_str(list, entry_prefix);
 			free(entry_prefix);
+
 			if(!found) {
 				if(archive_read_data_skip(archive) != ARCHIVE_OK) {
 					ret = 1;
@@ -392,7 +391,8 @@ int _klpm_unpack(klpm_handle_t *handle, const char *path, const char *prefix,
 				}
 				continue;
 			} else {
-				_klpm_log(handle, KUZPKG_LOG_DEBUG, "extracting: %s\n", entryname);
+				_klpm_log(handle, KUZPKG_LOG_DEBUG,
+						"extracting: %s\n", entryname);
 			}
 		}
 
@@ -404,16 +404,20 @@ int _klpm_unpack(klpm_handle_t *handle, const char *path, const char *prefix,
 		}
 
 		/* Extract the archive entry. */
-		int readret = archive_read_extract(archive, entry, 0);
-		if(readret == ARCHIVE_WARN) {
-			/* operation succeeded but a non-critical error was encountered */
-			_klpm_log(handle, KUZPKG_LOG_WARNING, _("warning given when extracting %s (%s)\n"),
-					entryname, archive_error_string(archive));
-		} else if(readret != ARCHIVE_OK) {
-			_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not extract %s (%s)\n"),
-					entryname, archive_error_string(archive));
-			ret = 1;
-			goto cleanup;
+		{
+			int readret = archive_read_extract(archive, entry, 0);
+
+			if(readret == ARCHIVE_WARN) {
+				_klpm_log(handle, KUZPKG_LOG_WARNING,
+						_("warning given when extracting %s (%s)\n"),
+						entryname, archive_error_string(archive));
+			} else if(readret != ARCHIVE_OK) {
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("could not extract %s (%s)\n"),
+						entryname, archive_error_string(archive));
+				ret = 1;
+				goto cleanup;
+			}
 		}
 
 		if(breakfirst) {
@@ -425,10 +429,12 @@ cleanup:
 	umask(oldmask);
 	_klpm_archive_read_free(archive);
 	close(fd);
+
 	if(cwdfd >= 0) {
 		if(fchdir(cwdfd) != 0) {
 			_klpm_log(handle, KUZPKG_LOG_ERROR,
-					_("could not restore working directory (%s)\n"), strerror(errno));
+					_("could not restore working directory (%s)\n"),
+					strerror(errno));
 		}
 		close(cwdfd);
 	}
@@ -436,15 +442,9 @@ cleanup:
 	return ret;
 }
 
-/** Determine if there are files in a directory.
- * @param handle the context handle
- * @param path the full absolute directory path
- * @param full_count whether to return an exact count of files
- * @return a file count if full_count is != 0, else >0 if directory has
- * contents, 0 if no contents, and -1 on error
- */
-ssize_t _klpm_files_in_directory(klpm_handle_t *handle, const char *path,
-		int full_count)
+/** Determine if there are files in a directory. */
+ssize_t _klpm_files_in_directory(klpm_handle_t *handle,
+		const char *path, int full_count)
 {
 	ssize_t files = 0;
 	struct dirent *ent;
@@ -452,13 +452,15 @@ ssize_t _klpm_files_in_directory(klpm_handle_t *handle, const char *path,
 
 	if(!dir) {
 		if(errno == ENOTDIR) {
-			_klpm_log(handle, KUZPKG_LOG_DEBUG, "%s was not a directory\n", path);
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"%s was not a directory\n", path);
 		} else {
-			_klpm_log(handle, KUZPKG_LOG_DEBUG, "could not read directory %s\n",
-					path);
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"could not read directory %s\n", path);
 		}
 		return -1;
 	}
+
 	while((ent = readdir(dir)) != NULL) {
 		const char *name = ent->d_name;
 
@@ -511,19 +513,22 @@ static int _klpm_chroot_write_to_child(klpm_handle_t *handle, int fd,
 		/* nothing written, try again later */
 	} else {
 		_klpm_log(handle, KUZPKG_LOG_ERROR,
-				_("unable to write to pipe (%s)\n"), strerror(errno));
+				_("unable to write to pipe (%s)\n"),
+				strerror(errno));
 		return -1;
 	}
 
 	return 0;
 }
 
-static void _klpm_chroot_process_output(klpm_handle_t *handle, const char *line)
+static void _klpm_chroot_process_output(klpm_handle_t *handle,
+		const char *line)
 {
 	klpm_event_scriptlet_info_t event = {
 		.type = KUZPKG_EVENT_SCRIPTLET_INFO,
 		.line = line
 	};
+
 	klpm_logaction(handle, "KUZPKG-SCRIPTLET", "%s", line);
 	EVENT(handle, &event);
 }
@@ -531,31 +536,34 @@ static void _klpm_chroot_process_output(klpm_handle_t *handle, const char *line)
 static int _klpm_chroot_read_from_child(klpm_handle_t *handle, int fd,
 		char *buf, ssize_t *buf_size, ssize_t buf_limit)
 {
-	ssize_t space = buf_limit - *buf_size - 2; /* reserve 2 for "\n\0" */
+	ssize_t space = buf_limit - *buf_size - 2;
 	ssize_t nread = read(fd, buf + *buf_size, space);
+
 	if(nread > 0) {
 		char *newline = memchr(buf + *buf_size, '\n', nread);
+
 		*buf_size += nread;
+
 		if(newline) {
 			while(newline) {
 				size_t linelen = newline - buf + 1;
 				char old = buf[linelen];
+
 				buf[linelen] = '\0';
 				_klpm_chroot_process_output(handle, buf);
 				buf[linelen] = old;
 
 				*buf_size -= linelen;
 				memmove(buf, buf + linelen, *buf_size);
+
 				newline = memchr(buf, '\n', *buf_size);
 			}
 		} else if(nread == space) {
-			/* we didn't read a full line, but we're out of space */
 			strcpy(buf + *buf_size, "\n");
 			_klpm_chroot_process_output(handle, buf);
 			*buf_size = 0;
 		}
 	} else if(nread == 0) {
-		/* end-of-file */
 		if(*buf_size) {
 			strcpy(buf + *buf_size, "\n");
 			_klpm_chroot_process_output(handle, buf);
@@ -564,51 +572,46 @@ static int _klpm_chroot_read_from_child(klpm_handle_t *handle, int fd,
 	} else if(should_retry(errno)) {
 		/* nothing read, try again */
 	} else {
-		/* read error */
 		if(*buf_size) {
 			strcpy(buf + *buf_size, "\n");
 			_klpm_chroot_process_output(handle, buf);
 		}
+
 		_klpm_log(handle, KUZPKG_LOG_ERROR,
-				_("unable to read from pipe (%s)\n"), strerror(errno));
+				_("unable to read from pipe (%s)\n"),
+				strerror(errno));
 		return -1;
 	}
+
 	return 0;
 }
 
 void _klpm_reset_signals(void)
 {
 	/* reset POSIX defined signals (see signal.h) */
-	/* there are likely more but there is no easy way
-	 * to get the full list of valid signals */
 	int *i, signals[] = {
-		SIGABRT, SIGALRM, SIGBUS, SIGCHLD, SIGCONT, SIGFPE, SIGHUP, SIGILL,
-		SIGINT, SIGKILL, SIGPIPE, SIGQUIT, SIGSEGV, SIGSTOP, SIGTERM, SIGTSTP,
-		SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGPROF, SIGSYS, SIGTRAP, SIGURG,
-		SIGVTALRM, SIGXCPU, SIGXFSZ,
+		SIGABRT, SIGALRM, SIGBUS, SIGCHLD, SIGCONT, SIGFPE, SIGHUP,
+		SIGILL, SIGINT, SIGKILL, SIGPIPE, SIGQUIT, SIGSEGV, SIGSTOP,
+		SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGPROF,
+		SIGSYS, SIGTRAP, SIGURG, SIGVTALRM, SIGXCPU, SIGXFSZ,
 #if defined(SIGPOLL)
-		/* Not available on FreeBSD et al. */
 		SIGPOLL,
 #endif
 		0
 	};
+
 	struct sigaction def = { .sa_handler = SIG_DFL };
+
 	sigemptyset(&def.sa_mask);
+
 	for(i = signals; *i; i++) {
 		sigaction(*i, &def, NULL);
 	}
 }
 
-/** Execute a command with arguments in a chroot.
- * @param handle the context handle
- * @param cmd command to execute
- * @param argv arguments to pass to cmd
- * @param stdin_cb callback to provide input to the chroot on stdin
- * @param stdin_ctx context to be passed to @a stdin_cb
- * @return 0 on success, 1 on error
- */
-int _klpm_run_chroot(klpm_handle_t *handle, const char *cmd, char *const argv[],
-		_klpm_cb_io stdin_cb, void *stdin_ctx)
+/** Execute a command with arguments in a chroot. */
+int _klpm_run_chroot(klpm_handle_t *handle, const char *cmd,
+		char *const argv[], _klpm_cb_io stdin_cb, void *stdin_ctx)
 {
 	pid_t pid;
 	int child2parent_pipefd[2], parent2child_pipefd[2];
@@ -621,30 +624,37 @@ int _klpm_run_chroot(klpm_handle_t *handle, const char *cmd, char *const argv[],
 	/* save the cwd so we can restore it later */
 	OPEN(cwdfd, ".", O_RDONLY | O_CLOEXEC);
 	if(cwdfd < 0) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not get current working directory\n"));
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not get current working directory\n"));
 	}
 
 	/* just in case our cwd was removed in the upgrade operation */
 	if(chdir(handle->root) != 0) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not change directory to %s (%s)\n"),
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not change directory to %s (%s)\n"),
 				handle->root, strerror(errno));
 		goto cleanup;
 	}
 
-	_klpm_log(handle, KUZPKG_LOG_DEBUG, "executing \"%s\" under chroot \"%s\"\n",
+	_klpm_log(handle, KUZPKG_LOG_DEBUG,
+			"executing \"%s\" under chroot \"%s\"\n",
 			cmd, handle->root);
 
 	/* Flush open fds before fork() to avoid cloning buffers */
 	fflush(NULL);
 
 	if(socketpair(AF_UNIX, SOCK_STREAM, 0, child2parent_pipefd) == -1) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not create pipe (%s)\n"), strerror(errno));
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not create pipe (%s)\n"),
+				strerror(errno));
 		retval = 1;
 		goto cleanup;
 	}
 
 	if(socketpair(AF_UNIX, SOCK_STREAM, 0, parent2child_pipefd) == -1) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not create pipe (%s)\n"), strerror(errno));
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not create pipe (%s)\n"),
+				strerror(errno));
 		retval = 1;
 		goto cleanup;
 	}
@@ -652,7 +662,9 @@ int _klpm_run_chroot(klpm_handle_t *handle, const char *cmd, char *const argv[],
 	/* fork- parent and child each have separate code blocks below */
 	pid = fork();
 	if(pid == -1) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR, _("could not fork a new process (%s)\n"), strerror(errno));
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not fork a new process (%s)\n"),
+				strerror(errno));
 		retval = 1;
 		goto cleanup;
 	}
@@ -662,56 +674,66 @@ int _klpm_run_chroot(klpm_handle_t *handle, const char *cmd, char *const argv[],
 		close(0);
 		close(1);
 		close(2);
-		while(dup2(child2parent_pipefd[HEAD], 1) == -1 && errno == EINTR);
-		while(dup2(child2parent_pipefd[HEAD], 2) == -1 && errno == EINTR);
-		while(dup2(parent2child_pipefd[TAIL], 0) == -1 && errno == EINTR);
+
+		while(dup2(child2parent_pipefd[HEAD], 1) == -1 &&
+				errno == EINTR);
+		while(dup2(child2parent_pipefd[HEAD], 2) == -1 &&
+				errno == EINTR);
+		while(dup2(parent2child_pipefd[TAIL], 0) == -1 &&
+				errno == EINTR);
+
 		close(parent2child_pipefd[TAIL]);
 		close(parent2child_pipefd[HEAD]);
 		close(child2parent_pipefd[TAIL]);
 		close(child2parent_pipefd[HEAD]);
+
 		if(cwdfd >= 0) {
 			close(cwdfd);
 		}
 
-		/* use fprintf instead of _klpm_log to send output through the parent */
-		/* don't chroot() to "/": this allows running with less caps when the
-		 * caller puts us in the right root */
-		if(strcmp(handle->root, "/") != 0 && chroot(handle->root) != 0) {
-			fprintf(stderr, _("could not change the root directory (%s)\n"), strerror(errno));
+		if(strcmp(handle->root, "/") != 0 &&
+				chroot(handle->root) != 0) {
+			fprintf(stderr,
+					_("could not change the root directory (%s)\n"),
+					strerror(errno));
 			exit(1);
 		}
+
 		if(chdir("/") != 0) {
-			fprintf(stderr, _("could not change directory to %s (%s)\n"),
+			fprintf(stderr,
+					_("could not change directory to %s (%s)\n"),
 					"/", strerror(errno));
 			exit(1);
 		}
-		/* bash assumes it's being run under rsh/ssh if stdin is a socket and
-		 * sources ~/.bashrc if it thinks it's the top-level shell.
-		 * set SHLVL before running to indicate that it's a child shell and
-		 * disable this behavior */
+
 		setenv("SHLVL", "1", 0);
-		/* bash sources $BASH_ENV when run non-interactively */
 		unsetenv("BASH_ENV");
 		umask(0022);
 		_klpm_reset_signals();
 		_klpm_handle_free(handle);
+
 		execv(cmd, argv);
-		/* execv only returns if there was an error */
-		fprintf(stderr, _("call to execv failed (%s)\n"), strerror(errno));
+
+		fprintf(stderr, _("call to execv failed (%s)\n"),
+				strerror(errno));
 		exit(1);
 	} else {
-		/* this code runs for the parent only (wait on the child) */
+		/* this code runs for the parent only */
 		int status;
-		char obuf[PIPE_BUF]; /* writes <= PIPE_BUF are guaranteed atomic */
+		char obuf[PIPE_BUF];
 		char ibuf[LINE_MAX];
 		ssize_t olen = 0, ilen = 0;
 		nfds_t nfds = 2;
-		struct pollfd fds[2], *child2parent = &(fds[0]), *parent2child = &(fds[1]);
+		struct pollfd fds[2];
+		struct pollfd *child2parent = &(fds[0]);
+		struct pollfd *parent2child = &(fds[1]);
 		int poll_ret;
 
 		child2parent->fd = child2parent_pipefd[TAIL];
 		child2parent->events = POLLIN;
+
 		fcntl(child2parent->fd, F_SETFL, O_NONBLOCK);
+
 		close(child2parent_pipefd[HEAD]);
 		close(parent2child_pipefd[TAIL]);
 
@@ -727,38 +749,40 @@ int _klpm_run_chroot(klpm_handle_t *handle, const char *cmd, char *const argv[],
 
 #define STOP_POLLING(p) do { close(p->fd); p->fd = -1; } while(0)
 
-		while((child2parent->fd != -1 || parent2child->fd != -1)
-				&& (poll_ret = poll(fds, nfds, -1)) != 0) {
+		while((child2parent->fd != -1 ||
+				parent2child->fd != -1) &&
+				(poll_ret = poll(fds, nfds, -1)) != 0) {
 			if(poll_ret == -1) {
 				if(errno == EINTR) {
 					continue;
-				} else {
-					break;
 				}
+				break;
 			}
+
 			if(child2parent->revents & POLLIN) {
-				if(_klpm_chroot_read_from_child(handle, child2parent->fd,
-							ibuf, &ilen, sizeof(ibuf)) != 0) {
-					/* we encountered end-of-file or an error */
+				if(_klpm_chroot_read_from_child(handle,
+						child2parent->fd,
+						ibuf, &ilen,
+						sizeof(ibuf)) != 0) {
 					STOP_POLLING(child2parent);
 				}
 			} else if(child2parent->revents) {
-				/* anything but POLLIN indicates an error */
 				STOP_POLLING(child2parent);
 			}
+
 			if(parent2child->revents & POLLOUT) {
-				if(_klpm_chroot_write_to_child(handle, parent2child->fd, obuf, &olen,
-							sizeof(obuf), stdin_cb, stdin_ctx) != 0) {
+				if(_klpm_chroot_write_to_child(handle,
+						parent2child->fd, obuf, &olen,
+						sizeof(obuf),
+						stdin_cb, stdin_ctx) != 0) {
 					STOP_POLLING(parent2child);
 				}
 			} else if(parent2child->revents) {
-				/* anything but POLLOUT indicates an error */
 				STOP_POLLING(parent2child);
 			}
 		}
-		/* process anything left in the input buffer */
+
 		if(ilen) {
-			/* buffer would have already been flushed if it had a newline */
 			strcpy(ibuf + ilen, "\n");
 			_klpm_chroot_process_output(handle, ibuf);
 		}
@@ -770,33 +794,40 @@ int _klpm_run_chroot(klpm_handle_t *handle, const char *cmd, char *const argv[],
 		if(parent2child->fd != -1) {
 			close(parent2child->fd);
 		}
+
 		if(child2parent->fd != -1) {
 			close(child2parent->fd);
 		}
 
 		while(waitpid(pid, &status, 0) == -1) {
 			if(errno != EINTR) {
-				_klpm_log(handle, KUZPKG_LOG_ERROR, _("call to waitpid failed (%s)\n"), strerror(errno));
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("call to waitpid failed (%s)\n"),
+						strerror(errno));
 				retval = 1;
 				goto cleanup;
 			}
 		}
 
-		/* check the return status, make sure it is 0 (success) */
 		if(WIFEXITED(status)) {
-			_klpm_log(handle, KUZPKG_LOG_DEBUG, "call to waitpid succeeded\n");
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"call to waitpid succeeded\n");
+
 			if(WEXITSTATUS(status) != 0) {
-				_klpm_log(handle, KUZPKG_LOG_ERROR, _("command failed to execute correctly\n"));
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("command failed to execute correctly\n"));
 				retval = 1;
 			}
 		} else if(WIFSIGNALED(status) != 0) {
 			char *signal_description = strsignal(WTERMSIG(status));
-			/* strsignal can return NULL on some (non-Linux) platforms */
+
 			if(signal_description == NULL) {
 				signal_description = _("Unknown signal");
 			}
-			_klpm_log(handle, KUZPKG_LOG_ERROR, _("command terminated by signal %d: %s\n"),
-						WTERMSIG(status), signal_description);
+
+			_klpm_log(handle, KUZPKG_LOG_ERROR,
+					_("command terminated by signal %d: %s\n"),
+					WTERMSIG(status), signal_description);
 			retval = 1;
 		}
 	}
@@ -805,7 +836,8 @@ cleanup:
 	if(cwdfd >= 0) {
 		if(fchdir(cwdfd) != 0) {
 			_klpm_log(handle, KUZPKG_LOG_ERROR,
-					_("could not restore working directory (%s)\n"), strerror(errno));
+					_("could not restore working directory (%s)\n"),
+					strerror(errno));
 		}
 		close(cwdfd);
 	}
@@ -813,10 +845,7 @@ cleanup:
 	return retval;
 }
 
-/** Run ldconfig in a chroot.
- * @param handle the context handle
- * @return 0 on success, 1 on error
- */
+/** Run ldconfig in a chroot. */
 int _klpm_ldconfig(klpm_handle_t *handle)
 {
 	char line[PATH_MAX];
@@ -829,8 +858,11 @@ int _klpm_ldconfig(klpm_handle_t *handle)
 		if(access(line, X_OK) == 0) {
 			char arg0[32];
 			char *argv[] = { arg0, NULL };
+
 			strcpy(arg0, "ldconfig");
-			return _klpm_run_chroot(handle, LDCONFIG, argv, NULL, NULL);
+
+			return _klpm_run_chroot(handle,
+					LDCONFIG, argv, NULL, NULL);
 		}
 	}
 
@@ -839,21 +871,13 @@ int _klpm_ldconfig(klpm_handle_t *handle)
 
 /** Helper function for comparing strings using the klpm "compare func"
  * signature.
- * @param s1 first string to be compared
- * @param s2 second string to be compared
- * @return 0 if strings are equal, positive int if first unequal character
- * has a greater value in s1, negative if it has a greater value in s2
  */
 int _klpm_str_cmp(const void *s1, const void *s2)
 {
 	return strcmp(s1, s2);
 }
 
-/** Find a filename in a registered klpm cachedir.
- * @param handle the context handle
- * @param filename name of file to find
- * @return malloced path of file, NULL if not found
- */
+/** Find a filename in a registered klpm cachedir. */
 char *_klpm_filecache_find(klpm_handle_t *handle, const char *filename)
 {
 	char path[PATH_MAX];
@@ -861,46 +885,45 @@ char *_klpm_filecache_find(klpm_handle_t *handle, const char *filename)
 	klpm_list_t *i;
 	struct stat buf;
 
-	/* Loop through the cache dirs until we find a matching file */
 	for(i = handle->cachedirs; i; i = i->next) {
-		snprintf(path, PATH_MAX, "%s%s", (char *)i->data,
-				filename);
+		snprintf(path, PATH_MAX, "%s%s",
+				(char *)i->data, filename);
+
 		if(stat(path, &buf) == 0) {
 			if(S_ISREG(buf.st_mode)) {
 				retpath = strdup(path);
-				_klpm_log(handle, KUZPKG_LOG_DEBUG, "found cached pkg: %s\n", retpath);
+				_klpm_log(handle, KUZPKG_LOG_DEBUG,
+						"found cached pkg: %s\n", retpath);
 				return retpath;
 			} else {
 				_klpm_log(handle, KUZPKG_LOG_WARNING,
-						"cached pkg '%s' is not a regular file: mode=%i\n", path, buf.st_mode);
+						"cached pkg '%s' is not a regular file: "
+						"mode=%i\n",
+						path, buf.st_mode);
 			}
 		} else if(errno != ENOENT) {
-			_klpm_log(handle, KUZPKG_LOG_WARNING, "could not open '%s'\n: %s", path, strerror(errno));
+			_klpm_log(handle, KUZPKG_LOG_WARNING,
+					"could not open '%s'\n: %s",
+					path, strerror(errno));
 		}
 	}
-	/* package wasn't found in any cachedir */
+
 	return NULL;
 }
 
-/** Check whether a filename exists in a registered klpm cachedir.
- * @param handle the context handle
- * @param filename name of file to find
- * @return 0 if the filename was not found, 1 otherwise
- */
+/** Check whether a filename exists in a registered klpm cachedir. */
 int _klpm_filecache_exists(klpm_handle_t *handle, const char *filename)
 {
 	int res;
 	char *fpath = _klpm_filecache_find(handle, filename);
+
 	res = (fpath != NULL);
 	FREE(fpath);
+
 	return res;
 }
 
-/** Check the klpm cachedirs for existence and find a writable one.
- * If no valid cache directory can be found, use /tmp.
- * @param handle the context handle
- * @return pointer to a writable cache directory.
- */
+/** Check the klpm cachedirs for existence and find a writable one. */
 const char *_klpm_filecache_setup(klpm_handle_t *handle)
 {
 	struct stat buf;
@@ -908,157 +931,201 @@ const char *_klpm_filecache_setup(klpm_handle_t *handle)
 	char *cachedir;
 	const char *tmpdir;
 
-	/* Loop through the cache dirs until we find a usable directory */
 	for(i = handle->cachedirs; i; i = i->next) {
 		cachedir = i->data;
+
 		if(stat(cachedir, &buf) != 0) {
-			/* cache directory does not exist.... try creating it */
-			_klpm_log(handle, KUZPKG_LOG_WARNING, _("no %s cache exists, creating...\n"),
+			_klpm_log(handle, KUZPKG_LOG_WARNING,
+					_("no %s cache exists, creating...\n"),
 					cachedir);
+
 			if(_klpm_makepath(cachedir) == 0) {
-				_klpm_log(handle, KUZPKG_LOG_DEBUG, "using cachedir: %s\n", cachedir);
+				_klpm_log(handle, KUZPKG_LOG_DEBUG,
+						"using cachedir: %s\n", cachedir);
 				return cachedir;
 			}
 		} else if(!S_ISDIR(buf.st_mode)) {
 			_klpm_log(handle, KUZPKG_LOG_DEBUG,
-					"skipping cachedir, not a directory: %s\n", cachedir);
+					"skipping cachedir, not a directory: %s\n",
+					cachedir);
 		} else if(_klpm_access(handle, NULL, cachedir, W_OK) != 0) {
 			_klpm_log(handle, KUZPKG_LOG_DEBUG,
-					"skipping cachedir, not writable: %s\n", cachedir);
-		} else if(!(buf.st_mode & (S_IWUSR | S_IWGRP | S_IWOTH))) {
+					"skipping cachedir, not writable: %s\n",
+					cachedir);
+		} else if(!(buf.st_mode &
+				(S_IWUSR | S_IWGRP | S_IWOTH))) {
 			_klpm_log(handle, KUZPKG_LOG_DEBUG,
-					"skipping cachedir, no write bits set: %s\n", cachedir);
+					"skipping cachedir, no write bits set: %s\n",
+					cachedir);
 		} else {
-			_klpm_log(handle, KUZPKG_LOG_DEBUG, "using cachedir: %s\n", cachedir);
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"using cachedir: %s\n", cachedir);
 			return cachedir;
 		}
 	}
 
-	/* we didn't find a valid cache directory. use TMPDIR or /tmp. */
-	if((tmpdir = getenv("TMPDIR")) && stat(tmpdir, &buf) && S_ISDIR(buf.st_mode)) {
+	if((tmpdir = getenv("TMPDIR")) &&
+			stat(tmpdir, &buf) &&
+			S_ISDIR(buf.st_mode)) {
 		/* TMPDIR was good, we can use it */
 	} else {
 		tmpdir = "/tmp";
 	}
+
 	klpm_option_add_cachedir(handle, tmpdir);
 	cachedir = handle->cachedirs->prev->data;
-	_klpm_log(handle, KUZPKG_LOG_DEBUG, "using cachedir: %s\n", cachedir);
+
+	_klpm_log(handle, KUZPKG_LOG_DEBUG,
+			"using cachedir: %s\n", cachedir);
 	_klpm_log(handle, KUZPKG_LOG_WARNING,
-			_("couldn't find or create package cache, using %s instead\n"), cachedir);
+			_("couldn't find or create package cache, using %s instead\n"),
+			cachedir);
+
 	return cachedir;
 }
 
-/** Setup directory for downloading files.
- * When using the sandbox, create a temporary directory under the supplied directory. The new
- * directory is writable by the download user, and will be removed after the download operation
- * has completed. When not using the sandbox, download in the supplied directory.
- * @param handle the context handle
- * @param dir existing sync or cache directory
- * @return pointer to the download directory.
- */
+/** Setup directory for downloading files. */
 char *_klpm_download_dir_setup(klpm_handle_t *handle, const char *dir)
 {
 	char *newdir = NULL;
-	ASSERT(dir != NULL, RET_ERR(handle, KUZPKG_ERR_WRONG_ARGS, NULL));
+
+	ASSERT(dir != NULL,
+			RET_ERR(handle, KUZPKG_ERR_WRONG_ARGS, NULL));
 
 	if(_klpm_use_sandbox(handle)) {
 		struct passwd const *pw = NULL;
 		errno = 0;
+
 		pw = getpwnam(handle->sandboxuser);
 
 		if(pw == NULL) {
 			if(errno == 0) {
 				_klpm_log(handle, KUZPKG_LOG_ERROR,
-						_("download user '%s' does not exist\n"), handle->sandboxuser);
+						_("download user '%s' does not exist\n"),
+						handle->sandboxuser);
 			} else {
 				_klpm_log(handle, KUZPKG_LOG_ERROR,
 						_("failed to get download user '%s': %s\n"),
-						handle->sandboxuser, strerror(errno));
+						handle->sandboxuser,
+						strerror(errno));
 			}
-			RET_ERR(handle, KUZPKG_ERR_RETRIEVE_PREPARE, NULL);
+
+			RET_ERR(handle,
+					KUZPKG_ERR_RETRIEVE_PREPARE, NULL);
 		}
 
 		const char template[] = "download-XXXXXX";
 		size_t newdirlen = strlen(dir) + sizeof(template) + 1;
-		MALLOC(newdir, newdirlen, RET_ERR(handle, KUZPKG_ERR_MEMORY, NULL));
-		snprintf(newdir, newdirlen - 1, "%s%s", dir, template);
+
+		MALLOC(newdir, newdirlen,
+				RET_ERR(handle, KUZPKG_ERR_MEMORY, NULL));
+
+		snprintf(newdir, newdirlen - 1,
+				"%s%s", dir, template);
 
 		if(mkdtemp(newdir) == NULL) {
-		_klpm_log(handle, KUZPKG_LOG_ERROR,
-				_("failed to create temporary download directory %s: %s\n"),
-				newdir, strerror(errno));
+			_klpm_log(handle, KUZPKG_LOG_ERROR,
+					_("failed to create temporary download directory "
+					  "%s: %s\n"),
+					newdir, strerror(errno));
+
 			free(newdir);
-			RET_ERR(handle, KUZPKG_ERR_RETRIEVE_PREPARE, NULL);
+
+			RET_ERR(handle,
+					KUZPKG_ERR_RETRIEVE_PREPARE, NULL);
 		}
 
 		if(chown(newdir, pw->pw_uid, pw->pw_gid) == -1) {
 			_klpm_log(handle, KUZPKG_LOG_ERROR,
-					_("failed to chown temporary download directory %s: %s\n"),
+					_("failed to chown temporary download directory "
+					  "%s: %s\n"),
 					newdir, strerror(errno));
+
 			free(newdir);
-			RET_ERR(handle, KUZPKG_ERR_RETRIEVE_PREPARE, NULL);
+
+			RET_ERR(handle,
+					KUZPKG_ERR_RETRIEVE_PREPARE, NULL);
 		}
 
-		newdir[newdirlen-2] = '/';
-		newdir[newdirlen-1] = '\0';
+		newdir[newdirlen - 2] = '/';
+		newdir[newdirlen - 1] = '\0';
 	} else {
-		/* we are not using sandbox features, download directly to the current directory */
 		STRDUP(newdir, dir, return NULL);
 	}
 
 	return newdir;
 }
 
-/** Remove a temporary directory.
- * The temporary download directory is removed after deleting any
- * leftover files.
- * @param dir directory to be removed
- */
+/** Remove a temporary directory. */
 void _klpm_remove_temporary_download_dir(const char *dir)
 {
 	ASSERT(dir != NULL, return);
+
 	size_t dirlen = strlen(dir);
 	struct dirent *dp = NULL;
 	DIR *dirp = opendir(dir);
+
 	if(!dirp) {
 		return;
 	}
+
 	for(dp = readdir(dirp); dp != NULL; dp = readdir(dirp)) {
-		if(strcmp(dp->d_name, "..") != 0 && strcmp(dp->d_name, ".") != 0) {
+		if(strcmp(dp->d_name, "..") != 0 &&
+				strcmp(dp->d_name, ".") != 0) {
 			char name[PATH_MAX];
+
 			if(dirlen + strlen(dp->d_name) + 2 > PATH_MAX) {
-				/* file path is too long to remove, hmm. */
 				continue;
 			} else {
 				sprintf(name, "%s/%s", dir, dp->d_name);
+
 				if(unlink(name)) {
 					continue;
 				}
 			}
 		}
 	}
+
 	closedir(dirp);
 	rmdir(dir);
 }
 
-
-#if defined  HAVE_LIBSSL || defined HAVE_LIBNETTLE
-/** Compute the MD5 message digest of a file.
- * @param path file path of file to compute  MD5 digest of
- * @param output string to hold computed MD5 digest
- * @return 0 on success, 1 on file open error, 2 on file read error
+/*
+ * Crypto/checksum support.
+ *
+ * Keep the original libkuzpkg checksum API and behavior, but do not
+ * implicitly assume Nettle when OpenSSL is disabled.
+ *
+ * crypto=openssl:
+ *     HAVE_LIBSSL=1
+ *
+ * crypto=nettle:
+ *     HAVE_LIBNETTLE=1
+ *
+ * crypto=none:
+ *     neither macro is defined
  */
+
 static int md5_file(const char *path, unsigned char output[16])
 {
+	unsigned char *buf;
+	ssize_t n;
+	int fd;
+
 #if HAVE_LIBSSL
 	EVP_MD_CTX *ctx;
 	const EVP_MD *md = EVP_get_digestbyname("MD5");
-#else /* HAVE_LIBNETTLE */
+#elif HAVE_LIBNETTLE
 	struct md5_ctx ctx;
+#else
+	/*
+	 * No checksum provider is available.
+	 * The public checksum function will translate this into NULL.
+	 */
+	(void)path;
+	(void)output;
+	return 1;
 #endif
-	unsigned char *buf;
-	ssize_t n;
-	int fd;
 
 	MALLOC(buf, (size_t)KUZPKG_BUFFER_SIZE, return 1);
 
@@ -1070,19 +1137,37 @@ static int md5_file(const char *path, unsigned char output[16])
 
 #if HAVE_LIBSSL
 	ctx = EVP_MD_CTX_create();
-	EVP_DigestInit_ex(ctx, md, NULL);
-#else /* HAVE_LIBNETTLE */
+	if(ctx == NULL) {
+		close(fd);
+		free(buf);
+		return 1;
+	}
+
+	if(md == NULL || EVP_DigestInit_ex(ctx, md, NULL) != 1) {
+		EVP_MD_CTX_destroy(ctx);
+		close(fd);
+		free(buf);
+		return 1;
+	}
+#elif HAVE_LIBNETTLE
 	md5_init(&ctx);
 #endif
 
-	while((n = read(fd, buf, KUZPKG_BUFFER_SIZE)) > 0 || errno == EINTR) {
+	while((n = read(fd, buf, KUZPKG_BUFFER_SIZE)) > 0 ||
+			errno == EINTR) {
 		if(n < 0) {
 			continue;
 		}
+
 #if HAVE_LIBSSL
-		EVP_DigestUpdate(ctx, buf, n);
-#else /* HAVE_LIBNETTLE */
-		md5_update(&ctx, n, buf);
+		if(EVP_DigestUpdate(ctx, buf, (size_t)n) != 1) {
+			EVP_MD_CTX_destroy(ctx);
+			close(fd);
+			free(buf);
+			return 1;
+		}
+#elif HAVE_LIBNETTLE
+		md5_update(&ctx, (size_t)n, buf);
 #endif
 	}
 
@@ -1090,34 +1175,42 @@ static int md5_file(const char *path, unsigned char output[16])
 	free(buf);
 
 	if(n < 0) {
+#if HAVE_LIBSSL
+		EVP_MD_CTX_destroy(ctx);
+#endif
 		return 2;
 	}
 
 #if HAVE_LIBSSL
-	EVP_DigestFinal_ex(ctx, output, NULL);
+	if(EVP_DigestFinal_ex(ctx, output, NULL) != 1) {
+		EVP_MD_CTX_destroy(ctx);
+		return 1;
+	}
+
 	EVP_MD_CTX_destroy(ctx);
-#else /* HAVE_LIBNETTLE */
+#elif HAVE_LIBNETTLE
 	md5_digest(&ctx, MD5_DIGEST_SIZE, output);
 #endif
+
 	return 0;
 }
 
-/** Compute the SHA-256 message digest of a file.
- * @param path file path of file to compute SHA256 digest of
- * @param output string to hold computed SHA256 digest
- * @return 0 on success, 1 on file open error, 2 on file read error
- */
 static int sha256_file(const char *path, unsigned char output[32])
 {
-#if HAVE_LIBSSL
-	EVP_MD_CTX *ctx;
-	const EVP_MD *md = EVP_get_digestbyname("SHA256");
-#else /* HAVE_LIBNETTLE */
-	struct sha256_ctx ctx;
-#endif
 	unsigned char *buf;
 	ssize_t n;
 	int fd;
+
+#if HAVE_LIBSSL
+	EVP_MD_CTX *ctx;
+	const EVP_MD *md = EVP_get_digestbyname("SHA256");
+#elif HAVE_LIBNETTLE
+	struct sha256_ctx ctx;
+#else
+	(void)path;
+	(void)output;
+	return 1;
+#endif
 
 	MALLOC(buf, (size_t)KUZPKG_BUFFER_SIZE, return 1);
 
@@ -1129,19 +1222,37 @@ static int sha256_file(const char *path, unsigned char output[32])
 
 #if HAVE_LIBSSL
 	ctx = EVP_MD_CTX_create();
-	EVP_DigestInit_ex(ctx, md, NULL);
-#else /* HAVE_LIBNETTLE */
+	if(ctx == NULL) {
+		close(fd);
+		free(buf);
+		return 1;
+	}
+
+	if(md == NULL || EVP_DigestInit_ex(ctx, md, NULL) != 1) {
+		EVP_MD_CTX_destroy(ctx);
+		close(fd);
+		free(buf);
+		return 1;
+	}
+#elif HAVE_LIBNETTLE
 	sha256_init(&ctx);
 #endif
 
-	while((n = read(fd, buf, KUZPKG_BUFFER_SIZE)) > 0 || errno == EINTR) {
+	while((n = read(fd, buf, KUZPKG_BUFFER_SIZE)) > 0 ||
+			errno == EINTR) {
 		if(n < 0) {
 			continue;
 		}
+
 #if HAVE_LIBSSL
-		EVP_DigestUpdate(ctx, buf, n);
-#else /* HAVE_LIBNETTLE */
-		sha256_update(&ctx, n, buf);
+		if(EVP_DigestUpdate(ctx, buf, (size_t)n) != 1) {
+			EVP_MD_CTX_destroy(ctx);
+			close(fd);
+			free(buf);
+			return 1;
+		}
+#elif HAVE_LIBNETTLE
+		sha256_update(&ctx, (size_t)n, buf);
 #endif
 	}
 
@@ -1149,18 +1260,25 @@ static int sha256_file(const char *path, unsigned char output[32])
 	free(buf);
 
 	if(n < 0) {
+#if HAVE_LIBSSL
+		EVP_MD_CTX_destroy(ctx);
+#endif
 		return 2;
 	}
 
 #if HAVE_LIBSSL
-	EVP_DigestFinal_ex(ctx, output, NULL);
+	if(EVP_DigestFinal_ex(ctx, output, NULL) != 1) {
+		EVP_MD_CTX_destroy(ctx);
+		return 1;
+	}
+
 	EVP_MD_CTX_destroy(ctx);
-#else /* HAVE_LIBNETTLE */
+#elif HAVE_LIBNETTLE
 	sha256_digest(&ctx, SHA256_DIGEST_SIZE, output);
 #endif
+
 	return 0;
 }
-#endif /* HAVE_LIBSSL || HAVE_LIBNETTLE */
 
 char SYMEXPORT *klpm_compute_md5sum(const char *filename)
 {
@@ -1222,13 +1340,8 @@ int _klpm_test_checksum(const char *filepath, const char *expected,
 }
 
 /* Note: does NOT handle sparse files on purpose for speed. */
-/** TODO.
- * Does not handle sparse files on purpose for speed.
- * @param a
- * @param b
- * @return
- */
-int _klpm_archive_fgets(struct archive *a, struct archive_read_buffer *b)
+int _klpm_archive_fgets(struct archive *a,
+		struct archive_read_buffer *b)
 {
 	/* ensure we start populating our line buffer at the beginning */
 	b->line_offset = b->line;
@@ -1240,14 +1353,19 @@ int _klpm_archive_fgets(struct archive *a, struct archive_read_buffer *b)
 		/* have we processed this entire block? */
 		if(b->block + b->block_size == b->block_offset) {
 			int64_t offset;
+
 			if(b->ret == ARCHIVE_EOF) {
-				/* reached end of archive on the last read, now we are out of data */
+				/* reached end of archive on the last read,
+				 * now we are out of data */
 				goto cleanup;
 			}
 
 			/* zero-copy - this is the entire next block of data. */
-			b->ret = archive_read_data_block(a, (void *)&b->block,
-					&b->block_size, &offset);
+			b->ret = archive_read_data_block(a,
+					(void *)&b->block,
+					&b->block_size,
+					&offset);
+
 			b->block_offset = b->block;
 			block_remaining = b->block_size;
 
@@ -1256,61 +1374,103 @@ int _klpm_archive_fgets(struct archive *a, struct archive_read_buffer *b)
 				goto cleanup;
 			}
 		} else {
-			block_remaining = b->block + b->block_size - b->block_offset;
+			block_remaining =
+				b->block + b->block_size - b->block_offset;
 		}
 
 		/* look through the block looking for EOL characters */
-		eol = memchr(b->block_offset, '\n', block_remaining);
+		eol = memchr(b->block_offset,
+				'\n',
+				block_remaining);
+
 		if(!eol) {
-			eol = memchr(b->block_offset, '\0', block_remaining);
+			eol = memchr(b->block_offset,
+					'\0',
+					block_remaining);
 		}
 
 		/* allocate our buffer, or ensure our existing one is big enough */
 		if(!b->line) {
-			/* set the initial buffer to the read block_size */
-			CALLOC(b->line, b->block_size + 1, sizeof(char), b->ret = -ENOMEM; goto cleanup);
+			b->line_offset = b->line;
+
+			CALLOC(b->line,
+					b->block_size + 1,
+					sizeof(char),
+					b->ret = -ENOMEM;
+					goto cleanup);
+
 			b->line_size = b->block_size + 1;
 			b->line_offset = b->line;
 		} else {
-			/* note: we know eol > b->block_offset and b->line_offset > b->line,
-			 * so we know the result is unsigned and can fit in size_t */
-			size_t new = eol ? (size_t)(eol - b->block_offset) : block_remaining;
-			size_t needed = (size_t)((b->line_offset - b->line) + new + 1);
+			size_t new =
+				eol ?
+				(size_t)(eol - b->block_offset) :
+				block_remaining;
+
+			size_t needed =
+				(size_t)((b->line_offset - b->line) +
+						new + 1);
+
 			if(needed > b->max_line_size) {
 				b->ret = -ERANGE;
 				goto cleanup;
 			}
+
 			if(needed > b->line_size) {
-				/* need to realloc + copy data to fit total length */
 				char *new_line;
-				CALLOC(new_line, needed, sizeof(char), b->ret = -ENOMEM; goto cleanup);
-				memcpy(new_line, b->line, b->line_size);
+
+				CALLOC(new_line,
+						needed,
+						sizeof(char),
+						b->ret = -ENOMEM;
+						goto cleanup);
+
+				memcpy(new_line,
+						b->line,
+						b->line_size);
+
 				b->line_size = needed;
-				b->line_offset = new_line + (b->line_offset - b->line);
+				b->line_offset =
+					new_line +
+					(b->line_offset - b->line);
+
 				free(b->line);
 				b->line = new_line;
 			}
 		}
 
 		if(eol) {
-			size_t len = (size_t)(eol - b->block_offset);
-			memcpy(b->line_offset, b->block_offset, len);
+			size_t len =
+				(size_t)(eol - b->block_offset);
+
+			memcpy(b->line_offset,
+					b->block_offset,
+					len);
+
 			b->line_offset[len] = '\0';
 			b->block_offset = eol + 1;
-			b->real_line_size = b->line_offset + len - b->line;
-			/* this is the main return point; from here you can read b->line */
+			b->real_line_size =
+				b->line_offset + len - b->line;
+
 			return ARCHIVE_OK;
 		} else {
-			/* we've looked through the whole block but no newline, copy it */
-			size_t len = (size_t)(b->block + b->block_size - b->block_offset);
-			memcpy(b->line_offset, b->block_offset, len);
+			size_t len =
+				(size_t)(b->block + b->block_size -
+						b->block_offset);
+
+			memcpy(b->line_offset,
+					b->block_offset,
+					len);
+
 			b->line_offset += len;
-			b->block_offset = b->block + b->block_size;
-			/* there was no new data, return what is left; saved ARCHIVE_EOF will be
-			 * returned on next call */
+			b->block_offset =
+				b->block + b->block_size;
+
 			if(len == 0) {
 				b->line_offset[0] = '\0';
-				b->real_line_size = b->line_offset - b->line;
+				b->real_line_size =
+					b->line_offset - b->line;
+
 				return ARCHIVE_OK;
 			}
 		}
@@ -1319,29 +1479,18 @@ int _klpm_archive_fgets(struct archive *a, struct archive_read_buffer *b)
 cleanup:
 	{
 		int ret = b->ret;
+
 		FREE(b->line);
 		*b = (struct archive_read_buffer){0};
+
 		return ret;
 	}
 }
 
-/** Parse a full package specifier.
- * @param target package specifier to parse, such as: "kuzpkg-4.0.1-2",
- * "kuzpkg-4.01-2/", or "kuzpkg-4.0.1-2/desc"
- * @param name to hold package name
- * @param version to hold package version
- * @param name_hash to hold package name hash
- * @return 0 on success, -1 on error
- */
-int _klpm_splitname(const char *target, char **name, char **version,
-		unsigned long *name_hash)
+/** Parse a full package specifier. */
+int _klpm_splitname(const char *target, char **name,
+		char **version, unsigned long *name_hash)
 {
-	/* the format of a db entry is as follows:
-	 *    package-version-rel/
-	 *    package-version-rel/desc (we ignore the filename portion)
-	 * package name can contain hyphens, so parse from the back- go back
-	 * two hyphens and we have split the version from the name.
-	 */
 	const char *pkgver, *end;
 
 	if(target == NULL) {
@@ -1354,29 +1503,40 @@ int _klpm_splitname(const char *target, char **name, char **version,
 		end = target + strlen(target);
 	}
 
-	/* do the magic parsing- find the beginning of the version string
-	 * by doing two iterations of same loop to lop off two hyphens */
-	for(pkgver = end - 1; *pkgver && *pkgver != '-'; pkgver--);
-	for(pkgver = pkgver - 1; *pkgver && *pkgver != '-'; pkgver--);
+	/* find beginning of version */
+	for(pkgver = end - 1;
+			*pkgver && *pkgver != '-';
+			pkgver--);
+
+	for(pkgver = pkgver - 1;
+			*pkgver && *pkgver != '-';
+			pkgver--);
+
 	if(*pkgver != '-' || pkgver == target) {
 		return -1;
 	}
 
-	/* copy into fields and return */
 	if(version) {
 		if(*version) {
 			FREE(*version);
 		}
-		/* version actually points to the dash, so need to increment 1 and account
-		 * for potential end character */
-		STRNDUP(*version, pkgver + 1, end - pkgver - 1, return -1);
+
+		STRNDUP(*version,
+				pkgver + 1,
+				end - pkgver - 1,
+				return -1);
 	}
 
 	if(name) {
 		if(*name) {
 			FREE(*name);
 		}
-		STRNDUP(*name, target, pkgver - target, return -1);
+
+		STRNDUP(*name,
+				target,
+				pkgver - target,
+				return -1);
+
 		if(name_hash) {
 			*name_hash = _klpm_hash_sdbm(*name);
 		}
@@ -1385,11 +1545,7 @@ int _klpm_splitname(const char *target, char **name, char **version,
 	return 0;
 }
 
-/** Hash the given string to an unsigned long value.
- * This is the standard sdbm hashing algorithm.
- * @param str string to hash
- * @return the hash value of the given string
- */
+/** Hash the given string to an unsigned long value. */
 unsigned long _klpm_hash_sdbm(const char *str)
 {
 	unsigned long hash = 0;
@@ -1398,6 +1554,7 @@ unsigned long _klpm_hash_sdbm(const char *str)
 	if(!str) {
 		return hash;
 	}
+
 	while((c = *str++)) {
 		hash = c + hash * 65599;
 	}
@@ -1405,56 +1562,47 @@ unsigned long _klpm_hash_sdbm(const char *str)
 	return hash;
 }
 
-/** Convert a string to a file offset.
- * This parses bare positive integers only.
- * @param line string to convert
- * @return off_t on success, -1 on error
- */
+/** Convert a string to a file offset. */
 off_t _klpm_strtoofft(const char *line)
 {
 	char *end;
 	unsigned long long result;
+
 	errno = 0;
 
-	/* we are trying to parse bare numbers only, no leading anything */
 	if(!isdigit((unsigned char)line[0])) {
 		return (off_t)-1;
 	}
+
 	result = strtoull(line, &end, 10);
+
 	if(result == 0 && end == line) {
-		/* line was not a number */
 		return (off_t)-1;
 	} else if(result == ULLONG_MAX && errno == ERANGE) {
-		/* line does not fit in unsigned long long */
 		return (off_t)-1;
 	} else if(*end) {
-		/* line began with a number but has junk left over at the end */
 		return (off_t)-1;
 	}
 
 	return (off_t)result;
 }
 
-/** Parses a date into an klpm_time_t struct.
- * @param line date to parse
- * @return time struct on success, 0 on error
- */
+/** Parse a date into an klpm_time_t struct. */
 klpm_time_t _klpm_parsedate(const char *line)
 {
 	char *end;
 	long long result;
+
 	errno = 0;
 
 	result = strtoll(line, &end, 10);
+
 	if(result == 0 && end == line) {
-		/* line was not a number */
 		errno = EINVAL;
 		return 0;
 	} else if(errno == ERANGE) {
-		/* line does not fit in long long */
 		return 0;
 	} else if(*end) {
-		/* line began with a number but has junk left over at the end */
 		errno = EINVAL;
 		return 0;
 	}
@@ -1462,16 +1610,9 @@ klpm_time_t _klpm_parsedate(const char *line)
 	return (klpm_time_t)result;
 }
 
-/** Wrapper around access() which takes a dir and file argument
- * separately and generates an appropriate error message.
- * If dir is NULL file will be treated as the whole path.
- * @param handle an klpm handle
- * @param dir directory path ending with and slash
- * @param file filename
- * @param amode access mode as described in access()
- * @return int value returned by access()
- */
-int _klpm_access(klpm_handle_t *handle, const char *dir, const char *file, int amode)
+/** Wrapper around access(). */
+int _klpm_access(klpm_handle_t *handle, const char *dir,
+		const char *file, int amode)
 {
 	size_t len = 0;
 	int ret = 0;
@@ -1485,56 +1626,73 @@ int _klpm_access(klpm_handle_t *handle, const char *dir, const char *file, int a
 		char *check_path;
 
 		len = strlen(dir) + strlen(file) + 1;
-		CALLOC(check_path, len, sizeof(char), RET_ERR(handle, KUZPKG_ERR_MEMORY, -1));
+
+		CALLOC(check_path,
+				len,
+				sizeof(char),
+				RET_ERR(handle, KUZPKG_ERR_MEMORY, -1));
+
 		snprintf(check_path, len, "%s%s", dir, file);
 
-		ret = faccessat(AT_FDCWD, check_path, amode, flag);
+		ret = faccessat(AT_FDCWD,
+				check_path,
+				amode,
+				flag);
+
 		free(check_path);
 	} else {
 		dir = "";
-		ret = faccessat(AT_FDCWD, file, amode, flag);
+
+		ret = faccessat(AT_FDCWD,
+				file,
+				amode,
+				flag);
 	}
 
 	if(ret != 0) {
 		if(amode & R_OK) {
-			_klpm_log(handle, KUZPKG_LOG_DEBUG, "\"%s%s\" is not readable: %s\n",
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"\"%s%s\" is not readable: %s\n",
 					dir, file, strerror(errno));
 		}
+
 		if(amode & W_OK) {
-			_klpm_log(handle, KUZPKG_LOG_DEBUG, "\"%s%s\" is not writable: %s\n",
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"\"%s%s\" is not writable: %s\n",
 					dir, file, strerror(errno));
 		}
+
 		if(amode & X_OK) {
-			_klpm_log(handle, KUZPKG_LOG_DEBUG, "\"%s%s\" is not executable: %s\n",
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"\"%s%s\" is not executable: %s\n",
 					dir, file, strerror(errno));
 		}
+
 		if(amode == F_OK) {
-			_klpm_log(handle, KUZPKG_LOG_DEBUG, "\"%s%s\" does not exist: %s\n",
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"\"%s%s\" does not exist: %s\n",
 					dir, file, strerror(errno));
 		}
 	}
+
 	return ret;
 }
 
-/** Checks whether a string matches at least one shell wildcard pattern.
- * Checks for matches with fnmatch. Matches are inverted by prepending
- * patterns with an exclamation mark. Preceding exclamation marks may be
- * escaped. Subsequent matches override previous ones.
- * @param patterns patterns to match against
- * @param string string to check against pattern
- * @return 0 if string matches pattern, negative if they don't match and
- * positive if the last match was inverted
- */
-int _klpm_fnmatch_patterns(klpm_list_t *patterns, const char *string)
+/** Check whether a string matches at least one shell wildcard pattern. */
+int _klpm_fnmatch_patterns(klpm_list_t *patterns,
+		const char *string)
 {
 	klpm_list_t *i;
 	char *pattern;
 	short inverted;
 
-	for(i = klpm_list_last(patterns); i; i = klpm_list_previous(i)) {
+	for(i = klpm_list_last(patterns);
+			i;
+			i = klpm_list_previous(i)) {
 		pattern = i->data;
 
 		inverted = pattern[0] == '!';
+
 		if(inverted || pattern[0] == '\\') {
 			pattern++;
 		}
@@ -1547,52 +1705,31 @@ int _klpm_fnmatch_patterns(klpm_list_t *patterns, const char *string)
 	return -1;
 }
 
-/** Checks whether a string matches a shell wildcard pattern.
- * Wrapper around fnmatch.
- * @param pattern pattern to match against
- * @param string string to check against pattern
- * @return 0 if string matches pattern, non-zero if they don't match and on
- * error
- */
+/** Wrapper around fnmatch(). */
 int _klpm_fnmatch(const void *pattern, const void *string)
 {
 	return fnmatch(pattern, string, 0);
 }
 
-/** Think of this as realloc with error handling. If realloc fails NULL will be
- * returned and data will not be changed.
- *
- * Newly created memory will be zeroed.
- *
- * @param data source memory space
- * @param current size of the space pointed to by data
- * @param required size you want
- * @return new memory; NULL on error
- */
-void *_klpm_realloc(void **data, size_t *current, const size_t required)
+/** Think of this as realloc with error handling. */
+void *_klpm_realloc(void **data, size_t *current,
+		const size_t required)
 {
 	REALLOC(*data, required, return NULL);
 
-	if (*current < required) {
-		/* ensure all new memory is zeroed out, in both the initial
-		 * allocation and later reallocs */
-		memset((char*)*data + *current, 0, required - *current);
+	if(*current < required) {
+		memset((char *)*data + *current,
+				0,
+				required - *current);
 	}
+
 	*current = required;
 	return *data;
 }
 
-/** This automatically grows data based on current/required.
- *
- * The memory space will be initialised to required bytes and doubled in size when required.
- *
- * Newly created memory will be zeroed.
- * @param data source memory space
- * @param current size of the space pointed to by data
- * @param required size you want
- * @return new memory if grown; old memory otherwise; NULL on error
- */
-void *_klpm_greedy_grow(void **data, size_t *current, const size_t required)
+/** Automatically grows data based on current/required. */
+void *_klpm_greedy_grow(void **data, size_t *current,
+		const size_t required)
 {
 	size_t newsize = 0;
 
@@ -1606,8 +1743,7 @@ void *_klpm_greedy_grow(void **data, size_t *current, const size_t required)
 		newsize = *current * 2;
 	}
 
-	/* check for overflows */
-	if (newsize < required) {
+	if(newsize < required) {
 		return NULL;
 	}
 
@@ -1616,20 +1752,14 @@ void *_klpm_greedy_grow(void **data, size_t *current, const size_t required)
 
 void _klpm_alloc_fail(size_t size)
 {
-	fprintf(stderr, "alloc failure: could not allocate %zu bytes\n", size);
+	fprintf(stderr,
+			"alloc failure: could not allocate %zu bytes\n",
+			size);
 }
 
-/** This functions reads file content.
- *
- * Memory buffer is allocated by the callee function. It is responsibility
- * of the caller to free the buffer.
- *
- * @param filepath filepath to read
- * @param data pointer to output buffer
- * @param data_len size of the output buffer
- * @return error code for the operation
- */
-klpm_errno_t _klpm_read_file(const char *filepath, unsigned char **data, size_t *data_len)
+/** Read file content. */
+klpm_errno_t _klpm_read_file(const char *filepath,
+		unsigned char **data, size_t *data_len)
 {
 	struct stat st;
 	FILE *fp;
@@ -1642,9 +1772,13 @@ klpm_errno_t _klpm_read_file(const char *filepath, unsigned char **data, size_t 
 		fclose(fp);
 		return KUZPKG_ERR_NOT_A_FILE;
 	}
+
 	*data_len = st.st_size;
 
-	MALLOC(*data, *data_len, fclose(fp); return KUZPKG_ERR_MEMORY);
+	MALLOC(*data,
+			*data_len,
+			fclose(fp);
+			return KUZPKG_ERR_MEMORY);
 
 	if(fread(*data, *data_len, 1, fp) != 1) {
 		FREE(*data);
