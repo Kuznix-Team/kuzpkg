@@ -2,21 +2,39 @@
  * packinstall.c - build, stage, package and optionally install a source tree.
  *
  * Supported build systems:
- *   Autotools, Make, Ninja, Meson, CMake, Cargo, Python,
- *   Perl, Go, Ruby/RubyGems and Bundler.
+ *   Autotools
+ *   Make
+ *   Ninja
+ *   Meson
+ *   CMake
+ *   Cargo
+ *   Python
+ *   Perl
+ *   Go
+ *   Ruby/RubyGems
+ *   Bundler
  *
  * Target support:
- *   Linux, historical Linux, NetBSD, FreeBSD, OpenBSD,
- *   DragonFly BSD, Solaris, Darwin and generic targets.
+ *   Linux
+ *   historical Linux
+ *   NetBSD
+ *   FreeBSD
+ *   OpenBSD
+ *   DragonFly BSD
+ *   Solaris
+ *   Darwin
+ *   generic/other
  *
  * Multilib support:
- *   lib32, lib64, libx32,
- *   MIPS o32/n32/n64,
- *   MIPS soft/hard-float,
- *   PowerPC 32/64,
- *   ARM 32/64.
+ *   lib32
+ *   lib64
+ *   libx32
+ *   MIPS o32/n32/n64
+ *   MIPS soft/hard-float
+ *   PowerPC 32/64
+ *   ARM 32/64
  *
- * Wildcard target support:
+ * Wildcard targets:
  *   *-*-elf
  *   *-*-eabi
  *   riscv64-*-elf
@@ -24,12 +42,21 @@
  *   *-*-linux-*
  *   *-*-netbsd*
  *   *-*-freebsd*
+ *
+ * Git support:
+ *   - Git worktree detection
+ *   - Git repository-name package fallback
+ *   - Git tag/commit package versions
+ *   - "." / "./" / relative Git checkout handling
+ *
+ * Copyright (C) 2026 Kuznix
  */
 
 #define _GNU_SOURCE
 
 #include <errno.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,8 +87,6 @@ enum target_os {
 	TARGET_OS_OTHER
 };
 
-static const char *target_os_name(enum target_os os);
-
 /* -------------------------------------------------------------------------
  * Architecture database
  * ------------------------------------------------------------------------- */
@@ -76,11 +101,6 @@ struct architecture {
 	int historical;
 };
 
-/*
- * These are package/target identities. Historical architectures are retained
- * so that package metadata can represent old systems even when they are not
- * usable on the current host.
- */
 static const struct architecture architectures[] = {
 	/* Linux x86 */
 	{
@@ -114,7 +134,8 @@ static const struct architecture architectures[] = {
 		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"aarch64_be", "aarch64_be", "aarch64_be-unknown-linux-gnu",
+		"aarch64_be", "aarch64_be",
+		"aarch64_be-unknown-linux-gnu",
 		"arm", TARGET_OS_LINUX, 1, 0
 	},
 	{
@@ -152,15 +173,18 @@ static const struct architecture architectures[] = {
 		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"mips64", "mips64", "mips64-unknown-linux-gnuabi64",
+		"mips64", "mips64",
+		"mips64-unknown-linux-gnuabi64",
 		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"mips64el", "mips64el", "mips64el-unknown-linux-gnuabi64",
+		"mips64el", "mips64el",
+		"mips64el-unknown-linux-gnuabi64",
 		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"mips64n32", "mips64", "mips64-unknown-linux-gnuabin32",
+		"mips64n32", "mips64",
+		"mips64-unknown-linux-gnuabin32",
 		"mips", TARGET_OS_LINUX, 1, 0
 	},
 	{
@@ -179,7 +203,8 @@ static const struct architecture architectures[] = {
 		"powerpc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"powerpc64", "ppc64", "powerpc64-unknown-linux-gnu",
+		"powerpc64", "ppc64",
+		"powerpc64-unknown-linux-gnu",
 		"powerpc", TARGET_OS_LINUX, 1, 0
 	},
 	{
@@ -190,7 +215,8 @@ static const struct architecture architectures[] = {
 
 	/* Linux RISC-V */
 	{
-		"riscv32", "riscv32", "riscv32-unknown-linux-gnu",
+		"riscv32", "riscv32",
+		"riscv32-unknown-linux-gnu",
 		"riscv", TARGET_OS_LINUX, 1, 0
 	},
 	{
@@ -199,7 +225,8 @@ static const struct architecture architectures[] = {
 		"riscv", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"riscv64", "riscv64", "riscv64-unknown-linux-gnu",
+		"riscv64", "riscv64",
+		"riscv64-unknown-linux-gnu",
 		"riscv", TARGET_OS_LINUX, 1, 0
 	},
 	{
@@ -222,11 +249,12 @@ static const struct architecture architectures[] = {
 		"sparc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"sparc64", "sparc64", "sparc64-unknown-linux-gnu",
+		"sparc64", "sparc64",
+		"sparc64-unknown-linux-gnu",
 		"sparc", TARGET_OS_LINUX, 1, 0
 	},
 
-	/* Linux other modern */
+	/* Linux modern */
 	{
 		"alpha", "alpha", "alpha-unknown-linux-gnu",
 		"alpha", TARGET_OS_LINUX, 1, 0
@@ -244,7 +272,8 @@ static const struct architecture architectures[] = {
 		"csky", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"hexagon", "hexagon", "hexagon-unknown-linux-musl",
+		"hexagon", "hexagon",
+		"hexagon-unknown-linux-musl",
 		"hexagon", TARGET_OS_LINUX, 1, 0
 	},
 	{
@@ -271,19 +300,23 @@ static const struct architecture architectures[] = {
 		"nios2", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"openrisc", "or1k", "or1k-unknown-linux-gnu",
+		"openrisc", "or1k",
+		"or1k-unknown-linux-gnu",
 		"openrisc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"or1k", "or1k", "or1k-unknown-linux-gnu",
+		"or1k", "or1k",
+		"or1k-unknown-linux-gnu",
 		"openrisc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"parisc", "hppa", "hppa-unknown-linux-gnu",
+		"parisc", "hppa",
+		"hppa-unknown-linux-gnu",
 		"parisc", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"parisc64", "hppa64", "hppa64-unknown-linux-gnu",
+		"parisc64", "hppa64",
+		"hppa64-unknown-linux-gnu",
 		"parisc", TARGET_OS_LINUX, 1, 0
 	},
 	{
@@ -295,15 +328,18 @@ static const struct architecture architectures[] = {
 		"sh", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"sh4eb", "sh4eb", "sh4eb-unknown-linux-gnu",
+		"sh4eb", "sh4eb",
+		"sh4eb-unknown-linux-gnu",
 		"sh", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"xtensa", "xtensa", "xtensa-unknown-linux-gnu",
+		"xtensa", "xtensa",
+		"xtensa-unknown-linux-gnu",
 		"xtensa", TARGET_OS_LINUX, 1, 0
 	},
 	{
-		"xtensaeb", "xtensa", "xtensaeb-unknown-linux-gnu",
+		"xtensaeb", "xtensa",
+		"xtensaeb-unknown-linux-gnu",
 		"xtensa", TARGET_OS_LINUX, 1, 0
 	},
 
@@ -321,7 +357,8 @@ static const struct architecture architectures[] = {
 		"frv", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"h8300", "h8300", "h8300-unknown-linux-gnu",
+		"h8300", "h8300",
+		"h8300-unknown-linux-gnu",
 		"h8300", TARGET_OS_LINUX, 0, 1
 	},
 	{
@@ -329,27 +366,33 @@ static const struct architecture architectures[] = {
 		"m32r", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"mn10300", "mn10300", "mn10300-unknown-linux-gnu",
+		"mn10300", "mn10300",
+		"mn10300-unknown-linux-gnu",
 		"mn10300", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"metag", "metag", "metag-unknown-linux-gnu",
+		"metag", "metag",
+		"metag-unknown-linux-gnu",
 		"metag", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"blackfin", "bfin", "bfin-unknown-linux-gnu",
+		"blackfin", "bfin",
+		"bfin-unknown-linux-gnu",
 		"blackfin", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"tile", "tile", "tile-unknown-linux-gnu",
+		"tile", "tile",
+		"tile-unknown-linux-gnu",
 		"tile", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"avr32", "avr32", "avr32-unknown-linux-gnu",
+		"avr32", "avr32",
+		"avr32-unknown-linux-gnu",
 		"avr32", TARGET_OS_LINUX, 0, 1
 	},
 	{
-		"c6x", "tic6x", "tic6x-unknown-linux-gnu",
+		"c6x", "tic6x",
+		"tic6x-unknown-linux-gnu",
 		"c6x", TARGET_OS_LINUX, 0, 1
 	},
 
@@ -600,19 +643,15 @@ static const struct architecture architectures[] = {
 		"x86", TARGET_OS_DARWIN, 1, 0
 	},
 
+	/* Sentinel */
 	{
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		TARGET_OS_UNKNOWN,
-		0,
-		0
+		NULL, NULL, NULL, NULL,
+		TARGET_OS_UNKNOWN, 0, 0
 	}
 };
 
 /* -------------------------------------------------------------------------
- * Multilib
+ * Multilib database
  * ------------------------------------------------------------------------- */
 
 enum multilib_kind {
@@ -655,7 +694,6 @@ static const struct multilib_variant multilib_variants[] = {
 		"libx32", "libx32", "-mx32", "x32",
 		MULTILIB_LIBX32
 	},
-
 	{
 		"mips-o32", "mips32", "-mabi=32", "o32",
 		MULTILIB_MIPS_O32
@@ -678,7 +716,6 @@ static const struct multilib_variant multilib_variants[] = {
 		"-mhard-float", "hardfloat",
 		MULTILIB_MIPS_HARDFLOAT
 	},
-
 	{
 		"ppc32", "lib32", "-m32", "32",
 		MULTILIB_PPC32
@@ -695,7 +732,6 @@ static const struct multilib_variant multilib_variants[] = {
 		"ppc64-abi", "ppc64-abi", "-m64",
 		"ppc64", MULTILIB_PPC64_ABI
 	},
-
 	{
 		"arm32", "arm", "-marm", "32",
 		MULTILIB_ARM32
@@ -704,7 +740,6 @@ static const struct multilib_variant multilib_variants[] = {
 		"arm64", "aarch64", "", "64",
 		MULTILIB_ARM64
 	},
-
 	{
 		NULL, NULL, NULL, NULL,
 		MULTILIB_NONE
@@ -712,7 +747,7 @@ static const struct multilib_variant multilib_variants[] = {
 };
 
 /* -------------------------------------------------------------------------
- * Target spec
+ * Target specification
  * ------------------------------------------------------------------------- */
 
 struct target_spec {
@@ -731,30 +766,36 @@ struct target_spec {
 };
 
 /* -------------------------------------------------------------------------
- * Build options
+ * Generic helpers
  * ------------------------------------------------------------------------- */
 
-struct build_options {
-	const char *arch_name;
-	const char *target_pattern;
-	const char *build_triplet;
-	const char *host_triplet;
+static int exists(const char *path)
+{
+	return path && access(path, F_OK) == 0;
+}
 
-	const struct multilib_variant *multilib;
+static int is_dir(const char *path)
+{
+	struct stat st;
 
-	int do_install;
-	int all_multilib;
-	int list_architectures;
-	int list_multilib;
-};
+	if(!path)
+		return 0;
 
-/* =========================================================================
- * Helper implementations
- * ========================================================================= */
+	return stat(path, &st) == 0 &&
+	       S_ISDIR(st.st_mode);
+}
 
-/* -------------------------------------------------------------------------
- * Wildcard matcher
- * ------------------------------------------------------------------------- */
+static const char *base_name(const char *path)
+{
+	const char *p;
+
+	if(!path)
+		return "";
+
+	p = strrchr(path, '/');
+
+	return p ? p + 1 : path;
+}
 
 static int wildcard_match(
 	const char *pattern,
@@ -776,18 +817,14 @@ static int wildcard_match(
 
 		if(*pattern == '?' ||
 		   *pattern == *string) {
-
 			pattern++;
 			string++;
-
 			continue;
 		}
 
 		if(star) {
-
 			pattern = star + 1;
 			string = ++mark;
-
 			continue;
 		}
 
@@ -799,10 +836,6 @@ static int wildcard_match(
 
 	return *pattern == '\0';
 }
-
-/* -------------------------------------------------------------------------
- * Shell execution
- * ------------------------------------------------------------------------- */
 
 static char *shell_quote(const char *s)
 {
@@ -885,40 +918,112 @@ static int run_command(const char *command)
 	return 128;
 }
 
+static char *command_output(const char *command)
+{
+	FILE *p;
+	char buffer[4096];
+	char *output;
+	size_t length = 0;
+	size_t capacity = 4096;
+
+	if(!command)
+		return NULL;
+
+	output = malloc(capacity);
+
+	if(!output)
+		return NULL;
+
+	output[0] = '\0';
+
+	p = popen(command, "r");
+
+	if(!p) {
+		free(output);
+		return NULL;
+	}
+
+	while(fgets(buffer, sizeof(buffer), p)) {
+
+		size_t n = strlen(buffer);
+
+		if(length + n + 1 > capacity) {
+
+			size_t new_capacity =
+				capacity;
+
+			while(length + n + 1 >
+			      new_capacity) {
+
+				if(new_capacity >
+				   SIZE_MAX / 2) {
+
+					pclose(p);
+					free(output);
+
+					return NULL;
+				}
+
+				new_capacity *= 2;
+			}
+
+			{
+				char *new_output =
+					realloc(
+						output,
+						new_capacity);
+
+				if(!new_output) {
+					pclose(p);
+					free(output);
+
+					return NULL;
+				}
+
+				output = new_output;
+				capacity = new_capacity;
+			}
+		}
+
+		memcpy(
+			output + length,
+			buffer,
+			n);
+
+		length += n;
+		output[length] = '\0';
+	}
+
+	if(pclose(p) == -1) {
+		free(output);
+		return NULL;
+	}
+
+	while(length > 0) {
+
+		unsigned char c =
+			(unsigned char)
+			output[length - 1];
+
+		if(c == '\n' ||
+		   c == '\r' ||
+		   c == ' ' ||
+		   c == '\t') {
+
+			output[--length] =
+				'\0';
+
+		} else {
+
+			break;
+		}
+	}
+
+	return output;
+}
+
 /* -------------------------------------------------------------------------
- * Filesystem helpers
- * ------------------------------------------------------------------------- */
-
-static int exists(const char *path)
-{
-	return path && access(path, F_OK) == 0;
-}
-
-static int is_dir(const char *path)
-{
-	struct stat st;
-
-	if(!path)
-		return 0;
-
-	return stat(path, &st) == 0 &&
-	       S_ISDIR(st.st_mode);
-}
-
-static const char *base_name(const char *path)
-{
-	const char *p;
-
-	if(!path)
-		return "";
-
-	p = strrchr(path, '/');
-
-	return p ? p + 1 : path;
-}
-
-/* -------------------------------------------------------------------------
- * Staging cleanup
+ * Staging
  * ------------------------------------------------------------------------- */
 
 static int clean_stage(const char *stage)
@@ -955,7 +1060,6 @@ static int clean_stage(const char *stage)
 		q) < 0) {
 
 		free(q);
-
 		return -1;
 	}
 
@@ -971,43 +1075,31 @@ static int clean_stage(const char *stage)
  * OS helpers
  * ------------------------------------------------------------------------- */
 
-static const char *target_os_name(
-	enum target_os os)
+static const char *target_os_name(enum target_os os)
 {
 	switch(os) {
 		case TARGET_OS_LINUX:
 			return "linux";
-
 		case TARGET_OS_NETBSD:
 			return "netbsd";
-
 		case TARGET_OS_FREEBSD:
 			return "freebsd";
-
 		case TARGET_OS_OPENBSD:
 			return "openbsd";
-
 		case TARGET_OS_DRAGONFLY:
 			return "dragonfly";
-
 		case TARGET_OS_SOLARIS:
 			return "solaris";
-
 		case TARGET_OS_AIX:
 			return "aix";
-
 		case TARGET_OS_HPUX:
 			return "hpux";
-
 		case TARGET_OS_DARWIN:
 			return "darwin";
-
 		case TARGET_OS_NONE:
 			return "none";
-
 		case TARGET_OS_OTHER:
 			return "other";
-
 		default:
 			return "unknown";
 	}
@@ -1017,8 +1109,8 @@ static const char *target_os_name(
  * Architecture lookup
  * ------------------------------------------------------------------------- */
 
-static const struct architecture *find_architecture(
-	const char *name)
+static const struct architecture *
+find_architecture(const char *name)
 {
 	size_t i;
 
@@ -1036,7 +1128,8 @@ static const struct architecture *find_architecture(
 	return NULL;
 }
 
-static const struct architecture *find_architecture_triplet(
+static const struct architecture *
+find_architecture_triplet(
 	const char *triplet)
 {
 	size_t i;
@@ -1199,7 +1292,7 @@ static int target_is_bare_metal(
 }
 
 /* -------------------------------------------------------------------------
- * Target parsing
+ * Target parser
  * ------------------------------------------------------------------------- */
 
 static int split_target(
@@ -1270,75 +1363,76 @@ static int split_target(
 }
 
 static void free_target(
-	struct target_spec *t)
+	struct target_spec *target)
 {
-	if(!t)
+	if(!target)
 		return;
 
-	free(t->triplet);
-	free(t->cpu);
-	free(t->vendor);
-	free(t->system);
-	free(t->abi);
+	free(target->triplet);
+	free(target->cpu);
+	free(target->vendor);
+	free(target->system);
+	free(target->abi);
 
-	memset(t, 0, sizeof(*t));
+	memset(target, 0, sizeof(*target));
 }
 
 static int parse_target(
 	const char *triplet,
 	struct target_spec *out)
 {
-	struct target_spec t;
+	struct target_spec target;
 
 	if(!triplet || !out)
 		return -1;
 
-	memset(&t, 0, sizeof(t));
+	memset(&target, 0, sizeof(target));
 
-	t.triplet = strdup(triplet);
+	target.triplet =
+		strdup(triplet);
 
-	if(!t.triplet)
+	if(!target.triplet)
 		return -1;
 
-	t.wildcard =
+	target.wildcard =
 		strchr(triplet, '*') != NULL ||
 		strchr(triplet, '?') != NULL;
 
-	t.known =
+	target.known =
 		find_architecture_triplet(
 			triplet) != NULL;
 
 	if(split_target(
 		triplet,
-		&t.cpu,
-		&t.vendor,
-		&t.system) != 0) {
+		&target.cpu,
+		&target.vendor,
+		&target.system) != 0) {
 
-		free_target(&t);
+		free_target(&target);
 
 		return -1;
 	}
 
-	t.os =
+	target.os =
 		detect_target_os(triplet);
 
-	t.elf =
+	target.elf =
 		target_is_elf(triplet);
 
-	t.bare_metal =
+	target.bare_metal =
 		target_is_bare_metal(triplet);
 
-	t.abi =
-		strdup(t.system);
+	target.abi =
+		strdup(target.system);
 
-	if(!t.abi) {
+	if(!target.abi) {
 
-		free_target(&t);
+		free_target(&target);
 
 		return -1;
 	}
 
-	*out = t;
+	*out = target;
 
 	return 0;
 }
@@ -1377,7 +1471,7 @@ static char *resolve_target_pattern(
 }
 
 /* -------------------------------------------------------------------------
- * Multilib
+ * Multilib lookup
  * ------------------------------------------------------------------------- */
 
 static const struct multilib_variant *
@@ -1421,11 +1515,11 @@ static int command_exists(
 		q) < 0) {
 
 		free(q);
-
 		return 0;
 	}
 
-	ret = system(cmd);
+	ret =
+		system(cmd);
 
 	free(q);
 	free(cmd);
@@ -1491,25 +1585,46 @@ static int configure_cross_environment(
 
 		if(command_exists(cc)) {
 
-			if(setenv("CC", cc, 1) != 0)
+			if(setenv(
+				"CC",
+				cc,
+				1) != 0)
 				return -1;
 
-			if(setenv("CXX", cxx, 1) != 0)
+			if(setenv(
+				"CXX",
+				cxx,
+				1) != 0)
 				return -1;
 
-			if(setenv("AR", ar, 1) != 0)
+			if(setenv(
+				"AR",
+				ar,
+				1) != 0)
 				return -1;
 
-			if(setenv("AS", as, 1) != 0)
+			if(setenv(
+				"AS",
+				as,
+				1) != 0)
 				return -1;
 
-			if(setenv("LD", ld, 1) != 0)
+			if(setenv(
+				"LD",
+				ld,
+				1) != 0)
 				return -1;
 
-			if(setenv("RANLIB", ranlib, 1) != 0)
+			if(setenv(
+				"RANLIB",
+				ranlib,
+				1) != 0)
 				return -1;
 
-			if(setenv("STRIP", strip, 1) != 0)
+			if(setenv(
+				"STRIP",
+				strip,
+				1) != 0)
 				return -1;
 		}
 	}
@@ -1517,17 +1632,18 @@ static int configure_cross_environment(
 	if(multilib_flags &&
 	   *multilib_flags) {
 
-		const char *old_cflags;
-		const char *old_cxxflags;
-		const char *old_ldflags;
+		const char *old_cflags =
+			getenv("CFLAGS");
+
+		const char *old_cxxflags =
+			getenv("CXXFLAGS");
+
+		const char *old_ldflags =
+			getenv("LDFLAGS");
 
 		char *cflags = NULL;
 		char *cxxflags = NULL;
 		char *ldflags = NULL;
-
-		old_cflags = getenv("CFLAGS");
-		old_cxxflags = getenv("CXXFLAGS");
-		old_ldflags = getenv("LDFLAGS");
 
 		if(asprintf(
 			&cflags,
@@ -1551,7 +1667,6 @@ static int configure_cross_environment(
 			multilib_flags) < 0) {
 
 			free(cflags);
-
 			return -1;
 		}
 
@@ -1600,107 +1715,400 @@ static int configure_cross_environment(
 }
 
 /* -------------------------------------------------------------------------
- * Package name/version
+ * Git helpers
  * ------------------------------------------------------------------------- */
 
-static char *package_version(
-	const char *tree)
+static int git_is_worktree(void)
 {
-	const char *b;
-	const char *p;
-	const char *dash;
-	char *v;
+	char *output;
+	int result;
 
-	b = base_name(tree);
+	output =
+		command_output(
+			"git rev-parse --is-inside-work-tree "
+			"2>/dev/null");
 
-	if(strncmp(
-		b,
-		"expect",
-		6) == 0 ||
-	   strncmp(
-		b,
-		"tcl",
-		3) == 0) {
+	if(!output)
+		return 0;
 
-		p = b;
+	result =
+		strcmp(output, "true") == 0;
 
-		while(*p &&
-		      (*p < '0' ||
-		       *p > '9'))
-			p++;
+	free(output);
 
-		return strdup(
-			*p ? p : "0");
+	return result;
+}
+
+static char *git_root(void)
+{
+	char *root;
+
+	if(!git_is_worktree())
+		return NULL;
+
+	root =
+		command_output(
+			"git rev-parse --show-toplevel "
+			"2>/dev/null");
+
+	if(!root || !*root) {
+
+		free(root);
+
+		return NULL;
 	}
 
-	if(strncmp(
-		b,
-		"unzip",
-		5) == 0) {
+	return root;
+}
 
-		p = b + 5;
+static char *git_remote_name(void)
+{
+	char *url;
+	const char *base;
+	char *name;
+	size_t length;
 
-		if(p[0] &&
-		   p[1] &&
-		   p[0] >= '0' &&
-		   p[0] <= '9' &&
-		   p[1] >= '0' &&
-		   p[1] <= '9') {
+	url =
+		command_output(
+			"git config --get "
+			"remote.origin.url "
+			"2>/dev/null");
 
-			if(asprintf(
-				&v,
-				"%c.%c%s",
-				p[0],
-				p[1],
-				p + 2) >= 0)
-				return v;
-		}
+	if(!url || !*url) {
+
+		free(url);
+
+		return NULL;
 	}
 
-	if(strcmp(
-		b,
-		"docbook-xml") == 0)
-		return strdup("4.5");
+	base =
+		strrchr(url, '/');
 
-	p = strrchr(b, '-');
-	dash = strrchr(b, '_');
+	if(base) {
 
-	if(dash &&
-	   (!p || dash > p))
-		p = dash;
-
-	if(p &&
-	   p[1] &&
-	   ((p[1] >= '0' &&
-	     p[1] <= '9') ||
-	    p[1] == 'v')) {
-
-		p++;
+		base++;
 
 	} else {
 
-		p = b;
+		base =
+			strrchr(url, ':');
 
-		while(*p &&
-		      (*p < '0' ||
-		       *p > '9'))
-			p++;
+		if(base)
+			base++;
+		else
+			base = url;
 	}
 
-	v = strdup(
-		*p ? p : "0");
+	name =
+		strdup(base);
 
-	if(!v)
+	free(url);
+
+	if(!name)
 		return NULL;
 
-	for(char *q = v; *q; q++) {
+	length =
+		strlen(name);
 
-		if(*q == '_')
-			*q = '.';
+	if(length >= 4 &&
+	   strcmp(
+		name + length - 4,
+		".git") == 0)
+		name[length - 4] = '\0';
+
+	if(!name[0]) {
+
+		free(name);
+
+		return NULL;
 	}
 
-	return v;
+	return name;
 }
+
+static char *sanitize_package_name(
+	const char *input)
+{
+	char *name;
+	size_t length;
+	size_t j = 0;
+	size_t i;
+
+	if(!input || !*input)
+		return NULL;
+
+	name =
+		strdup(input);
+
+	if(!name)
+		return NULL;
+
+	length =
+		strlen(name);
+
+	for(i = 0; i < length; i++) {
+
+		unsigned char c =
+			(unsigned char)name[i];
+
+		if((c >= 'a' &&
+		    c <= 'z') ||
+		   (c >= 'A' &&
+		    c <= 'Z') ||
+		   (c >= '0' &&
+		    c <= '9') ||
+		   c == '.' ||
+		   c == '_' ||
+		   c == '+' ||
+		   c == '@' ||
+		   c == '-') {
+
+			name[j++] =
+				(char)c;
+
+		} else {
+
+			name[j++] =
+				'_';
+		}
+	}
+
+	name[j] = '\0';
+
+	while(name[0] == '.')
+		memmove(
+			name,
+			name + 1,
+			strlen(name));
+
+	if(strcmp(name, ".") == 0 ||
+	   strcmp(name, "..") == 0 ||
+	   !name[0]) {
+
+		free(name);
+
+		return NULL;
+	}
+
+	return name;
+}
+
+static char *sanitize_package_version(
+	const char *input)
+{
+	char *version;
+	size_t length;
+	size_t j = 0;
+	size_t i;
+
+	if(!input || !*input)
+		return NULL;
+
+	version =
+		strdup(input);
+
+	if(!version)
+		return NULL;
+
+	length =
+		strlen(version);
+
+	for(i = 0; i < length; i++) {
+
+		unsigned char c =
+			(unsigned char)version[i];
+
+		if((c >= 'a' &&
+		    c <= 'z') ||
+		   (c >= 'A' &&
+		    c <= 'Z') ||
+		   (c >= '0' &&
+		    c <= '9') ||
+		   c == '.' ||
+		   c == '_' ||
+		   c == '+' ||
+		   c == '-') {
+
+			version[j++] =
+				(char)c;
+
+		} else {
+
+			version[j++] =
+				'_';
+		}
+	}
+
+	version[j] = '\0';
+
+	while(version[0] == '.')
+		memmove(
+			version,
+			version + 1,
+			strlen(version));
+
+	if(!version[0]) {
+
+		free(version);
+
+		return NULL;
+	}
+
+	return version;
+}
+
+static char *git_package_name(void)
+{
+	char *root;
+	char *name;
+	char *remote;
+	const char *base;
+
+	root =
+		git_root();
+
+	if(!root)
+		return NULL;
+
+	base =
+		base_name(root);
+
+	name =
+		sanitize_package_name(base);
+
+	free(root);
+
+	if(name)
+		return name;
+
+	/*
+	 * Fall back to remote.origin.url, which is useful for Git worktrees
+	 * whose filesystem directory has an unhelpful name.
+	 */
+	remote =
+		git_remote_name();
+
+	if(remote)
+		return sanitize_package_name(remote);
+
+	return NULL;
+}
+
+static char *git_package_version(void)
+{
+	char *description;
+	char *commit_count;
+	char *commit;
+	char *version;
+	char *safe;
+
+	if(!git_is_worktree())
+		return NULL;
+
+	/*
+	 * Prefer a tag-based version.
+	 */
+	description =
+		command_output(
+			"git describe --tags "
+			"--always --dirty "
+			"2>/dev/null");
+
+	if(description &&
+	   *description &&
+	   strcmp(
+		description,
+		"HEAD") != 0) {
+
+		safe =
+			sanitize_package_version(
+				description);
+
+		free(description);
+
+		if(safe)
+			return safe;
+
+	} else {
+
+		free(description);
+	}
+
+	/*
+	 * Untagged Git repository:
+	 *
+	 *   0.r<commits>.g<hash>
+	 */
+	commit_count =
+		command_output(
+			"git rev-list --count HEAD "
+			"2>/dev/null");
+
+	commit =
+		command_output(
+			"git rev-parse --short=12 HEAD "
+			"2>/dev/null");
+
+	if(commit_count &&
+	   *commit_count &&
+	   commit &&
+	   *commit) {
+
+		if(asprintf(
+			&version,
+			"0.r%s.g%s",
+			commit_count,
+			commit) >= 0) {
+
+			safe =
+				sanitize_package_version(
+					version);
+
+			free(version);
+			free(commit_count);
+			free(commit);
+
+			return safe;
+		}
+	}
+
+	free(commit_count);
+	free(commit);
+
+	/*
+	 * Final fallback for a Git worktree.
+	 */
+	commit =
+		command_output(
+			"git rev-parse --short=12 HEAD "
+			"2>/dev/null");
+
+	if(commit && *commit) {
+
+		if(asprintf(
+			&version,
+			"0.g%s",
+			commit) >= 0) {
+
+			safe =
+				sanitize_package_version(
+					version);
+
+			free(version);
+			free(commit);
+
+			return safe;
+		}
+	}
+
+	free(commit);
+
+	return NULL;
+}
+
+/* -------------------------------------------------------------------------
+ * Package naming/version
+ * ------------------------------------------------------------------------- */
 
 static char *package_name(
 	const char *tree)
@@ -1708,10 +2116,58 @@ static char *package_name(
 	const char *b;
 	const char *p;
 	char *name;
+	char *safe;
+	char *git_name;
 
-	b = base_name(tree);
-	p = b;
+	b =
+		base_name(tree);
 
+	/*
+	 * Critical fix for:
+	 *
+	 *   packinstall . /tmp/pkg
+	 *
+	 * or:
+	 *
+	 *   packinstall ./ /tmp/pkg
+	 */
+	if(!b ||
+	   !*b ||
+	   strcmp(b, ".") == 0 ||
+	   strcmp(b, "..") == 0) {
+
+		git_name =
+			git_package_name();
+
+		if(git_name)
+			return git_name;
+
+		return strdup("package");
+	}
+
+	/*
+	 * A Git checkout invoked using "." should always use the
+	 * repository identity.
+	 */
+	if(git_is_worktree() &&
+	   strcmp(b, ".") == 0) {
+
+		git_name =
+			git_package_name();
+
+		if(git_name)
+			return git_name;
+	}
+
+	p =
+		b;
+
+	/*
+	 * Handle LFS-like prefixes such as:
+	 *
+	 *   001-foo-1.2.3
+	 *   0123-foo-1.2.3
+	 */
 	while(*p >= '0' &&
 	      *p <= '9')
 		p++;
@@ -1719,13 +2175,18 @@ static char *package_name(
 	if(p - b >= 2 &&
 	   p - b <= 4 &&
 	   *p == '-')
-		b = p + 1;
+		b =
+			p + 1;
 
-	name = strdup(b);
+	name =
+		strdup(b);
 
 	if(!name)
 		return NULL;
 
+	/*
+	 * Stop the name before a conventional version suffix.
+	 */
 	for(size_t i = 1;
 	    name[i];
 	    i++) {
@@ -1740,14 +2201,184 @@ static char *package_name(
 			    *q <= '9') ||
 			   *q == 'v') {
 
-				name[i] = '\0';
+				name[i] =
+					'\0';
 
 				break;
 			}
 		}
 	}
 
-	return name;
+	safe =
+		sanitize_package_name(name);
+
+	free(name);
+
+	if(safe)
+		return safe;
+
+	git_name =
+		git_package_name();
+
+	if(git_name)
+		return git_name;
+
+	return strdup("package");
+}
+
+static char *package_version(
+	const char *tree)
+{
+	const char *b;
+	const char *p;
+	const char *dash;
+	char *v;
+	char *safe;
+	char *git_version;
+
+	/*
+	 * Git is preferred for actual Git projects. This handles the
+	 * common case where the repository has no source-version directory.
+	 */
+	if(git_is_worktree()) {
+
+		git_version =
+			git_package_version();
+
+		if(git_version)
+			return git_version;
+	}
+
+	b =
+		base_name(tree);
+
+	if(!b ||
+	   !*b ||
+	   strcmp(b, ".") == 0 ||
+	   strcmp(b, "..") == 0)
+		return strdup("0");
+
+	/*
+	 * Existing special cases.
+	 */
+	if(strncmp(
+		b,
+		"expect",
+		6) == 0 ||
+	   strncmp(
+		b,
+		"tcl",
+		3) == 0) {
+
+		p =
+			b;
+
+		while(*p &&
+		      (*p < '0' ||
+		       *p > '9'))
+			p++;
+
+		safe =
+			sanitize_package_version(
+				*p ? p : "0");
+
+		return safe ?
+			safe :
+			strdup("0");
+	}
+
+	if(strncmp(
+		b,
+		"unzip",
+		5) == 0) {
+
+		p =
+			b + 5;
+
+		if(p[0] &&
+		   p[1] &&
+		   p[0] >= '0' &&
+		   p[0] <= '9' &&
+		   p[1] >= '0' &&
+		   p[1] <= '9') {
+
+			if(asprintf(
+				&v,
+				"%c.%c%s",
+				p[0],
+				p[1],
+				p + 2) >= 0) {
+
+				safe =
+					sanitize_package_version(
+						v);
+
+				free(v);
+
+				return safe ?
+					safe :
+					strdup("0");
+			}
+		}
+	}
+
+	if(strcmp(
+		b,
+		"docbook-xml") == 0)
+		return strdup("4.5");
+
+	p =
+		strrchr(b, '-');
+
+	dash =
+		strrchr(b, '_');
+
+	if(dash &&
+	   (!p ||
+	    dash > p))
+		p =
+			dash;
+
+	if(p &&
+	   p[1] &&
+	   ((p[1] >= '0' &&
+	     p[1] <= '9') ||
+	    p[1] == 'v')) {
+
+		p++;
+
+	} else {
+
+		p =
+			b;
+
+		while(*p &&
+		      (*p < '0' ||
+		       *p > '9'))
+			p++;
+	}
+
+	v =
+		strdup(
+			*p ? p : "0");
+
+	if(!v)
+		return NULL;
+
+	for(char *q = v; *q; q++) {
+
+		if(*q == '_')
+			*q = '.';
+	}
+
+	safe =
+		sanitize_package_version(v);
+
+	free(v);
+
+	return safe ?
+		safe :
+		strdup("0");
 }
 
 /* -------------------------------------------------------------------------
@@ -1759,10 +2390,12 @@ static char *find_gemspec(void)
 	FILE *p;
 	char line[PATH_MAX];
 
-	p = popen(
-		"find . -maxdepth 1 -type f "
-		"-name '*.gemspec' -print -quit",
-		"r");
+	p =
+		popen(
+			"find . -maxdepth 1 "
+			"-type f -name '*.gemspec' "
+			"-print -quit",
+			"r");
 
 	if(!p)
 		return NULL;
@@ -1800,10 +2433,12 @@ static char *find_gem_package(void)
 	FILE *p;
 	char line[PATH_MAX];
 
-	p = popen(
-		"find . -maxdepth 1 -type f "
-		"-name '*.gem' -print -quit",
-		"r");
+	p =
+		popen(
+			"find . -maxdepth 1 "
+			"-type f -name '*.gem' "
+			"-print -quit",
+			"r");
 
 	if(!p)
 		return NULL;
@@ -1862,8 +2497,7 @@ static int build_ruby_gem(
 	if(gemspec) {
 
 		qgemspec =
-			shell_quote(
-				gemspec);
+			shell_quote(gemspec);
 
 		if(!qgemspec)
 			goto out;
@@ -1936,7 +2570,7 @@ out:
 }
 
 /* -------------------------------------------------------------------------
- * Build project
+ * Build
  * ------------------------------------------------------------------------- */
 
 static int build_project(
@@ -1948,6 +2582,8 @@ static int build_project(
 	char *qstage;
 	char *cmd = NULL;
 	int ret = -1;
+
+	(void)src;
 
 	qstage =
 		shell_quote(stage);
@@ -2101,7 +2737,7 @@ static int build_project(
 		cmd = NULL;
 	}
 
-	/* Ruby/RubyGems */
+	/* Ruby */
 	{
 		char *gemspec =
 			find_gemspec();
@@ -2299,7 +2935,7 @@ out:
 }
 
 /* -------------------------------------------------------------------------
- * Normalization
+ * Staging normalization
  * ------------------------------------------------------------------------- */
 
 static int remove_info_dir(
@@ -2380,7 +3016,7 @@ static int normalize_multilib_layout(
 }
 
 /* -------------------------------------------------------------------------
- * PKGBUILD generation
+ * PKGBUILD
  * ------------------------------------------------------------------------- */
 
 static int write_pkgbuild(
@@ -2475,7 +3111,7 @@ out:
 }
 
 /* -------------------------------------------------------------------------
- * Package and install
+ * Package creation / installation
  * ------------------------------------------------------------------------- */
 
 static int package_and_install(
@@ -2619,7 +3255,7 @@ static int package_and_install(
 }
 
 /* -------------------------------------------------------------------------
- * Listings
+ * Listing
  * ------------------------------------------------------------------------- */
 
 static void list_architectures(void)
@@ -2637,7 +3273,9 @@ static void list_architectures(void)
 	printf(
 		"--------------------------------------------------------------------------------------------\n");
 
-	for(i = 0; architectures[i].name; i++) {
+	for(i = 0;
+	    architectures[i].name;
+	    i++) {
 
 		printf(
 			"%-24s %-38s %-12s %-12s %-12s\n",
@@ -2679,7 +3317,9 @@ static void list_multilib(void)
 	printf(
 		"---------------------------------------------------------------\n");
 
-	for(i = 0; multilib_variants[i].name; i++) {
+	for(i = 0;
+	    multilib_variants[i].name;
+	    i++) {
 
 		printf(
 			"%-20s %-16s %-16s %s\n",
@@ -2734,6 +3374,7 @@ static void usage(
 		"\n"
 		"Examples:\n"
 		"  %s ./foo-1.0 /tmp/foo\n"
+		"  %s . /tmp/foo\n"
 		"  %s --arch x86_64 --multilib lib32 "
 			"./foo-1.0 /tmp/foo\n"
 		"  %s --arch x86_64 --multilib libx32 "
@@ -2752,6 +3393,7 @@ static void usage(
 			"./foo-1.0 /tmp/foo\n"
 		"  %s --target '*-*-freebsd*' "
 			"./foo-1.0 /tmp/foo\n",
+		argv0,
 		argv0,
 		argv0,
 		argv0,
@@ -2788,6 +3430,7 @@ int main(
 	struct target_spec target;
 	struct build_options opts;
 
+	char source_path[PATH_MAX];
 	char *resolved_target = NULL;
 	char *name = NULL;
 	char *version = NULL;
@@ -2796,38 +3439,60 @@ int main(
 
 	int ret;
 
-	memset(&target, 0, sizeof(target));
-	memset(&opts, 0, sizeof(opts));
+	memset(
+		&target,
+		0,
+		sizeof(target));
+
+	memset(
+		&opts,
+		0,
+		sizeof(opts));
 
 	opts.do_install = 1;
 
 	/* Parse command line. */
 	for(int i = 1; i < argc; i++) {
 
-		const char *arg = argv[i];
+		const char *arg =
+			argv[i];
 
-		if(strcmp(arg, "-n") == 0 ||
-		   strcmp(arg, "--no-install") == 0) {
+		if(strcmp(
+			arg,
+			"-n") == 0 ||
+		   strcmp(
+			arg,
+			"--no-install") == 0) {
 
 			opts.do_install = 0;
+
 			continue;
 		}
 
-		if(strcmp(arg, "--all-multilib") == 0) {
+		if(strcmp(
+			arg,
+			"--all-multilib") == 0) {
 
 			opts.all_multilib = 1;
+
 			continue;
 		}
 
-		if(strcmp(arg, "--list-architectures") == 0) {
+		if(strcmp(
+			arg,
+			"--list-architectures") == 0) {
 
 			opts.list_architectures = 1;
+
 			continue;
 		}
 
-		if(strcmp(arg, "--list-multilib") == 0) {
+		if(strcmp(
+			arg,
+			"--list-multilib") == 0) {
 
 			opts.list_multilib = 1;
+
 			continue;
 		}
 
@@ -2835,12 +3500,18 @@ int main(
 		   strcmp(arg, "--arch") == 0) {
 
 			if(i + 1 >= argc) {
+
 				usage(argv[0]);
+
 				return 2;
 			}
 
-			arch_name = argv[++i];
-			opts.arch_name = arch_name;
+			arch_name =
+				argv[++i];
+
+			opts.arch_name =
+				arch_name;
+
 			continue;
 		}
 
@@ -2849,8 +3520,12 @@ int main(
 			"--arch=",
 			7) == 0) {
 
-			arch_name = arg + 7;
-			opts.arch_name = arch_name;
+			arch_name =
+				arg + 7;
+
+			opts.arch_name =
+				arch_name;
+
 			continue;
 		}
 
@@ -2858,12 +3533,18 @@ int main(
 		   strcmp(arg, "--target") == 0) {
 
 			if(i + 1 >= argc) {
+
 				usage(argv[0]);
+
 				return 2;
 			}
 
-			target_pattern = argv[++i];
-			opts.target_pattern = target_pattern;
+			target_pattern =
+				argv[++i];
+
+			opts.target_pattern =
+				target_pattern;
+
 			continue;
 		}
 
@@ -2872,8 +3553,12 @@ int main(
 			"--target=",
 			9) == 0) {
 
-			target_pattern = arg + 9;
-			opts.target_pattern = target_pattern;
+			target_pattern =
+				arg + 9;
+
+			opts.target_pattern =
+				target_pattern;
+
 			continue;
 		}
 
@@ -2881,12 +3566,18 @@ int main(
 		   strcmp(arg, "--build") == 0) {
 
 			if(i + 1 >= argc) {
+
 				usage(argv[0]);
+
 				return 2;
 			}
 
-			build_triplet = argv[++i];
-			opts.build_triplet = build_triplet;
+			build_triplet =
+				argv[++i];
+
+			opts.build_triplet =
+				build_triplet;
+
 			continue;
 		}
 
@@ -2895,8 +3586,12 @@ int main(
 			"--build=",
 			8) == 0) {
 
-			build_triplet = arg + 8;
-			opts.build_triplet = build_triplet;
+			build_triplet =
+				arg + 8;
+
+			opts.build_triplet =
+				build_triplet;
+
 			continue;
 		}
 
@@ -2904,12 +3599,18 @@ int main(
 		   strcmp(arg, "--host") == 0) {
 
 			if(i + 1 >= argc) {
+
 				usage(argv[0]);
+
 				return 2;
 			}
 
-			host_triplet = argv[++i];
-			opts.host_triplet = host_triplet;
+			host_triplet =
+				argv[++i];
+
+			opts.host_triplet =
+				host_triplet;
+
 			continue;
 		}
 
@@ -2918,8 +3619,12 @@ int main(
 			"--host=",
 			7) == 0) {
 
-			host_triplet = arg + 7;
-			opts.host_triplet = host_triplet;
+			host_triplet =
+				arg + 7;
+
+			opts.host_triplet =
+				host_triplet;
+
 			continue;
 		}
 
@@ -2927,11 +3632,15 @@ int main(
 		   strcmp(arg, "--multilib") == 0) {
 
 			if(i + 1 >= argc) {
+
 				usage(argv[0]);
+
 				return 2;
 			}
 
-			multilib_name = argv[++i];
+			multilib_name =
+				argv[++i];
+
 			continue;
 		}
 
@@ -2940,7 +3649,9 @@ int main(
 			"--multilib=",
 			11) == 0) {
 
-			multilib_name = arg + 11;
+			multilib_name =
+				arg + 11;
+
 			continue;
 		}
 
@@ -2964,7 +3675,8 @@ int main(
 
 			fprintf(
 				stderr,
-				"packinstall: too many positional arguments\n");
+				"packinstall: too many "
+				"positional arguments\n");
 
 			return 2;
 		}
@@ -2990,14 +3702,35 @@ int main(
 		return 2;
 	}
 
-	/* Validate source directory. */
-	if(!is_dir(src)) {
+	/*
+	 * Resolve the source path BEFORE chdir().
+	 *
+	 * This is important for:
+	 *
+	 *   packinstall . /tmp/pkg
+	 *
+	 * and other relative Git checkout paths.
+	 */
+	if(!realpath(
+		src,
+		source_path)) {
+
+		fprintf(
+			stderr,
+			"packinstall: realpath('%s'): %s\n",
+			src,
+			strerror(errno));
+
+		return 1;
+	}
+
+	if(!is_dir(source_path)) {
 
 		fprintf(
 			stderr,
 			"packinstall: source tree '%s' "
 			"does not exist or is not a directory\n",
-			src);
+			source_path);
 
 		return 1;
 	}
@@ -3014,22 +3747,43 @@ int main(
 		return 1;
 	}
 
-	if(chdir(src) != 0) {
+	/*
+	 * Enter the source tree.
+	 */
+	if(chdir(
+		source_path) != 0) {
 
 		fprintf(
 			stderr,
 			"packinstall: cannot enter '%s': %s\n",
-			src,
+			source_path,
 			strerror(errno));
 
 		return 1;
+	}
+
+	/*
+	 * Git repository metadata is now detected relative to the
+	 * actual source root.
+	 */
+	fprintf(
+		stderr,
+		"packinstall: source=%s\n",
+		source_path);
+
+	if(git_is_worktree()) {
+
+		fprintf(
+			stderr,
+			"packinstall: detected Git worktree\n");
 	}
 
 	/* Architecture selection. */
 	if(arch_name) {
 
 		arch_entry =
-			find_architecture(arch_name);
+			find_architecture(
+				arch_name);
 
 		if(!arch_entry)
 			arch_entry =
@@ -3052,7 +3806,9 @@ int main(
 			detect_host_architecture();
 	}
 
-	/* Resolve target. */
+	/*
+	 * Resolve target.
+	 */
 	if(target_pattern) {
 
 		resolved_target =
@@ -3086,7 +3842,9 @@ int main(
 	if(!resolved_target)
 		goto fail;
 
-	/* Build triplet defaults to current host. */
+	/*
+	 * Build triplet defaults to native host.
+	 */
 	if(!build_triplet) {
 
 		const struct architecture *host;
@@ -3103,7 +3861,10 @@ int main(
 			build_triplet;
 	}
 
-	/* Cross host defaults to selected target. */
+	/*
+	 * Host defaults to selected target for explicit cross-target
+	 * requests.
+	 */
 	if(!host_triplet &&
 	   target_pattern) {
 
@@ -3114,7 +3875,9 @@ int main(
 			host_triplet;
 	}
 
-	/* Parse target. */
+	/*
+	 * Parse target.
+	 */
 	if(parse_target(
 		resolved_target,
 		&target) != 0) {
@@ -3127,7 +3890,9 @@ int main(
 		goto fail;
 	}
 
-	/* Multilib. */
+	/*
+	 * Multilib.
+	 */
 	if(multilib_name) {
 
 		multilib =
@@ -3148,18 +3913,59 @@ int main(
 			multilib;
 	}
 
-	/* Package metadata. */
+	/*
+	 * Package name and version MUST be generated while we're inside
+	 * the real source tree. For Git projects this makes:
+	 *
+	 *   packinstall . /tmp/kuzpkg
+	 *
+	 * produce:
+	 *
+	 *   pkgname=kuzpkg
+	 *
+	 * instead of:
+	 *
+	 *   pkgname=.
+	 */
 	name =
-		package_name(src);
+		package_name(
+			source_path);
 
 	version =
-		package_version(src);
+		package_version(
+			source_path);
 
 	if(!name || !version) {
 
 		fprintf(
 			stderr,
-			"packinstall: out of memory\n");
+			"packinstall: unable to determine "
+			"package name/version\n");
+
+		goto fail;
+	}
+
+	/*
+	 * One final safety check.
+	 */
+	if(name[0] == '.' ||
+	   !name[0]) {
+
+		fprintf(
+			stderr,
+			"packinstall: invalid package name '%s'\n",
+			name);
+
+		goto fail;
+	}
+
+	if(version[0] == '.' ||
+	   !version[0]) {
+
+		fprintf(
+			stderr,
+			"packinstall: invalid package version '%s'\n",
+			version);
 
 		goto fail;
 	}
@@ -3178,7 +3984,8 @@ int main(
 			arch_entry->name :
 			"unknown",
 		target.triplet,
-		target_os_name(target.os),
+		target_os_name(
+			target.os),
 		multilib ?
 			multilib->name :
 			"none");
@@ -3197,14 +4004,18 @@ int main(
 			"packinstall: target type: bare-metal\n");
 	}
 
-	/* Clean staging. */
+	/*
+	 * Clean staging directory.
+	 */
 	if(clean_stage(stage) != 0)
 		goto fail;
 
-	/* Build. */
+	/*
+	 * Build.
+	 */
 	ret =
 		build_project(
-			src,
+			source_path,
 			stage,
 			&opts,
 			&target);
@@ -3212,17 +4023,23 @@ int main(
 	if(ret != 0)
 		goto fail;
 
-	/* Remove generated info directory. */
+	/*
+	 * Remove generated system info directory.
+	 */
 	if(remove_info_dir(stage) != 0)
 		goto fail;
 
-	/* Record multilib metadata. */
+	/*
+	 * Add multilib metadata.
+	 */
 	if(normalize_multilib_layout(
 		stage,
 		multilib) != 0)
 		goto fail;
 
-	/* Create/install package. */
+	/*
+	 * Create/install package.
+	 */
 	ret =
 		package_and_install(
 			stage,
@@ -3250,7 +4067,6 @@ int main(
 	return 0;
 
 fail:
-
 	fprintf(
 		stderr,
 		"packinstall: failed\n");
