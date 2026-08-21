@@ -47,7 +47,7 @@ option('doxygen', type : 'feature', value : 'disabled',
 option('curl', type : 'feature', value : 'auto',
        description : 'use curl to download files')
 
-option('crypto', type : 'combo', choices : ['none', 'openssl', 'nettle'], value : 'none',
+option('crypto', type : 'combo', choices : ['openssl', 'nettle'],
        description : 'select crypto implementation')
 
 option('gpgme', type : 'feature', value : 'auto',
