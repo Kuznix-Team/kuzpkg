@@ -5,9 +5,8 @@
  *  Copyright (c) 2002-2006 by Judd Vinet <jvinet@zeroflux.org>
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  it under the terms of the GNU General Public License; either version 2
+ *  of the License, or (at your option) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,1964 +17,1758 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <time.h>
-
-#include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h> /* intmax_t */
 #include <string.h>
-#include <errno.h>
-#include <dirent.h>
 #include <unistd.h>
-#include <limits.h>
-#include <wchar.h>
-#include <wctype.h>
 #include <ctype.h>
-#ifdef HAVE_TERMIOS_H
-#include <termios.h> /* tcflush */
+#include <dirent.h>
+#include <time.h>
+#include <errno.h>
+#include <limits.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <fnmatch.h>
+#include <poll.h>
+#include <pwd.h>
+#include <signal.h>
+
+/* libarchive */
+#include <archive.h>
+#include <archive_entry.h>
+
+#ifdef HAVE_LIBSSL
+#include <openssl/evp.h>
 #endif
 
-#include <klpm.h>
-#include <klpm_list.h>
+#ifdef HAVE_LIBNETTLE
+#include <nettle/md5.h>
+#include <nettle/sha2.h>
+#endif
 
-/* kuzpkg */
+/* libkuzpkg */
 #include "util.h"
-#include "conf.h"
-#include "callback.h"
+#include "log.h"
+#include "libarchive-compat.h"
+#include "klpm.h"
+#include "klpm_list.h"
+#include "handle.h"
+#include "trans.h"
+#include "sandbox.h"
 
-static int cached_columns = -1;
-
-struct table_cell_t {
-	char *label;
-	size_t len;
-	int mode;
-};
-
-enum {
-	CELL_NORMAL = 0,
-	CELL_TITLE = (1 << 0),
-	CELL_RIGHT_ALIGN = (1 << 1),
-	CELL_FREE = (1 << 3)
-};
-
-#define PRINT_FORMAT_STRING(temp, format, func) \
-	if(strstr(temp, format)) { \
-		string = strreplace(temp, format, func(pkg)); \
-		free(temp); \
-		temp = string; \
-	} \
-
-#define PRINT_FORMAT_LIST(temp, format, func, extract) \
-	if(strstr(temp, format)) { \
-		klpm_list_t *lst = func(pkg); \
-		char *cl = concat_list(lst, (formatfn)extract); \
-		string = strreplace(temp, format, cl); \
-		free(cl); \
-		free(temp); \
-		temp = string; \
-	} \
-
-
-int trans_init(int flags, int check_valid)
+#ifndef HAVE_STRSEP
+/**
+ * Extracts tokens from a string.
+ * Replaces strsep which is not portable (missing on Solaris).
+ *
+ * Copyright (c) 2001 by François Gouget
+ * <fgouget_at_codeweavers.com>
+ */
+char *strsep(char **str, const char *delims)
 {
-	int ret;
+	char *token;
 
-	check_syncdbs(0, check_valid);
-
-	ret = klpm_trans_init(config->handle, flags);
-	if(ret == -1) {
-		trans_init_error();
-		return -1;
+	if(*str == NULL) {
+		return NULL;
 	}
-	return 0;
-}
 
-void trans_init_error(void)
-{
-	klpm_errno_t err = klpm_errno(config->handle);
-	pm_printf(KUZPKG_LOG_ERROR, _("failed to init transaction (%s)\n"),
-			klpm_strerror(err));
-	if(err == KUZPKG_ERR_HANDLE_LOCK) {
-		const char *lockfile = klpm_option_get_lockfile(config->handle);
-		pm_printf(KUZPKG_LOG_ERROR, _("could not lock database: %s\n"),
-					strerror(errno));
-		if(access(lockfile, F_OK) == 0) {
-			fprintf(stderr, _("  if you're sure a package manager is not already\n"
-						"  running, you can remove %s\n"), lockfile);
+	token = *str;
+	while(**str != '\0') {
+		if(strchr(delims, **str) != NULL) {
+			**str = '\0';
+			(*str)++;
+			return token;
 		}
+		(*str)++;
 	}
+
+	*str = NULL;
+	return token;
+}
+#endif
+
+int _klpm_makepath(const char *path)
+{
+	return _klpm_makepath_mode(path, 0755);
 }
 
-int trans_release(void)
+/**
+ * Creates a directory, including parents if needed, similar to mkdir -p.
+ */
+int _klpm_makepath_mode(const char *path, mode_t mode)
 {
-	if(klpm_trans_release(config->handle) == -1) {
-		pm_printf(KUZPKG_LOG_ERROR, _("failed to release transaction (%s)\n"),
-				klpm_strerror(klpm_errno(config->handle)));
-		return -1;
-	}
-	return 0;
-}
-
-int needs_root(void)
-{
-	switch(config->op) {
-		case PM_OP_DATABASE:
-			return !config->op_q_check;
-		case PM_OP_UPGRADE:
-		case PM_OP_REMOVE:
-			return !config->print;
-		case PM_OP_SYNC:
-			return (config->op_s_clean || config->op_s_sync ||
-					(!config->group && !config->op_s_info && !config->op_q_list &&
-					 !config->op_s_search && !config->print));
-		case PM_OP_FILES:
-			return config->op_s_sync;
-		default:
-			return 0;
-	}
-}
-
-int check_syncdbs(size_t need_repos, int check_valid)
-{
+	char *ptr, *str;
+	mode_t oldmask;
 	int ret = 0;
-	klpm_list_t *i;
-	klpm_list_t *sync_dbs = klpm_get_syncdbs(config->handle);
 
-	if(need_repos && sync_dbs == NULL) {
-		pm_printf(KUZPKG_LOG_ERROR, _("no usable package repositories configured.\n"));
-		return 1;
-	}
+	STRDUP(str, path, return 1);
 
-	if(check_valid) {
-		/* ensure all known dbs are valid */
-		for(i = sync_dbs; i; i = klpm_list_next(i)) {
-			klpm_db_t *db = i->data;
-			if(klpm_db_get_valid(db)) {
-				pm_printf(KUZPKG_LOG_ERROR, _("database '%s' is not valid (%s)\n"),
-						klpm_db_get_name(db), klpm_strerror(klpm_errno(config->handle)));
-				ret = 1;
-			}
+	oldmask = umask(0000);
+
+	for(ptr = str; *ptr; ptr++) {
+		if(*ptr != '/' || ptr == str || ptr[-1] == '/') {
+			continue;
 		}
+
+		*ptr = '\0';
+
+		if(mkdir(str, mode) < 0 && errno != EEXIST) {
+			ret = 1;
+			goto done;
+		}
+
+		*ptr = '/';
 	}
+
+	if(mkdir(str, mode) < 0 && errno != EEXIST) {
+		ret = 1;
+	}
+
+done:
+	umask(oldmask);
+	free(str);
 	return ret;
 }
 
-int sync_syncdbs(int level, klpm_list_t *syncs)
+/** Copies a file. */
+int _klpm_copyfile(const char *src, const char *dest)
 {
-	int ret;
-	int force = (level < 2 ? 0 : 1);
+	char *buf;
+	int in, out, ret = 1;
+	ssize_t nread;
+	struct stat st;
 
-	multibar_move_completed_up(false);
-	ret = klpm_db_update(config->handle, syncs, force);
-	if(ret < 0) {
-		pm_printf(KUZPKG_LOG_ERROR, _("failed to synchronize all databases (%s)\n"),
-			klpm_strerror(klpm_errno(config->handle)));
+	MALLOC(buf, (size_t)KUZPKG_BUFFER_SIZE, return 1);
+
+	OPEN(in, src, O_RDONLY | O_CLOEXEC);
+
+	do {
+		out = open(dest, O_WRONLY | O_CREAT | O_BINARY | O_CLOEXEC, 0000);
+	} while(out == -1 && errno == EINTR);
+
+	if(in < 0 || out < 0) {
+		goto cleanup;
 	}
 
-	return (ret >= 0);
-}
-
-/* discard unhandled input on the terminal's input buffer */
-static int flush_term_input(int fd)
-{
-#ifdef HAVE_TCFLUSH
-	if(isatty(fd)) {
-		return tcflush(fd, TCIFLUSH);
-	}
-#endif
-
-	/* fail silently */
-	return 0;
-}
-
-void columns_cache_reset(void)
-{
-	cached_columns = -1;
-}
-
-static int getcols_fd(int fd)
-{
-	int width = -1;
-
-	if(!isatty(fd)) {
-		return 0;
+	if(fstat(in, &st) || fchmod(out, st.st_mode)) {
+		goto cleanup;
 	}
 
-#if defined(TIOCGSIZE)
-	struct ttysize win;
-	if(ioctl(fd, TIOCGSIZE, &win) == 0) {
-		width = win.ts_cols;
-	}
-#elif defined(TIOCGWINSZ)
-	struct winsize win;
-	if(ioctl(fd, TIOCGWINSZ, &win) == 0) {
-		width = win.ws_col;
-	}
-#endif
+	while((nread = read(in, buf, KUZPKG_BUFFER_SIZE)) > 0 || errno == EINTR) {
+		ssize_t nwrite = 0;
 
-	if(width <= 0) {
-		return -EIO;
-	}
-
-	return width;
-}
-
-unsigned short getcols(void)
-{
-	const char *e;
-	int c = -1;
-
-	if(cached_columns >= 0) {
-		return cached_columns;
-	}
-
-	e = getenv("COLUMNS");
-	if(e && *e) {
-		char *p = NULL;
-		c = strtol(e, &p, 10);
-		if(*p != '\0') {
-			c= -1;
-		}
-	}
-
-	if(c < 0) {
-		c = getcols_fd(STDOUT_FILENO);
-	}
-
-	if(c < 0) {
-		c = 80;
-	}
-
-	cached_columns = c;
-	return c;
-}
-
-/* does the same thing as 'rm -rf' */
-int rmrf(const char *path)
-{
-	int errflag = 0;
-	struct dirent *dp;
-	DIR *dirp;
-
-	if(!unlink(path)) {
-		return 0;
-	} else {
-		switch(errno) {
-		case ENOENT:
-			return 0;
-		case EPERM:
-		case EISDIR:
-			break;
-		default:
-			/* not a directory */
-			return 1;
-		}
-
-		dirp = opendir(path);
-		if(!dirp) {
-			return 1;
-		}
-		for(dp = readdir(dirp); dp != NULL; dp = readdir(dirp)) {
-			if(strcmp(dp->d_name, "..") != 0 && strcmp(dp->d_name, ".") != 0) {
-				char name[PATH_MAX];
-				snprintf(name, PATH_MAX, "%s/%s", path, dp->d_name);
-				errflag += rmrf(name);
-			}
-		}
-		closedir(dirp);
-		if(rmdir(path)) {
-			errflag++;
-		}
-		return errflag;
-	}
-}
-
-/* output a string, but wrap words properly with a specified indentation
- */
-void indentprint(const char *str, unsigned short indent, unsigned short cols)
-{
-	wchar_t *wcstr;
-	const wchar_t *p;
-	size_t len, cidx;
-
-	if(!str) {
-		return;
-	}
-
-	/* if we're not a tty, or our tty is not wide enough that wrapping even makes
-	 * sense, print without indenting */
-	if(cols == 0 || indent > cols) {
-		fputs(str, stdout);
-		return;
-	}
-
-	len = strlen(str) + 1;
-	wcstr = calloc(len, sizeof(wchar_t));
-	len = mbstowcs(wcstr, str, len);
-	p = wcstr;
-	cidx = indent;
-
-	if(!p || !len) {
-		free(wcstr);
-		return;
-	}
-
-	while(*p) {
-		if(*p == L' ') {
-			const wchar_t *q, *next;
-			p++;
-			if(p == NULL || *p == L' ') continue;
-			next = wcschr(p, L' ');
-			if(next == NULL) {
-				next = p + wcslen(p);
-			}
-			/* len captures # cols */
-			len = 0;
-			q = p;
-			while(q < next) {
-				len += wcwidth(*q++);
-			}
-			if((len + 1) > (cols - cidx)) {
-				/* wrap to a newline and reindent */
-				printf("\n%-*s", (int)indent, "");
-				cidx = indent;
-			} else {
-				printf(" ");
-				cidx++;
-			}
-			continue;
-		}
-		printf("%lc", (wint_t)*p);
-		cidx += wcwidth(*p);
-		p++;
-	}
-	free(wcstr);
-}
-
-/* Replace all occurrences of 'needle' with 'replace' in 'str', returning
- * a new string (must be free'd) */
-char *strreplace(const char *str, const char *needle, const char *replace)
-{
-	const char *p = NULL, *q = NULL;
-	char *newstr = NULL, *newp = NULL;
-	klpm_list_t *i = NULL, *list = NULL;
-	size_t needlesz = strlen(needle), replacesz;
-	size_t newsz;
-
-	if(!str) {
-		return NULL;
-	}
-	if(!replace) {
-		replace = "";
-	}
-	replacesz = strlen(replace);
-
-	p = str;
-	q = strstr(p, needle);
-	while(q) {
-		list = klpm_list_add(list, (char *)q);
-		p = q + needlesz;
-		q = strstr(p, needle);
-	}
-
-	/* no occurrences of needle found */
-	if(!list) {
-		return strdup(str);
-	}
-	/* size of new string = size of old string + "number of occurrences of needle"
-	 * x "size difference between replace and needle" */
-	newsz = strlen(str) + 1 +
-		klpm_list_count(list) * (replacesz - needlesz);
-	newstr = calloc(newsz, sizeof(char));
-	if(!newstr) {
-		return NULL;
-	}
-
-	p = str;
-	newp = newstr;
-	for(i = list; i; i = klpm_list_next(i)) {
-		q = i->data;
-		if(q > p) {
-			/* add chars between this occurrence and last occurrence, if any */
-			memcpy(newp, p, (size_t)(q - p));
-			newp += q - p;
-		}
-		memcpy(newp, replace, replacesz);
-		newp += replacesz;
-		p = q + needlesz;
-	}
-	klpm_list_free(list);
-
-	if(*p) {
-		/* add the rest of 'p' */
-		strcpy(newp, p);
-	}
-
-	return newstr;
-}
-
-typedef char *(*formatfn)(void*);
-
-static char *concat_list(klpm_list_t *lst, formatfn fn)
-{
-	char *output = NULL, *tmp = NULL;
-
-	for(klpm_list_t *i = lst; i; i = klpm_list_next(i)) {
-		char *str = fn ? fn(i->data) : i->data;
-
-		if(str == NULL) {
+		if(nread < 0) {
 			continue;
 		}
 
-		if(tmp) {
-			pm_asprintf(&output, "%s %s", tmp, str);
-			free(tmp);
-		} else {
-			pm_asprintf(&output, "%s", str);
-		}
-		tmp = output;
-
-		if(fn) {
-			free(str);
-		}
+		do {
+			nwrite = write(out, buf + nwrite, nread);
+			if(nwrite >= 0) {
+				nread -= nwrite;
+			} else if(errno != EINTR) {
+				goto cleanup;
+			}
+		} while(nread > 0);
 	}
 
-	if(!output) {
-		pm_asprintf(&output, "%s", "");
+	ret = 0;
+
+cleanup:
+	free(buf);
+
+	if(in >= 0) {
+		close(in);
 	}
 
-	return output;
+	if(out >= 0) {
+		close(out);
+	}
+
+	return ret;
 }
 
-static size_t string_length(const char *s)
+/** Combines a directory, filename and suffix into a full path. */
+char *_klpm_get_fullpath(const char *path, const char *filename,
+		const char *suffix)
 {
-	size_t len;
-	wchar_t *wcstr;
+	char *filepath;
+	size_t len = strlen(path) + strlen(filename) + strlen(suffix) + 1;
 
-	if(!s || s[0] == '\0') {
+	MALLOC(filepath, len, return NULL);
+	snprintf(filepath, len, "%s%s%s", path, filename, suffix);
+
+	return filepath;
+}
+
+/** Trim trailing newlines from a string. */
+size_t _klpm_strip_newline(char *str, size_t len)
+{
+	if(*str == '\0') {
 		return 0;
 	}
-	if(strchr(s, '\033')) {
-		char* replaced = malloc(sizeof(char) * strlen(s));
-		size_t iter = 0;
-		for(; *s; s++) {
-			if(*s == '\033' && *(s+1) == '[' && isdigit(*(s+2))) {
-				/* handle terminal colour escape sequences */
-				const char* t = s + 3;
 
-				while(isdigit(*t) || *t == ';') {
-					t++;
-				}
-
-				if(*t == 'm') {
-					/* end of terminal colour sequence */
-					s = t++;
-					continue;
-				}
-			}
-
-			replaced[iter] = *s;
-			iter++;
-		}
-		replaced[iter] = '\0';
-		len = iter;
-		wcstr = calloc(len, sizeof(wchar_t));
-		len = mbstowcs(wcstr, replaced, len);
-		len = wcswidth(wcstr, len);
-		free(wcstr);
-		free(replaced);
-	} else {
-		/* len goes from # bytes -> # chars -> # cols */
-		len = strlen(s) + 1;
-		wcstr = calloc(len, sizeof(wchar_t));
-		len = mbstowcs(wcstr, s, len);
-		len = wcswidth(wcstr, len);
-		free(wcstr);
+	if(len == 0) {
+		len = strlen(str);
 	}
+
+	while(len > 0 && str[len - 1] == '\n') {
+		len--;
+	}
+
+	str[len] = '\0';
 
 	return len;
 }
 
-static void add_table_cell(klpm_list_t **row, char *label, int mode)
-{
-	struct table_cell_t *cell = malloc(sizeof(struct table_cell_t));
-
-	cell->label = label;
-	cell->mode = mode;
-	cell->len = string_length(label);
-
-	*row = klpm_list_add(*row, cell);
-}
-
-static void table_free_cell(void *ptr)
-{
-	struct table_cell_t *cell = ptr;
-
-	if(cell) {
-		if(cell->mode & CELL_FREE) {
-			free(cell->label);
-		}
-		free(cell);
-	}
-}
-
-static void table_free(klpm_list_t *headers, klpm_list_t *rows)
-{
-	klpm_list_t *i;
-
-	klpm_list_free_inner(headers, table_free_cell);
-
-	for(i = rows; i; i = klpm_list_next(i)) {
-		klpm_list_free_inner(i->data, table_free_cell);
-		klpm_list_free(i->data);
-	}
-
-	klpm_list_free(headers);
-	klpm_list_free(rows);
-}
-
-static void add_transaction_sizes_row(klpm_list_t **rows, char *label, off_t size)
-{
-	klpm_list_t *row = NULL;
-	char *str;
-	const char *units;
-	double s = humanize_size(size, 'M', 2, &units);
-	pm_asprintf(&str, "%.2f %s", s, units);
-
-	add_table_cell(&row, label, CELL_TITLE);
-	add_table_cell(&row, str, CELL_RIGHT_ALIGN | CELL_FREE);
-
-	*rows = klpm_list_add(*rows, row);
-}
-
-void string_display(const char *title, const char *string, unsigned short cols)
-{
-	if(title) {
-		printf("%s%s%s ", config->colstr.title, title, config->colstr.nocolor);
-	}
-	if(string == NULL || string[0] == '\0') {
-		printf(_("None"));
-	} else {
-		/* compute the length of title + a space */
-		size_t len = string_length(title) + 1;
-		indentprint(string, (unsigned short)len, cols);
-	}
-	printf("\n");
-}
-
-static void table_print_line(const klpm_list_t *line, short col_padding,
-		size_t colcount, const size_t *widths, const int *has_data)
-{
-	size_t i;
-	int need_padding = 0;
-	const klpm_list_t *curcell;
-
-	for(i = 0, curcell = line; curcell && i < colcount;
-			i++, curcell = klpm_list_next(curcell)) {
-		const struct table_cell_t *cell = curcell->data;
-		const char *str = (cell->label ? cell->label : "");
-		int cell_width;
-
-		if(!has_data[i]) {
-			continue;
-		}
-
-		/* calculate cell width, adjusting for multi-byte character strings */
-		cell_width = (int)widths[i] - string_length(str) + strlen(str);
-		cell_width = cell->mode & CELL_RIGHT_ALIGN ? cell_width : -cell_width;
-
-		if(need_padding) {
-			printf("%*s", col_padding, "");
-		}
-
-		if(cell->mode & CELL_TITLE) {
-			printf("%s%*s%s", config->colstr.title, cell_width, str, config->colstr.nocolor);
-		} else {
-			printf("%*s", cell_width, str);
-		}
-		need_padding = 1;
-	}
-
-	printf("\n");
-}
-
+/* Compression functions */
 
 /**
- * Find the max string width of each column. Also determines whether values
- * exist in the column and sets the value in has_data accordingly.
- * @param header a list of header strings
- * @param rows a list of lists of rows as strings
- * @param padding the amount of padding between columns
- * @param totalcols the total number of columns in the header and each row
- * @param widths a pointer to store width data
- * @param has_data a pointer to store whether column has data
- *
- * @return the total width of the table; 0 on failure
+ * Open an archive for reading.
  */
-static size_t table_calc_widths(const klpm_list_t *header,
-		const klpm_list_t *rows, short padding, size_t totalcols,
-		size_t **widths, int **has_data)
+int _klpm_open_archive(klpm_handle_t *handle, const char *path,
+		struct stat *buf, struct archive **archive, klpm_errno_t error)
 {
-	const klpm_list_t *i;
-	size_t curcol, totalwidth = 0, usefulcols = 0;
-	size_t *colwidths;
-	int *coldata;
+	int fd;
+	size_t bufsize = KUZPKG_BUFFER_SIZE;
+	errno = 0;
 
-	if(totalcols <= 0) {
-		return 0;
+	if((*archive = archive_read_new()) == NULL) {
+		RET_ERR(handle, KUZPKG_ERR_LIBARCHIVE, -1);
 	}
 
-	colwidths = malloc(totalcols * sizeof(size_t));
-	coldata = calloc(totalcols, sizeof(int));
-	if(!colwidths || !coldata) {
-		free(colwidths);
-		free(coldata);
-		return 0;
-	}
-	/* header determines column count and initial values of longest_strs */
-	for(i = header, curcol = 0; i; i = klpm_list_next(i), curcol++) {
-		const struct table_cell_t *row = i->data;
-		colwidths[curcol] = row->len;
-		/* note: header does not determine whether column has data */
-	}
-
-	/* now find the longest string in each column */
-	for(i = rows; i; i = klpm_list_next(i)) {
-		/* grab first column of each row and iterate through columns */
-		const klpm_list_t *j = i->data;
-		for(curcol = 0; j; j = klpm_list_next(j), curcol++) {
-			const struct table_cell_t *cell = j->data;
-			size_t str_len = cell ? cell->len : 0;
-
-			if(str_len > colwidths[curcol]) {
-				colwidths[curcol] = str_len;
-			}
-			if(str_len > 0) {
-				coldata[curcol] = 1;
-			}
-		}
-	}
-
-	for(i = header, curcol = 0; i; i = klpm_list_next(i), curcol++) {
-		/* only include columns that have data */
-		if(coldata[curcol]) {
-			usefulcols++;
-			totalwidth += colwidths[curcol];
-		}
-	}
-
-	/* add padding between columns */
-	if(usefulcols > 0) {
-		totalwidth += padding * (usefulcols - 1);
-	}
-
-	*widths = colwidths;
-	*has_data = coldata;
-	return totalwidth;
-}
-
-/** Displays the list in table format
- *
- * @param header the column headers. column count is determined by the nr
- *               of headers
- * @param rows the rows to display as a list of lists of strings. the outer
- *             list represents the rows, the inner list the cells (= columns)
- * @param cols the number of columns available in the terminal
- * @return -1 if not enough terminal cols available, else 0
- */
-static int table_display(const klpm_list_t *header,
-		const klpm_list_t *rows, unsigned short cols)
-{
-	const unsigned short padding = 2;
-	const klpm_list_t *i, *first;
-	size_t *widths = NULL, totalcols, totalwidth;
-	int *has_data = NULL;
-	int ret = 0;
-
-	if(rows == NULL) {
-		return ret;
-	}
-
-	/* we want the first row. if no headers are provided, use the first
-	 * entry of the rows array. */
-	first = header ? header : rows->data;
-
-	totalcols = klpm_list_count(first);
-	totalwidth = table_calc_widths(first, rows, padding, totalcols,
-			&widths, &has_data);
-	/* return -1 if terminal is not wide enough */
-	if(cols && totalwidth > cols) {
-		pm_printf(KUZPKG_LOG_WARNING,
-				_("insufficient columns available for table display\n"));
-		ret = -1;
-		goto cleanup;
-	}
-	if(!totalwidth || !widths || !has_data) {
-		ret = -1;
-		goto cleanup;
-	}
-
-	if(header) {
-		table_print_line(header, padding, totalcols, widths, has_data);
-		printf("\n");
-	}
-
-	for(i = rows; i; i = klpm_list_next(i)) {
-		table_print_line(i->data, padding, totalcols, widths, has_data);
-	}
-
-cleanup:
-	free(widths);
-	free(has_data);
-	return ret;
-}
-
-void list_display(const char *title, const klpm_list_t *list,
-		unsigned short maxcols)
-{
-	const klpm_list_t *i;
-	size_t len = 0;
-
-	if(title) {
-		len = string_length(title) + 1;
-		printf("%s%s%s ", config->colstr.title, title, config->colstr.nocolor);
-	}
-
-	if(!list) {
-		printf("%s\n", _("None"));
-	} else {
-		size_t cols = len;
-		const char *str = list->data;
-		fputs(str, stdout);
-		cols += string_length(str);
-		for(i = klpm_list_next(list); i; i = klpm_list_next(i)) {
-			str = i->data;
-			size_t s = string_length(str);
-			/* wrap only if we have enough usable column space */
-			if(maxcols > len && cols + s + 2 >= maxcols) {
-				size_t j;
-				cols = len;
-				printf("\n");
-				for(j = 1; j <= len; j++) {
-					printf(" ");
-				}
-			} else if(cols != len) {
-				/* 2 spaces are added if this is not the first element on a line. */
-				printf("  ");
-				cols += 2;
-			}
-			fputs(str, stdout);
-			cols += s;
-		}
-		putchar('\n');
-	}
-}
-
-void list_display_linebreak(const char *title, const klpm_list_t *list,
-		unsigned short maxcols)
-{
-	unsigned short len = 0;
-
-	if(title) {
-		len = (unsigned short)string_length(title) + 1;
-		printf("%s%s%s ", config->colstr.title, title, config->colstr.nocolor);
-	}
-
-	if(!list) {
-		printf("%s\n", _("None"));
-	} else {
-		const klpm_list_t *i;
-		/* Print the first element */
-		indentprint((const char *)list->data, len, maxcols);
-		printf("\n");
-		/* Print the rest */
-		for(i = klpm_list_next(list); i; i = klpm_list_next(i)) {
-			size_t j;
-			for(j = 1; j <= len; j++) {
-				printf(" ");
-			}
-			indentprint((const char *)i->data, len, maxcols);
-			printf("\n");
-		}
-	}
-}
-
-void signature_display(const char *title, klpm_siglist_t *siglist,
-		unsigned short maxcols)
-{
-	unsigned short len = 0;
-
-	if(title) {
-		len = (unsigned short)string_length(title) + 1;
-		printf("%s%s%s ", config->colstr.title, title, config->colstr.nocolor);
-	}
-	if(siglist->count == 0) {
-		printf(_("None"));
-	} else {
-		size_t i;
-		for(i = 0; i < siglist->count; i++) {
-			char *sigline;
-			const char *status, *validity, *name;
-			int ret;
-			klpm_sigresult_t *result = siglist->results + i;
-			/* Don't re-indent the first result */
-			if(i != 0) {
-				size_t j;
-				for(j = 1; j <= len; j++) {
-					printf(" ");
-				}
-			}
-			switch(result->status) {
-				case KUZPKG_SIGSTATUS_VALID:
-					status = _("Valid");
-					break;
-				case KUZPKG_SIGSTATUS_KEY_EXPIRED:
-					status = _("Key expired");
-					break;
-				case KUZPKG_SIGSTATUS_SIG_EXPIRED:
-					status = _("Expired");
-					break;
-				case KUZPKG_SIGSTATUS_INVALID:
-					status = _("Invalid");
-					break;
-				case KUZPKG_SIGSTATUS_KEY_UNKNOWN:
-					status = _("Key unknown");
-					break;
-				case KUZPKG_SIGSTATUS_KEY_DISABLED:
-					status = _("Key disabled");
-					break;
-				default:
-					status = _("Signature error");
-					break;
-			}
-			switch(result->validity) {
-				case KUZPKG_SIGVALIDITY_FULL:
-					validity = _("full trust");
-					break;
-				case KUZPKG_SIGVALIDITY_MARGINAL:
-					validity = _("marginal trust");
-					break;
-				case KUZPKG_SIGVALIDITY_NEVER:
-					validity = _("never trust");
-					break;
-				case KUZPKG_SIGVALIDITY_UNKNOWN:
-				default:
-					validity = _("unknown trust");
-					break;
-			}
-			name = result->key.uid ? result->key.uid : result->key.fingerprint;
-			ret = pm_asprintf(&sigline, _("%s, %s from \"%s\""),
-					status, validity, name);
-			if(ret == -1) {
-				continue;
-			}
-			indentprint(sigline, len, maxcols);
-			printf("\n");
-			free(sigline);
-		}
-	}
-}
-
-/* creates a header row for use with table_display */
-static klpm_list_t *create_verbose_header(size_t count)
-{
-	klpm_list_t *ret = NULL;
-
-	char *header;
-	pm_asprintf(&header, "%s (%zu)", _("Package"), count);
-
-	add_table_cell(&ret, header, CELL_TITLE | CELL_FREE);
-	add_table_cell(&ret, _("Old Version"), CELL_TITLE);
-	add_table_cell(&ret, _("New Version"), CELL_TITLE);
-	add_table_cell(&ret, _("Net Change"), CELL_TITLE);
-	add_table_cell(&ret, _("Download Size"), CELL_TITLE);
-
-	return ret;
-}
-
-/* returns package info as list of strings */
-static klpm_list_t *create_verbose_row(pm_target_t *target)
-{
-	char *str;
-	off_t size = 0;
-	double human_size;
-	const char *label;
-	klpm_list_t *ret = NULL;
-
-	/* a row consists of the package name, */
-	if(target->install) {
-		const klpm_db_t *db = klpm_pkg_get_db(target->install);
-		if(db) {
-			pm_asprintf(&str, "%s/%s", klpm_db_get_name(db), klpm_pkg_get_name(target->install));
-		} else {
-			pm_asprintf(&str, "%s", klpm_pkg_get_name(target->install));
-		}
-	} else {
-		pm_asprintf(&str, "%s", klpm_pkg_get_name(target->remove));
-	}
-	add_table_cell(&ret, str, CELL_NORMAL | CELL_FREE);
-
-	/* old and new versions */
-	pm_asprintf(&str, "%s",
-			target->remove != NULL ? klpm_pkg_get_version(target->remove) : "");
-	add_table_cell(&ret, str, CELL_NORMAL | CELL_FREE);
-
-	pm_asprintf(&str, "%s",
-			target->install != NULL ? klpm_pkg_get_version(target->install) : "");
-	add_table_cell(&ret, str, CELL_NORMAL | CELL_FREE);
-
-	/* and size */
-	size -= target->remove ? klpm_pkg_get_isize(target->remove) : 0;
-	size += target->install ? klpm_pkg_get_isize(target->install) : 0;
-	human_size = humanize_size(size, 'M', 2, &label);
-	pm_asprintf(&str, "%.2f %s", human_size, label);
-	add_table_cell(&ret, str, CELL_RIGHT_ALIGN | CELL_FREE);
-
-	size = target->install ? klpm_pkg_download_size(target->install) : 0;
-	if(size != 0) {
-		human_size = humanize_size(size, 'M', 2, &label);
-		pm_asprintf(&str, "%.2f %s", human_size, label);
-	} else {
-		str = NULL;
-	}
-	add_table_cell(&ret, str, CELL_RIGHT_ALIGN | CELL_FREE);
-
-	return ret;
-}
-
-/* prepare a list of pkgs to display */
-static void _display_targets(klpm_list_t *targets, int verbose)
-{
-	char *str;
-	off_t isize = 0, rsize = 0, dlsize = 0;
-	unsigned short cols;
-	klpm_list_t *i, *names = NULL, *header = NULL, *rows = NULL;
-
-	if(!targets) {
-		return;
-	}
-
-	/* gather package info */
-	for(i = targets; i; i = klpm_list_next(i)) {
-		pm_target_t *target = i->data;
-
-		if(target->install) {
-			dlsize += klpm_pkg_download_size(target->install);
-			isize += klpm_pkg_get_isize(target->install);
-		}
-		if(target->remove) {
-			/* add up size of all removed packages */
-			rsize += klpm_pkg_get_isize(target->remove);
-		}
-	}
-
-	/* form data for both verbose and non-verbose display */
-	for(i = targets; i; i = klpm_list_next(i)) {
-		pm_target_t *target = i->data;
-
-		if(verbose) {
-			rows = klpm_list_add(rows, create_verbose_row(target));
-		}
-
-		if(target->install) {
-			pm_asprintf(&str, "%s%s-%s%s", klpm_pkg_get_name(target->install), config->colstr.faint,
-					klpm_pkg_get_version(target->install), config->colstr.nocolor);
-		} else if(isize == 0) {
-			pm_asprintf(&str, "%s%s-%s%s", klpm_pkg_get_name(target->remove), config->colstr.faint,
-					klpm_pkg_get_version(target->remove), config->colstr.nocolor);
-		} else {
-			pm_asprintf(&str, "%s%s-%s %s[%s]%s", klpm_pkg_get_name(target->remove), config->colstr.faint,
-					klpm_pkg_get_version(target->remove), config->colstr.nocolor, _("removal"), config->colstr.nocolor);
-		}
-		names = klpm_list_add(names, str);
-	}
-
-	/* print to screen */
-	pm_asprintf(&str, "%s (%zu)", _("Packages"), klpm_list_count(targets));
-	printf("\n");
-
-	cols = getcols();
-	if(verbose) {
-		header = create_verbose_header(klpm_list_count(targets));
-		if(table_display(header, rows, cols) != 0) {
-			/* fallback to list display if table wouldn't fit */
-			list_display(str, names, cols);
-		}
-	} else {
-		list_display(str, names, cols);
-	}
-	printf("\n");
-
-	table_free(header, rows);
-	FREELIST(names);
-	free(str);
-	rows = NULL;
-
-	if(dlsize > 0 || config->op_s_downloadonly) {
-		add_transaction_sizes_row(&rows, _("Total Download Size:"), dlsize);
-	}
-	if(!config->op_s_downloadonly) {
-		if(isize > 0) {
-			add_transaction_sizes_row(&rows, _("Total Installed Size:"), isize);
-		}
-		if(rsize > 0 && isize == 0) {
-			add_transaction_sizes_row(&rows, _("Total Removed Size:"), rsize);
-		}
-		/* only show this net value if different from raw installed size */
-		if(isize > 0 && rsize > 0) {
-			add_transaction_sizes_row(&rows, _("Net Upgrade Size:"), isize - rsize);
-		}
-	}
-	table_display(NULL, rows, cols);
-	table_free(NULL, rows);
-}
-
-static int target_cmp(const void *p1, const void *p2)
-{
-	const pm_target_t *targ1 = p1;
-	const pm_target_t *targ2 = p2;
-	/* explicit are always sorted after implicit (e.g. deps, pulled targets) */
-	if(targ1->is_explicit != targ2->is_explicit) {
-		return targ1->is_explicit > targ2->is_explicit;
-	}
-	const char *name1 = targ1->install ?
-		klpm_pkg_get_name(targ1->install) : klpm_pkg_get_name(targ1->remove);
-	const char *name2 = targ2->install ?
-		klpm_pkg_get_name(targ2->install) : klpm_pkg_get_name(targ2->remove);
-	return strcmp(name1, name2);
-}
-
-static int pkg_cmp(const void *p1, const void *p2)
-{
-	/* explicit cast due to (un)necessary removal of const */
-	klpm_pkg_t *pkg1 = (klpm_pkg_t *)p1;
-	klpm_pkg_t *pkg2 = (klpm_pkg_t *)p2;
-	return strcmp(klpm_pkg_get_name(pkg1), klpm_pkg_get_name(pkg2));
-}
-
-void display_targets(void)
-{
-	klpm_list_t *i, *targets = NULL;
-	klpm_db_t *db_local = klpm_get_localdb(config->handle);
-
-	for(i = klpm_trans_get_add(config->handle); i; i = klpm_list_next(i)) {
-		klpm_pkg_t *pkg = i->data;
-		pm_target_t *targ = calloc(1, sizeof(pm_target_t));
-		if(!targ) return;
-		targ->install = pkg;
-		targ->remove = klpm_db_get_pkg(db_local, klpm_pkg_get_name(pkg));
-		if(klpm_list_find(config->explicit_adds, pkg, pkg_cmp)) {
-			targ->is_explicit = 1;
-		}
-		targets = klpm_list_add(targets, targ);
-	}
-	for(i = klpm_trans_get_remove(config->handle); i; i = klpm_list_next(i)) {
-		klpm_pkg_t *pkg = i->data;
-		pm_target_t *targ = calloc(1, sizeof(pm_target_t));
-		if(!targ) return;
-		targ->remove = pkg;
-		if(klpm_list_find(config->explicit_removes, pkg, pkg_cmp)) {
-			targ->is_explicit = 1;
-		}
-		targets = klpm_list_add(targets, targ);
-	}
-
-	targets = klpm_list_msort(targets, klpm_list_count(targets), target_cmp);
-	_display_targets(targets, config->verbosepkglists);
-	FREELIST(targets);
-}
-
-static off_t pkg_get_size(klpm_pkg_t *pkg)
-{
-	switch(config->op) {
-		case PM_OP_SYNC:
-			return klpm_pkg_download_size(pkg);
-		case PM_OP_UPGRADE:
-			return klpm_pkg_get_size(pkg);
-		default:
-			return klpm_pkg_get_isize(pkg);
-	}
-}
-
-static char *pkg_get_location(klpm_pkg_t *pkg)
-{
-	klpm_list_t *servers;
-	char *string = NULL;
-	switch(klpm_pkg_get_origin(pkg)) {
-		case KUZPKG_PKG_FROM_SYNCDB:
-			if(klpm_pkg_download_size(pkg) == 0) {
-				/* file is already in the package cache */
-				klpm_list_t *i;
-				const char *pkgfile = klpm_pkg_get_filename(pkg);
-				char path[PATH_MAX];
-				struct stat buf;
-
-				for(i = klpm_option_get_cachedirs(config->handle); i; i = i->next) {
-					snprintf(path, PATH_MAX, "%s%s", (char *)i->data, pkgfile);
-					if(stat(path, &buf) == 0 && S_ISREG(buf.st_mode)) {
-						pm_asprintf(&string, "file://%s", path);
-						return string;
-					}
-				}
-			}
-
-			servers = klpm_db_get_servers(klpm_pkg_get_db(pkg));
-			if(servers) {
-				pm_asprintf(&string, "%s/%s", (char *)(servers->data),
-						klpm_pkg_get_filename(pkg));
-				return string;
-			}
-
-			/* fallthrough - for theoretical serverless repos */
-			__attribute__((fallthrough));
-
-		case KUZPKG_PKG_FROM_FILE:
-			return strdup(klpm_pkg_get_filename(pkg));
-
-		case KUZPKG_PKG_FROM_LOCALDB:
-		default:
-			pm_asprintf(&string, "%s-%s", klpm_pkg_get_name(pkg), klpm_pkg_get_version(pkg));
-			return string;
-	}
-}
-
-/* a pow() implementation that is specialized for an integer base and small,
- * positive-only integer exponents. */
-static double simple_pow(int base, int exp)
-{
-	double result = 1.0;
-	for(; exp > 0; exp--) {
-		result *= base;
-	}
-	return result;
-}
-
-/** Converts sizes in bytes into human readable units.
- *
- * @param bytes the size in bytes
- * @param target_unit '\0' or a short label. If equal to one of the short unit
- * labels ('B', 'K', ...) bytes is converted to target_unit; if '\0', the first
- * unit which will bring the value to below a threshold of 2048 will be chosen.
- * @param precision number of decimal places, ensures -0.00 gets rounded to
- * 0.00; -1 if no rounding desired
- * @param label will be set to the appropriate unit label
- *
- * @return the size in the appropriate unit
- */
-double humanize_size(off_t bytes, const char target_unit, int precision,
-		const char **label)
-{
-	static const char *labels[] = {"B", "KiB", "MiB", "GiB",
-		"TiB", "PiB", "EiB", "ZiB", "YiB"};
-	static const int unitcount = ARRAYSIZE(labels);
-
-	double val = (double)bytes;
-	int index;
-
-	for(index = 0; index < unitcount - 1; index++) {
-		if(target_unit != '\0' && labels[index][0] == target_unit) {
-			break;
-		} else if(target_unit == '\0' && val <= 2048.0 && val >= -2048.0) {
-			break;
-		}
-		val /= 1024.0;
-	}
-
-	if(label) {
-		*label = labels[index];
-	}
-
-	/* do not display negative zeroes */
-	if(precision >= 0 && val < 0.0 &&
-			val > (-0.5 / simple_pow(10, precision))) {
-		val = 0.0;
-	}
-
-	return val;
-}
-
-void print_packages(const klpm_list_t *packages)
-{
-	const klpm_list_t *i;
-	if(!config->print_format) {
-		config->print_format = strdup("%l");
-	}
-	for(i = packages; i; i = klpm_list_next(i)) {
-		klpm_pkg_t *pkg = i->data;
-		char *string = strdup(config->print_format);
-		char *temp = string;
-		/* %a : arch */
-		if(strstr(temp, "%a")) {
-			const char *arch = klpm_pkg_get_arch(pkg);
-			if(arch == NULL) {
-				arch = "";
-			}
-			string = strreplace(temp, "%a", arch);
-			free(temp);
-			temp = string;
-		}
-		/* %b : build date */
-		if(strstr(temp, "%b")) {
-			char bdatestr[50] = "";
-			time_t bdate = (time_t)klpm_pkg_get_builddate(pkg);
-			if(bdate != -1) {
-				strftime(bdatestr, 50, "%c", localtime(&bdate));
-				string = strreplace(temp, "%b", bdatestr);
-				free(temp);
-				temp = string;
-			}
-		}
-		/* %d : description */
-		PRINT_FORMAT_STRING(temp, "%d", klpm_pkg_get_desc)
-		/* %e : pkgbase */
-		PRINT_FORMAT_STRING(temp, "%e", klpm_pkg_get_base)
-		/* %f : filename */
-		PRINT_FORMAT_STRING(temp, "%f", klpm_pkg_get_filename)
-		/* %g : base64 encoded PGP signature */
-		PRINT_FORMAT_STRING(temp, "%g", klpm_pkg_get_base64_sig)
-		/* %h : sha25sum */
-		PRINT_FORMAT_STRING(temp, "%h", klpm_pkg_get_sha256sum)
-		/* %n : pkgname */
-		PRINT_FORMAT_STRING(temp, "%n", klpm_pkg_get_name)
-		/* %p : packager */
-		PRINT_FORMAT_STRING(temp, "%p", klpm_pkg_get_packager)
-		/* %v : pkgver */
-		PRINT_FORMAT_STRING(temp, "%v", klpm_pkg_get_version)
-		/* %l : location */
-		if(strstr(temp, "%l")) {
-			char *pkgloc = pkg_get_location(pkg);
-			string = strreplace(temp, "%l", pkgloc);
-			free(pkgloc);
-			free(temp);
-			temp = string;
-		}
-		/* %r : repo */
-		if(strstr(temp, "%r")) {
-			const char *repo = "local";
-			klpm_db_t *db = klpm_pkg_get_db(pkg);
-			if(db) {
-				repo = klpm_db_get_name(db);
-			}
-			string = strreplace(temp, "%r", repo);
-			free(temp);
-			temp = string;
-		}
-		/* %s : size */
-		if(strstr(temp, "%s")) {
-			char *size;
-			pm_asprintf(&size, "%jd", (intmax_t)pkg_get_size(pkg));
-			string = strreplace(temp, "%s", size);
-			free(size);
-			free(temp);
-			temp = string;
-		}
-		/* %u : url */
-		PRINT_FORMAT_STRING(temp, "%u", klpm_pkg_get_url)
-		/* %C : checkdepends */
-		PRINT_FORMAT_LIST(temp, "%C", klpm_pkg_get_checkdepends, klpm_dep_compute_string)
-		/* %D : depends */
-		PRINT_FORMAT_LIST(temp, "%D", klpm_pkg_get_depends, klpm_dep_compute_string)
-		/* %G : groups */
-		PRINT_FORMAT_LIST(temp, "%G", klpm_pkg_get_groups, NULL)
-		/* %H : conflicts */
-		PRINT_FORMAT_LIST(temp, "%H", klpm_pkg_get_conflicts, klpm_dep_compute_string)
-		/* %M : makedepends */
-		PRINT_FORMAT_LIST(temp, "%M", klpm_pkg_get_makedepends, klpm_dep_compute_string)
-		/* %O : optdepends */
-		PRINT_FORMAT_LIST(temp, "%O", klpm_pkg_get_optdepends, klpm_dep_compute_string)
-		/* %P : provides */
-		PRINT_FORMAT_LIST(temp, "%P", klpm_pkg_get_provides, klpm_dep_compute_string)
-		/* %R : replaces */
-		PRINT_FORMAT_LIST(temp, "%R", klpm_pkg_get_replaces, klpm_dep_compute_string)
-		/* %L : license */
-		PRINT_FORMAT_LIST(temp, "%L", klpm_pkg_get_licenses, NULL)
-
-		printf("%s\n", string);
-		free(string);
-	}
-}
-
-/**
- * Helper function for comparing depends using the klpm "compare func"
- * signature. The function descends through the structure in the following
- * comparison order: name, modifier (e.g., '>', '='), version, description.
- * @param d1 the first depend structure
- * @param d2 the second depend structure
- * @return -1, 0, or 1 if first is <, ==, or > second
- */
-static int depend_cmp(const void *d1, const void *d2)
-{
-	const klpm_depend_t *dep1 = d1;
-	const klpm_depend_t *dep2 = d2;
-	int ret;
-
-	ret = strcmp(dep1->name, dep2->name);
-	if(ret == 0) {
-		ret = dep1->mod - dep2->mod;
-	}
-	if(ret == 0) {
-		if(dep1->version && dep2->version) {
-			ret = strcmp(dep1->version, dep2->version);
-		} else if(!dep1->version && dep2->version) {
-			ret = -1;
-		} else if(dep1->version && !dep2->version) {
-			ret = 1;
-		}
-	}
-	if(ret == 0) {
-		if(dep1->desc && dep2->desc) {
-			ret = strcmp(dep1->desc, dep2->desc);
-		} else if(!dep1->desc && dep2->desc) {
-			ret = -1;
-		} else if(dep1->desc && !dep2->desc) {
-			ret = 1;
-		}
-	}
-
-	return ret;
-}
+	_klpm_archive_read_support_filter_all(*archive);
+	archive_read_support_format_all(*archive);
 
-static char *make_optstring(klpm_depend_t *optdep)
-{
-	klpm_db_t *localdb = klpm_get_localdb(config->handle);
-	char *optstring = klpm_dep_compute_string(optdep);
-	char *status = NULL;
-	if(klpm_find_satisfier(klpm_db_get_pkgcache(localdb), optstring)) {
-		status = _(" [installed]");
-	} else if(klpm_find_satisfier(klpm_trans_get_add(config->handle), optstring)) {
-		status = _(" [pending]");
-	}
-	if(status) {
-		optstring = realloc(optstring, strlen(optstring) + strlen(status) + 1);
-		strcpy(optstring + strlen(optstring), status);
-	}
-	return optstring;
-}
-
-void display_new_optdepends(klpm_pkg_t *oldpkg, klpm_pkg_t *newpkg)
-{
-	klpm_list_t *i, *old, *new, *optdeps, *optstrings = NULL;
-
-	old = klpm_pkg_get_optdepends(oldpkg);
-	new = klpm_pkg_get_optdepends(newpkg);
-	optdeps = klpm_list_diff(new, old, depend_cmp);
-
-	/* turn optdepends list into a text list */
-	for(i = optdeps; i; i = klpm_list_next(i)) {
-		klpm_depend_t *optdep = i->data;
-		optstrings = klpm_list_add(optstrings, make_optstring(optdep));
-	}
-
-	if(optstrings) {
-		printf(_("New optional dependencies for %s\n"), klpm_pkg_get_name(newpkg));
-		unsigned short cols = getcols();
-		list_display_linebreak("   ", optstrings, cols);
-	}
-
-	klpm_list_free(optdeps);
-	FREELIST(optstrings);
-}
-
-void display_optdepends(klpm_pkg_t *pkg)
-{
-	klpm_list_t *i, *optdeps, *optstrings = NULL;
-
-	optdeps = klpm_pkg_get_optdepends(pkg);
-
-	/* turn optdepends list into a text list */
-	for(i = optdeps; i; i = klpm_list_next(i)) {
-		klpm_depend_t *optdep = i->data;
-		optstrings = klpm_list_add(optstrings, make_optstring(optdep));
-	}
-
-	if(optstrings) {
-		printf(_("Optional dependencies for %s\n"), klpm_pkg_get_name(pkg));
-		unsigned short cols = getcols();
-		list_display_linebreak("   ", optstrings, cols);
-	}
-
-	FREELIST(optstrings);
-}
-
-static void display_repo_list(const char *dbname, klpm_list_t *list,
-		unsigned short cols)
-{
-	const char *prefix = "  ";
-	const colstr_t *colstr = &config->colstr;
-
-	colon_printf(_("Repository %s%s\n"), colstr->repo, dbname);
-	list_display(prefix, list, cols);
-}
-
-void select_display(const klpm_list_t *pkglist)
-{
-	const klpm_list_t *i;
-	int nth = 1;
-	klpm_list_t *list = NULL;
-	char *string = NULL;
-	const char *dbname = NULL;
-	unsigned short cols = getcols();
-
-	for(i = pkglist; i; i = i->next) {
-		klpm_pkg_t *pkg = i->data;
-		klpm_db_t *db = klpm_pkg_get_db(pkg);
-
-		if(!dbname) {
-			dbname = klpm_db_get_name(db);
-		}
-		if(strcmp(klpm_db_get_name(db), dbname) != 0) {
-			display_repo_list(dbname, list, cols);
-			FREELIST(list);
-			dbname = klpm_db_get_name(db);
-		}
-		string = NULL;
-		pm_asprintf(&string, "%d) %s", nth, klpm_pkg_get_name(pkg));
-		list = klpm_list_add(list, string);
-		nth++;
-	}
-	display_repo_list(dbname, list, cols);
-	FREELIST(list);
-}
-
-static int parseindex(char *s, int *val, int min, int max)
-{
-	char *endptr = NULL;
-	int n = strtol(s, &endptr, 10);
-	if(*endptr == '\0') {
-		if(n < min || n > max) {
-			pm_printf(KUZPKG_LOG_ERROR,
-					_("invalid value: %d is not between %d and %d\n"),
-					n, min, max);
-			return -1;
-		}
-		*val = n;
-		return 0;
-	} else {
-		pm_printf(KUZPKG_LOG_ERROR, _("invalid number: %s\n"), s);
-		return -1;
-	}
-}
-
-static int multiselect_parse(char *array, int count, char *response)
-{
-	char *str, *saveptr;
-
-	for(str = response; ; str = NULL) {
-		int include = 1;
-		int start, end;
-		size_t len;
-		char *ends = NULL;
-		char *starts = strtok_r(str, " ,", &saveptr);
-
-		if(starts == NULL) {
-			break;
-		}
-		len = strtrim(starts);
-		if(len == 0) {
-			continue;
-		}
-
-		if(*starts == '^') {
-			starts++;
-			len--;
-			include = 0;
-		} else if(str) {
-			/* if first token is including, we deselect all targets */
-			memset(array, 0, count);
-		}
-
-		if(len > 1) {
-			/* check for range */
-			char *p;
-			if((p = strchr(starts + 1, '-'))) {
-				*p = 0;
-				ends = p + 1;
-			}
-		}
-
-		if(parseindex(starts, &start, 1, count) != 0) {
-			return -1;
-		}
-
-		if(!ends) {
-			array[start - 1] = include;
-		} else {
-			if(parseindex(ends, &end, start, count) != 0) {
-				return -1;
-			}
-			do {
-				array[start - 1] = include;
-			} while(start++ < end);
-		}
-	}
-
-	return 0;
-}
-
-void console_cursor_hide(void) {
-	if(isatty(fileno(stdout))) {
-		printf(CURSOR_HIDE_ANSICODE);
-	}
-}
-
-void console_cursor_show(void) {
-	if(isatty(fileno(stdout))) {
-		printf(CURSOR_SHOW_ANSICODE);
-
-		/* We typically explicitly show the cursor either when we are
-		 * getting input from stdin, or when we are in the process of
-		 * exiting. In the former case, it's not guaranteed that the
-		 * terminal will see the command before reading from stdin. In
-		 * the latter case, we need to make sure that if we get a
-		 * further TERM/INT after we return signal disposition to
-		 * SIG_DFL, it doesn't leave the cursor invisible.
-		 */
-		fflush(stdout);
-	}
-}
-
-char *safe_fgets_stdin(char *s, int size)
-{
-	char *result;
-	console_cursor_show();
-	result = safe_fgets(s, size, stdin);
-	console_cursor_hide();
-	return result;
-}
-
-int multiselect_question(char *array, int count)
-{
-	char *response, *lastchar;
-	FILE *stream;
-	size_t response_len = 64;
-
-	if(config->noconfirm) {
-		stream = stdout;
-	} else {
-		/* Use stderr so questions are always displayed when redirecting output */
-		stream = stderr;
-	}
-
-	response = malloc(response_len);
-	if(!response) {
-		return -1;
-	}
-	lastchar = response + response_len - 1;
-	/* sentinel byte to later see if we filled up the entire string */
-	*lastchar = 1;
-
-	while(1) {
-		memset(array, 1, count);
-
-		fprintf(stream, "\n");
-		fprintf(stream, _("Enter a selection (default=all)"));
-		fprintf(stream, ": ");
-		fflush(stream);
-
-		if(config->noconfirm) {
-			fprintf(stream, "\n");
-			break;
-		}
-
-		flush_term_input(fileno(stdin));
-
-		if(safe_fgets_stdin(response, response_len)) {
-			const size_t response_incr = 64;
-			size_t len;
-			/* handle buffer not being large enough to read full line case */
-			while(*lastchar == '\0' && lastchar[-1] != '\n') {
-				char *new_response;
-				response_len += response_incr;
-				new_response = realloc(response, response_len);
-				if(!new_response) {
-					free(response);
-					return -1;
-				}
-				response = new_response;
-				lastchar = response + response_len - 1;
-				/* sentinel byte */
-				*lastchar = 1;
-				if(safe_fgets_stdin(response + response_len - response_incr - 1,
-							response_incr + 1) == 0) {
-					free(response);
-					return -1;
-				}
-			}
-
-			len = strtrim(response);
-			if(len > 0) {
-				if(multiselect_parse(array, count, response) == -1) {
-					/* only loop if user gave an invalid answer */
-					continue;
-				}
-			}
-			break;
-		} else {
-			free(response);
-			return -1;
-		}
-	}
-
-	free(response);
-	return 0;
-}
+	_klpm_log(handle, KUZPKG_LOG_DEBUG, "opening archive %s\n", path);
 
-int select_question(int count)
-{
-	char response[32];
-	FILE *stream;
-	int preset = 1;
+	OPEN(fd, path, O_RDONLY | O_CLOEXEC);
 
-	if(config->noconfirm) {
-		stream = stdout;
-	} else {
-		/* Use stderr so questions are always displayed when redirecting output */
-		stream = stderr;
+	if(fd < 0) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not open file %s: %s\n"),
+				path, strerror(errno));
+		goto error;
 	}
 
-	while(1) {
-		fprintf(stream, "\n");
-		fprintf(stream, _("Enter a number (default=%d)"), preset);
-		fprintf(stream, ": ");
-		fflush(stream);
-
-		if(config->noconfirm) {
-			fprintf(stream, "\n");
-			break;
-		}
-
-		flush_term_input(fileno(stdin));
-
-		if(safe_fgets_stdin(response, sizeof(response))) {
-			size_t len = strtrim(response);
-			if(len > 0) {
-				int n;
-				if(parseindex(response, &n, 1, count) != 0) {
-					continue;
-				}
-				return (n - 1);
-			}
-		}
-		break;
-	}
-
-	return (preset - 1);
-}
-
-#define CMP(x, y) ((x) < (y) ? -1 : ((x) > (y) ? 1 : 0))
-
-static int mbscasecmp(const char *s1, const char *s2)
-{
-	size_t len1 = strlen(s1), len2 = strlen(s2);
-	wchar_t c1, c2;
-	const char *p1 = s1, *p2 = s2;
-	mbstate_t ps1, ps2;
-	memset(&ps1, 0, sizeof(mbstate_t));
-	memset(&ps2, 0, sizeof(mbstate_t));
-	while(*p1 && *p2) {
-		size_t b1 = mbrtowc(&c1, p1, len1, &ps1);
-		size_t b2 = mbrtowc(&c2, p2, len2, &ps2);
-		if(b1 == (size_t) -2 || b1 == (size_t) -1
-				|| b2 == (size_t) -2 || b2 == (size_t) -1) {
-			/* invalid multi-byte string, fall back to strcasecmp */
-			return strcasecmp(p1, p2);
-		}
-		if(b1 == 0 || b2 == 0) {
-			return CMP(c1, c2);
-		}
-		c1 = towlower(c1);
-		c2 = towlower(c2);
-		if(c1 != c2) {
-			return CMP(c1, c2);
-		}
-		p1 += b1;
-		p2 += b2;
-		len1 -= b1;
-		len2 -= b2;
-	}
-	return CMP(*p1, *p2);
-}
-
-/* presents a prompt and gets a Y/N answer */
-__attribute__((format(printf, 2, 0)))
-static int question(short preset, const char *format, va_list args)
-{
-	char response[32];
-	FILE *stream;
-	int fd_in = fileno(stdin);
-
-	if(config->noconfirm) {
-		stream = stdout;
-	} else {
-		/* Use stderr so questions are always displayed when redirecting output */
-		stream = stderr;
-	}
-
-	/* ensure all text makes it to the screen before we prompt the user */
-	fflush(stdout);
-	fflush(stderr);
-
-	fputs(config->colstr.colon, stream);
-	vfprintf(stream, format, args);
-
-	if(preset) {
-		fprintf(stream, " %s ", _("[Y/n]"));
-	} else {
-		fprintf(stream, " %s ", _("[y/N]"));
-	}
-
-	fputs(config->colstr.nocolor, stream);
-	fflush(stream);
-
-	if(config->noconfirm) {
-		fprintf(stream, "\n");
-		return preset;
-	}
-
-	flush_term_input(fd_in);
-
-	if(safe_fgets_stdin(response, sizeof(response))) {
-		size_t len = strtrim(response);
-		if(len == 0) {
-			return preset;
-		}
-
-		/* if stdin is piped, response does not get printed out, and as a result
-		 * a \n is missing, resulting in broken output */
-		if(!isatty(fd_in)) {
-			fprintf(stream, "%s\n", response);
-		}
-
-		if(mbscasecmp(response, _("Y")) == 0 || mbscasecmp(response, _("YES")) == 0) {
-			return 1;
-		} else if(mbscasecmp(response, _("N")) == 0 || mbscasecmp(response, _("NO")) == 0) {
-			return 0;
-		}
-	}
-	return 0;
-}
-
-int yesno(const char *format, ...)
-{
-	int ret;
-	va_list args;
-
-	va_start(args, format);
-	ret = question(1, format, args);
-	va_end(args);
-
-	return ret;
-}
-
-int noyes(const char *format, ...)
-{
-	int ret;
-	va_list args;
-
-	va_start(args, format);
-	ret = question(0, format, args);
-	va_end(args);
-
-	return ret;
-}
-
-int colon_printf(const char *fmt, ...)
-{
-	int ret;
-	va_list args;
-
-	va_start(args, fmt);
-	fputs(config->colstr.colon, stdout);
-	ret = vprintf(fmt, args);
-	fputs(config->colstr.nocolor, stdout);
-	va_end(args);
-
-	fflush(stdout);
-	return ret;
-}
-
-int pm_printf(klpm_loglevel_t level, const char *format, ...)
-{
-	int ret;
-	va_list args;
-
-	/* print the message using va_arg list */
-	va_start(args, format);
-	ret = pm_vfprintf(stderr, level, format, args);
-	va_end(args);
-
-	return ret;
-}
-
-int pm_asprintf(char **string, const char *format, ...)
-{
-	int ret = 0;
-	va_list args;
-
-	/* print the message using va_arg list */
-	va_start(args, format);
-	if(vasprintf(string, format, args) == -1) {
-		pm_printf(KUZPKG_LOG_ERROR, _("failed to allocate string\n"));
-		ret = -1;
-	}
-	va_end(args);
-
-	return ret;
-}
-
-int pm_sprintf(char **string, klpm_loglevel_t level, const char *format, ...)
-{
-	int ret = 0;
-	va_list args;
-
-	/* print the message using va_arg list */
-	va_start(args, format);
-	ret = pm_vasprintf(string, level, format, args);
-	va_end(args);
-
-	return ret;
-}
-
-int pm_vasprintf(char **string, klpm_loglevel_t level, const char *format, va_list args)
-{
-	int ret = 0;
-	char *msg = NULL;
-
-	/* if current logmask does not overlap with level, do not print msg */
-	if(!(config->logmask & level)) {
-		return ret;
-	}
-
-	/* print the message using va_arg list */
-	ret = vasprintf(&msg, format, args);
-
-	/* print a prefix to the message */
-	switch(level) {
-		case KUZPKG_LOG_ERROR:
-			pm_asprintf(string, "%s%s%s%s", config->colstr.err, _("error: "),
-								config->colstr.nocolor, msg);
-			break;
-		case KUZPKG_LOG_WARNING:
-			pm_asprintf(string, "%s%s%s%s", config->colstr.warn, _("warning: "),
-								config->colstr.nocolor, msg);
-			break;
-		case KUZPKG_LOG_DEBUG:
-			pm_asprintf(string, "debug: %s", msg);
-			break;
-		case KUZPKG_LOG_FUNCTION:
-			pm_asprintf(string, "function: %s", msg);
-			break;
-		default:
-			pm_asprintf(string, "%s", msg);
-			break;
-	}
-	free(msg);
-
-	return ret;
-}
-
-int pm_vfprintf(FILE *stream, klpm_loglevel_t level, const char *format, va_list args)
-{
-	int ret = 0;
-
-	/* if current logmask does not overlap with level, do not print msg */
-	if(!(config->logmask & level)) {
-		return ret;
+	if(fstat(fd, buf) != 0) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not stat file %s: %s\n"),
+				path, strerror(errno));
+		goto error;
 	}
-
-#if defined(KUZPKG_DEBUG)
-	/* If debug is on, we'll timestamp the output */
-	if(config->logmask & KUZPKG_LOG_DEBUG) {
-		time_t t;
-		struct tm *tmp;
-		char timestr[10] = {0};
-
-		t = time(NULL);
-		tmp = localtime(&t);
-		strftime(timestr, 9, "%H:%M:%S", tmp);
-		timestr[8] = '\0';
 
-		fprintf(stream, "[%s] ", timestr);
+#ifdef HAVE_STRUCT_STAT_ST_BLKSIZE
+	if(buf->st_blksize > KUZPKG_BUFFER_SIZE) {
+		bufsize = buf->st_blksize;
 	}
 #endif
 
-	/* print a prefix to the message */
-	switch(level) {
-		case KUZPKG_LOG_ERROR:
-			fprintf(stream, "%s%s%s", config->colstr.err, _("error: "),
-					config->colstr.nocolor);
-			break;
-		case KUZPKG_LOG_WARNING:
-			fprintf(stream, "%s%s%s", config->colstr.warn, _("warning: "),
-					config->colstr.nocolor);
-			break;
-		case KUZPKG_LOG_DEBUG:
-			fprintf(stream, "debug: ");
-			break;
-		case KUZPKG_LOG_FUNCTION:
-			fprintf(stream, "function: ");
-			break;
-		default:
-			break;
+	if(archive_read_open_fd(*archive, fd, bufsize) != ARCHIVE_OK) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not open file %s: %s\n"),
+				path, archive_error_string(*archive));
+		goto error;
 	}
 
-	/* print the message using va_arg list */
-	ret = vfprintf(stream, format, args);
+	return fd;
+
+error:
+	_klpm_archive_read_free(*archive);
+	*archive = NULL;
+
+	if(fd >= 0) {
+		close(fd);
+	}
+
+	RET_ERR(handle, error, -1);
+}
+
+/** Unpack a specific file in an archive. */
+int _klpm_unpack_single(klpm_handle_t *handle, const char *archive,
+		const char *prefix, const char *filename)
+{
+	klpm_list_t *list = NULL;
+	int ret = 0;
+
+	if(filename == NULL) {
+		return 1;
+	}
+
+	list = klpm_list_add(list, (void *)filename);
+	ret = _klpm_unpack(handle, archive, prefix, list, 1);
+	klpm_list_free(list);
+
 	return ret;
 }
 
-char *arg_to_string(int argc, char *argv[])
+/** Unpack a list of files in an archive. */
+int _klpm_unpack(klpm_handle_t *handle, const char *path, const char *prefix,
+		klpm_list_t *list, int breakfirst)
 {
-	char *cl_text, *p;
-	size_t size = 0;
-	int i;
-	for(i = 0; i < argc; i++) {
-		size += strlen(argv[i]) + 1;
+	int ret = 0;
+	mode_t oldmask;
+	struct archive *archive;
+	struct archive_entry *entry;
+	struct stat buf;
+	int fd, cwdfd;
+
+	fd = _klpm_open_archive(handle, path, &buf, &archive,
+			KUZPKG_ERR_PKG_OPEN);
+
+	if(fd < 0) {
+		return 1;
 	}
-	if(!size) {
+
+	oldmask = umask(0022);
+
+	OPEN(cwdfd, ".", O_RDONLY | O_CLOEXEC);
+
+	if(cwdfd < 0) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not get current working directory\n"));
+	}
+
+	if(chdir(prefix) != 0) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not change directory to %s (%s)\n"),
+				prefix, strerror(errno));
+		ret = 1;
+		goto cleanup;
+	}
+
+	while(archive_read_next_header(archive, &entry) == ARCHIVE_OK) {
+		const char *entryname;
+		mode_t mode;
+
+		entryname = archive_entry_pathname(entry);
+
+		if(entryname == NULL) {
+			ret = 1;
+			goto cleanup;
+		}
+
+		if(list) {
+			char *entry_prefix = NULL;
+			char *p;
+			char *found;
+
+			STRDUP(entry_prefix, entryname,
+					ret = 1; goto cleanup);
+
+			p = strstr(entry_prefix, "/");
+			if(p) {
+				*(p + 1) = '\0';
+			}
+
+			found = klpm_list_find_str(list, entry_prefix);
+			free(entry_prefix);
+
+			if(!found) {
+				if(archive_read_data_skip(archive) != ARCHIVE_OK) {
+					ret = 1;
+					goto cleanup;
+				}
+				continue;
+			}
+
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"extracting: %s\n", entryname);
+		}
+
+		mode = archive_entry_mode(entry);
+
+		if(S_ISREG(mode)) {
+			archive_entry_set_perm(entry, 0644);
+		} else if(S_ISDIR(mode)) {
+			archive_entry_set_perm(entry, 0755);
+		}
+
+		{
+			int readret = archive_read_extract(archive, entry, 0);
+
+			if(readret == ARCHIVE_WARN) {
+				_klpm_log(handle, KUZPKG_LOG_WARNING,
+						_("warning given when extracting %s (%s)\n"),
+						entryname, archive_error_string(archive));
+			} else if(readret != ARCHIVE_OK) {
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("could not extract %s (%s)\n"),
+						entryname, archive_error_string(archive));
+				ret = 1;
+				goto cleanup;
+			}
+		}
+
+		if(breakfirst) {
+			break;
+		}
+	}
+
+cleanup:
+	umask(oldmask);
+	_klpm_archive_read_free(archive);
+	close(fd);
+
+	if(cwdfd >= 0) {
+		if(fchdir(cwdfd) != 0) {
+			_klpm_log(handle, KUZPKG_LOG_ERROR,
+					_("could not restore working directory (%s)\n"),
+					strerror(errno));
+		}
+		close(cwdfd);
+	}
+
+	return ret;
+}
+
+/** Determine if there are files in a directory. */
+ssize_t _klpm_files_in_directory(klpm_handle_t *handle, const char *path,
+		int full_count)
+{
+	ssize_t files = 0;
+	struct dirent *ent;
+	DIR *dir = opendir(path);
+
+	if(!dir) {
+		if(errno == ENOTDIR) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"%s was not a directory\n", path);
+		} else {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"could not read directory %s\n", path);
+		}
+		return -1;
+	}
+
+	while((ent = readdir(dir)) != NULL) {
+		const char *name = ent->d_name;
+
+		if(strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
+			continue;
+		}
+
+		files++;
+
+		if(!full_count) {
+			break;
+		}
+	}
+
+	closedir(dir);
+	return files;
+}
+
+static int should_retry(int errnum)
+{
+	return errnum == EAGAIN
+#if EAGAIN != EWOULDBLOCK
+		|| errnum == EWOULDBLOCK
+#endif
+		|| errnum == EINTR;
+}
+
+static int _klpm_chroot_write_to_child(klpm_handle_t *handle, int fd,
+		char *buf, ssize_t *buf_size, ssize_t buf_limit,
+		_klpm_cb_io out_cb, void *cb_ctx)
+{
+	ssize_t nwrite;
+
+	if(*buf_size == 0) {
+		if((*buf_size = out_cb(buf, buf_limit, cb_ctx)) == 0) {
+			return -1;
+		}
+	}
+
+	nwrite = send(fd, buf, *buf_size, MSG_NOSIGNAL);
+
+	if(nwrite != -1) {
+		*buf_size -= nwrite;
+		memmove(buf, buf + nwrite, *buf_size);
+	} else if(should_retry(errno)) {
+	} else {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("unable to write to pipe (%s)\n"),
+				strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+static void _klpm_chroot_process_output(klpm_handle_t *handle,
+		const char *line)
+{
+	klpm_event_scriptlet_info_t event = {
+		.type = KUZPKG_EVENT_SCRIPTLET_INFO,
+		.line = line
+	};
+
+	klpm_logaction(handle, "KUZPKG-SCRIPTLET", "%s", line);
+	EVENT(handle, &event);
+}
+
+static int _klpm_chroot_read_from_child(klpm_handle_t *handle, int fd,
+		char *buf, ssize_t *buf_size, ssize_t buf_limit)
+{
+	ssize_t space = buf_limit - *buf_size - 2;
+	ssize_t nread = read(fd, buf + *buf_size, space);
+
+	if(nread > 0) {
+		char *newline = memchr(buf + *buf_size, '\n', nread);
+
+		*buf_size += nread;
+
+		if(newline) {
+			while(newline) {
+				size_t linelen = newline - buf + 1;
+				char old = buf[linelen];
+
+				buf[linelen] = '\0';
+				_klpm_chroot_process_output(handle, buf);
+				buf[linelen] = old;
+
+				*buf_size -= linelen;
+				memmove(buf, buf + linelen, *buf_size);
+
+				newline = memchr(buf, '\n', *buf_size);
+			}
+		} else if(nread == space) {
+			strcpy(buf + *buf_size, "\n");
+			_klpm_chroot_process_output(handle, buf);
+			*buf_size = 0;
+		}
+	} else if(nread == 0) {
+		if(*buf_size) {
+			strcpy(buf + *buf_size, "\n");
+			_klpm_chroot_process_output(handle, buf);
+		}
+		return -1;
+	} else if(should_retry(errno)) {
+	} else {
+		if(*buf_size) {
+			strcpy(buf + *buf_size, "\n");
+			_klpm_chroot_process_output(handle, buf);
+		}
+
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("unable to read from pipe (%s)\n"),
+				strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+void _klpm_reset_signals(void)
+{
+	int *i, signals[] = {
+		SIGABRT, SIGALRM, SIGBUS, SIGCHLD, SIGCONT, SIGFPE, SIGHUP,
+		SIGILL, SIGINT, SIGKILL, SIGPIPE, SIGQUIT, SIGSEGV, SIGSTOP,
+		SIGTERM, SIGTSTP, SIGTTIN, SIGTTOU, SIGUSR1, SIGUSR2, SIGPROF,
+		SIGSYS, SIGTRAP, SIGURG, SIGVTALRM, SIGXCPU, SIGXFSZ,
+#if defined(SIGPOLL)
+		SIGPOLL,
+#endif
+		0
+	};
+
+	struct sigaction def = { .sa_handler = SIG_DFL };
+
+	sigemptyset(&def.sa_mask);
+
+	for(i = signals; *i; i++) {
+		sigaction(*i, &def, NULL);
+	}
+}
+
+int _klpm_run_chroot(klpm_handle_t *handle, const char *cmd,
+		char *const argv[], _klpm_cb_io stdin_cb, void *stdin_ctx)
+{
+	pid_t pid;
+	int child2parent_pipefd[2], parent2child_pipefd[2];
+	int cwdfd;
+	int retval = 0;
+
+#define HEAD 1
+#define TAIL 0
+
+	OPEN(cwdfd, ".", O_RDONLY | O_CLOEXEC);
+
+	if(cwdfd < 0) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not get current working directory\n"));
+	}
+
+	if(chdir(handle->root) != 0) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not change directory to %s (%s)\n"),
+				handle->root, strerror(errno));
+		goto cleanup;
+	}
+
+	_klpm_log(handle, KUZPKG_LOG_DEBUG,
+			"executing \"%s\" under chroot \"%s\"\n",
+			cmd, handle->root);
+
+	fflush(NULL);
+
+	if(socketpair(AF_UNIX, SOCK_STREAM, 0, child2parent_pipefd) == -1) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not create pipe (%s)\n"),
+				strerror(errno));
+		retval = 1;
+		goto cleanup;
+	}
+
+	if(socketpair(AF_UNIX, SOCK_STREAM, 0, parent2child_pipefd) == -1) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not create pipe (%s)\n"),
+				strerror(errno));
+		retval = 1;
+		goto cleanup;
+	}
+
+	pid = fork();
+
+	if(pid == -1) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("could not fork a new process (%s)\n"),
+				strerror(errno));
+		retval = 1;
+		goto cleanup;
+	}
+
+	if(pid == 0) {
+		close(0);
+		close(1);
+		close(2);
+
+		while(dup2(child2parent_pipefd[HEAD], 1) == -1 &&
+				errno == EINTR);
+		while(dup2(child2parent_pipefd[HEAD], 2) == -1 &&
+				errno == EINTR);
+		while(dup2(parent2child_pipefd[TAIL], 0) == -1 &&
+				errno == EINTR);
+
+		close(parent2child_pipefd[TAIL]);
+		close(parent2child_pipefd[HEAD]);
+		close(child2parent_pipefd[TAIL]);
+		close(child2parent_pipefd[HEAD]);
+
+		if(cwdfd >= 0) {
+			close(cwdfd);
+		}
+
+		if(strcmp(handle->root, "/") != 0 &&
+				chroot(handle->root) != 0) {
+			fprintf(stderr,
+					_("could not change the root directory (%s)\n"),
+					strerror(errno));
+			exit(1);
+		}
+
+		if(chdir("/") != 0) {
+			fprintf(stderr,
+					_("could not change directory to %s (%s)\n"),
+					"/", strerror(errno));
+			exit(1);
+		}
+
+		setenv("SHLVL", "1", 0);
+		unsetenv("BASH_ENV");
+		umask(0022);
+		_klpm_reset_signals();
+		_klpm_handle_free(handle);
+
+		execv(cmd, argv);
+
+		fprintf(stderr, _("call to execv failed (%s)\n"),
+				strerror(errno));
+		exit(1);
+	} else {
+		int status;
+		char obuf[PIPE_BUF];
+		char ibuf[LINE_MAX];
+		ssize_t olen = 0, ilen = 0;
+		nfds_t nfds = 2;
+		struct pollfd fds[2];
+		struct pollfd *child2parent = &(fds[0]);
+		struct pollfd *parent2child = &(fds[1]);
+		int poll_ret;
+
+		child2parent->fd = child2parent_pipefd[TAIL];
+		child2parent->events = POLLIN;
+
+		fcntl(child2parent->fd, F_SETFL, O_NONBLOCK);
+
+		close(child2parent_pipefd[HEAD]);
+		close(parent2child_pipefd[TAIL]);
+
+		if(stdin_cb) {
+			parent2child->fd = parent2child_pipefd[HEAD];
+			parent2child->events = POLLOUT;
+			fcntl(parent2child->fd, F_SETFL, O_NONBLOCK);
+		} else {
+			parent2child->fd = -1;
+			parent2child->events = 0;
+			close(parent2child_pipefd[HEAD]);
+		}
+
+#define STOP_POLLING(p) do { \
+	close((p)->fd); \
+	(p)->fd = -1; \
+} while(0)
+
+		while((child2parent->fd != -1 ||
+				parent2child->fd != -1) &&
+				(poll_ret = poll(fds, nfds, -1)) != 0) {
+			if(poll_ret == -1) {
+				if(errno == EINTR) {
+					continue;
+				}
+				break;
+			}
+
+			if(child2parent->revents & POLLIN) {
+				if(_klpm_chroot_read_from_child(handle,
+						child2parent->fd,
+						ibuf, &ilen,
+						sizeof(ibuf)) != 0) {
+					STOP_POLLING(child2parent);
+				}
+			} else if(child2parent->revents) {
+				STOP_POLLING(child2parent);
+			}
+
+			if(parent2child->revents & POLLOUT) {
+				if(_klpm_chroot_write_to_child(handle,
+						parent2child->fd,
+						obuf, &olen,
+						sizeof(obuf),
+						stdin_cb,
+						stdin_ctx) != 0) {
+					STOP_POLLING(parent2child);
+				}
+			} else if(parent2child->revents) {
+				STOP_POLLING(parent2child);
+			}
+		}
+
+		if(ilen) {
+			strcpy(ibuf + ilen, "\n");
+			_klpm_chroot_process_output(handle, ibuf);
+		}
+
+#undef STOP_POLLING
+#undef HEAD
+#undef TAIL
+
+		if(parent2child->fd != -1) {
+			close(parent2child->fd);
+		}
+
+		if(child2parent->fd != -1) {
+			close(child2parent->fd);
+		}
+
+		while(waitpid(pid, &status, 0) == -1) {
+			if(errno != EINTR) {
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("call to waitpid failed (%s)\n"),
+						strerror(errno));
+				retval = 1;
+				goto cleanup;
+			}
+		}
+
+		if(WIFEXITED(status)) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"call to waitpid succeeded\n");
+
+			if(WEXITSTATUS(status) != 0) {
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("command failed to execute correctly\n"));
+				retval = 1;
+			}
+		} else if(WIFSIGNALED(status)) {
+			char *signal_description = strsignal(WTERMSIG(status));
+
+			if(signal_description == NULL) {
+				signal_description = _("Unknown signal");
+			}
+
+			_klpm_log(handle, KUZPKG_LOG_ERROR,
+					_("command terminated by signal %d: %s\n"),
+					WTERMSIG(status), signal_description);
+			retval = 1;
+		}
+	}
+
+cleanup:
+	if(cwdfd >= 0) {
+		if(fchdir(cwdfd) != 0) {
+			_klpm_log(handle, KUZPKG_LOG_ERROR,
+					_("could not restore working directory (%s)\n"),
+					strerror(errno));
+		}
+
+		close(cwdfd);
+	}
+
+	return retval;
+}
+
+/** Run ldconfig in a chroot. */
+int _klpm_ldconfig(klpm_handle_t *handle)
+{
+	char line[PATH_MAX];
+
+	_klpm_log(handle, KUZPKG_LOG_DEBUG, "running ldconfig\n");
+
+	snprintf(line, PATH_MAX, "%setc/ld.so.conf", handle->root);
+
+	if(access(line, F_OK) == 0) {
+		snprintf(line, PATH_MAX, "%s%s", handle->root, LDCONFIG);
+
+		if(access(line, X_OK) == 0) {
+			char arg0[32];
+			char *argv[] = { arg0, NULL };
+
+			strcpy(arg0, "ldconfig");
+
+			return _klpm_run_chroot(handle, LDCONFIG, argv,
+					NULL, NULL);
+		}
+	}
+
+	return 0;
+}
+
+/** Compare two strings using klpm's compare signature. */
+int _klpm_str_cmp(const void *s1, const void *s2)
+{
+	return strcmp(s1, s2);
+}
+
+/** Find a filename in a registered klpm cachedir. */
+char *_klpm_filecache_find(klpm_handle_t *handle, const char *filename)
+{
+	char path[PATH_MAX];
+	char *retpath;
+	klpm_list_t *i;
+	struct stat buf;
+
+	for(i = handle->cachedirs; i; i = i->next) {
+		snprintf(path, PATH_MAX, "%s%s",
+				(char *)i->data, filename);
+
+		if(stat(path, &buf) == 0) {
+			if(S_ISREG(buf.st_mode)) {
+				retpath = strdup(path);
+				_klpm_log(handle, KUZPKG_LOG_DEBUG,
+						"found cached pkg: %s\n",
+						retpath);
+				return retpath;
+			}
+
+			_klpm_log(handle, KUZPKG_LOG_WARNING,
+					"cached pkg '%s' is not a regular file: mode=%i\n",
+					path, buf.st_mode);
+		} else if(errno != ENOENT) {
+			_klpm_log(handle, KUZPKG_LOG_WARNING,
+					"could not open '%s': %s",
+					path, strerror(errno));
+		}
+	}
+
+	return NULL;
+}
+
+/** Check whether a filename exists in a registered klpm cachedir. */
+int _klpm_filecache_exists(klpm_handle_t *handle, const char *filename)
+{
+	int res;
+	char *fpath = _klpm_filecache_find(handle, filename);
+
+	res = (fpath != NULL);
+	FREE(fpath);
+
+	return res;
+}
+
+/** Find a writable package cache directory. */
+const char *_klpm_filecache_setup(klpm_handle_t *handle)
+{
+	struct stat buf;
+	klpm_list_t *i;
+	char *cachedir;
+	const char *tmpdir;
+
+	for(i = handle->cachedirs; i; i = i->next) {
+		cachedir = i->data;
+
+		if(stat(cachedir, &buf) != 0) {
+			_klpm_log(handle, KUZPKG_LOG_WARNING,
+					_("no %s cache exists, creating...\n"),
+					cachedir);
+
+			if(_klpm_makepath(cachedir) == 0) {
+				_klpm_log(handle, KUZPKG_LOG_DEBUG,
+						"using cachedir: %s\n",
+						cachedir);
+				return cachedir;
+			}
+		} else if(!S_ISDIR(buf.st_mode)) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"skipping cachedir, not a directory: %s\n",
+					cachedir);
+		} else if(_klpm_access(handle, NULL, cachedir, W_OK) != 0) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"skipping cachedir, not writable: %s\n",
+					cachedir);
+		} else if(!(buf.st_mode &
+				(S_IWUSR | S_IWGRP | S_IWOTH))) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"skipping cachedir, no write bits set: %s\n",
+					cachedir);
+		} else {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"using cachedir: %s\n",
+					cachedir);
+			return cachedir;
+		}
+	}
+
+	if((tmpdir = getenv("TMPDIR")) &&
+			stat(tmpdir, &buf) == 0 &&
+			S_ISDIR(buf.st_mode)) {
+	} else {
+		tmpdir = "/tmp";
+	}
+
+	klpm_option_add_cachedir(handle, tmpdir);
+	cachedir = handle->cachedirs->prev->data;
+
+	_klpm_log(handle, KUZPKG_LOG_DEBUG,
+			"using cachedir: %s\n", cachedir);
+
+	_klpm_log(handle, KUZPKG_LOG_WARNING,
+			_("couldn't find or create package cache, using %s instead\n"),
+			cachedir);
+
+	return cachedir;
+}
+
+/** Setup directory for downloading files. */
+char *_klpm_download_dir_setup(klpm_handle_t *handle, const char *dir)
+{
+	char *newdir = NULL;
+
+	ASSERT(dir != NULL,
+			RET_ERR(handle, KUZPKG_ERR_WRONG_ARGS, NULL));
+
+	if(_klpm_use_sandbox(handle)) {
+		struct passwd const *pw = NULL;
+		errno = 0;
+
+		pw = getpwnam(handle->sandboxuser);
+
+		if(pw == NULL) {
+			if(errno == 0) {
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("download user '%s' does not exist\n"),
+						handle->sandboxuser);
+			} else {
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("failed to get download user '%s': %s\n"),
+						handle->sandboxuser,
+						strerror(errno));
+			}
+
+			RET_ERR(handle,
+					KUZPKG_ERR_RETRIEVE_PREPARE, NULL);
+		}
+
+		{
+			const char template[] = "download-XXXXXX";
+			size_t newdirlen =
+				strlen(dir) + sizeof(template) + 1;
+
+			MALLOC(newdir, newdirlen,
+					RET_ERR(handle,
+						KUZPKG_ERR_MEMORY, NULL));
+
+			snprintf(newdir, newdirlen - 1,
+					"%s%s", dir, template);
+
+			if(mkdtemp(newdir) == NULL) {
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("failed to create temporary download "
+						  "directory %s: %s\n"),
+						newdir, strerror(errno));
+
+				free(newdir);
+
+				RET_ERR(handle,
+						KUZPKG_ERR_RETRIEVE_PREPARE,
+						NULL);
+			}
+
+			if(chown(newdir, pw->pw_uid, pw->pw_gid) == -1) {
+				_klpm_log(handle, KUZPKG_LOG_ERROR,
+						_("failed to chown temporary download "
+						  "directory %s: %s\n"),
+						newdir, strerror(errno));
+
+				free(newdir);
+
+				RET_ERR(handle,
+						KUZPKG_ERR_RETRIEVE_PREPARE,
+						NULL);
+			}
+
+			newdir[newdirlen - 2] = '/';
+			newdir[newdirlen - 1] = '\0';
+		}
+	} else {
+		STRDUP(newdir, dir, return NULL);
+	}
+
+	return newdir;
+}
+
+/** Remove a temporary download directory. */
+void _klpm_remove_temporary_download_dir(const char *dir)
+{
+	ASSERT(dir != NULL, return);
+
+	{
+		size_t dirlen = strlen(dir);
+		struct dirent *dp = NULL;
+		DIR *dirp = opendir(dir);
+
+		if(!dirp) {
+			return;
+		}
+
+		for(dp = readdir(dirp); dp != NULL; dp = readdir(dirp)) {
+			if(strcmp(dp->d_name, "..") != 0 &&
+					strcmp(dp->d_name, ".") != 0) {
+				char name[PATH_MAX];
+
+				if(dirlen + strlen(dp->d_name) + 2 > PATH_MAX) {
+					continue;
+				}
+
+				snprintf(name, sizeof(name), "%s/%s",
+						dir, dp->d_name);
+
+				if(unlink(name)) {
+					continue;
+				}
+			}
+		}
+
+		closedir(dirp);
+		rmdir(dir);
+	}
+}
+
+
+/*
+ * Checksum support
+ *
+ * IMPORTANT:
+ *
+ * This intentionally does NOT use:
+ *
+ *     #if defined(HAVE_LIBSSL) || defined(HAVE_LIBNETTLE)
+ *
+ * with an unconditional Nettle else branch.
+ *
+ * When crypto=none is selected, neither HAVE_LIBSSL nor HAVE_LIBNETTLE
+ * is defined. In that case the functions below compile without referencing
+ * any crypto library and simply report that checksum calculation is
+ * unavailable.
+ */
+
+static int md5_file(const char *path, unsigned char output[16])
+{
+	unsigned char *buf;
+	ssize_t n;
+	int fd;
+
+#if HAVE_LIBSSL
+	EVP_MD_CTX *ctx;
+	const EVP_MD *md;
+
+#elif HAVE_LIBNETTLE
+	struct md5_ctx ctx;
+
+#else
+	(void)path;
+	(void)output;
+	return 1;
+#endif
+
+	MALLOC(buf, (size_t)KUZPKG_BUFFER_SIZE, return 1);
+
+	OPEN(fd, path, O_RDONLY | O_CLOEXEC);
+
+	if(fd < 0) {
+		free(buf);
+		return 1;
+	}
+
+#if HAVE_LIBSSL
+	ctx = EVP_MD_CTX_create();
+	if(ctx == NULL) {
+		close(fd);
+		free(buf);
+		return 1;
+	}
+
+	md = EVP_get_digestbyname("MD5");
+	if(md == NULL || EVP_DigestInit_ex(ctx, md, NULL) != 1) {
+		EVP_MD_CTX_destroy(ctx);
+		close(fd);
+		free(buf);
+		return 1;
+	}
+
+#elif HAVE_LIBNETTLE
+	md5_init(&ctx);
+#endif
+
+	while((n = read(fd, buf, KUZPKG_BUFFER_SIZE)) > 0 ||
+			errno == EINTR) {
+		if(n < 0) {
+			continue;
+		}
+
+#if HAVE_LIBSSL
+		if(EVP_DigestUpdate(ctx, buf, (size_t)n) != 1) {
+			EVP_MD_CTX_destroy(ctx);
+			close(fd);
+			free(buf);
+			return 1;
+		}
+
+#elif HAVE_LIBNETTLE
+		md5_update(&ctx, (size_t)n, buf);
+#endif
+	}
+
+	close(fd);
+	free(buf);
+
+	if(n < 0) {
+#if HAVE_LIBSSL
+		EVP_MD_CTX_destroy(ctx);
+#endif
+		return 2;
+	}
+
+#if HAVE_LIBSSL
+	if(EVP_DigestFinal_ex(ctx, output, NULL) != 1) {
+		EVP_MD_CTX_destroy(ctx);
+		return 1;
+	}
+
+	EVP_MD_CTX_destroy(ctx);
+
+#elif HAVE_LIBNETTLE
+	md5_digest(&ctx, MD5_DIGEST_SIZE, output);
+#endif
+
+	return 0;
+}
+
+static int sha256_file(const char *path, unsigned char output[32])
+{
+	unsigned char *buf;
+	ssize_t n;
+	int fd;
+
+#if HAVE_LIBSSL
+	EVP_MD_CTX *ctx;
+	const EVP_MD *md;
+
+#elif HAVE_LIBNETTLE
+	struct sha256_ctx ctx;
+
+#else
+	(void)path;
+	(void)output;
+	return 1;
+#endif
+
+	MALLOC(buf, (size_t)KUZPKG_BUFFER_SIZE, return 1);
+
+	OPEN(fd, path, O_RDONLY | O_CLOEXEC);
+
+	if(fd < 0) {
+		free(buf);
+		return 1;
+	}
+
+#if HAVE_LIBSSL
+	ctx = EVP_MD_CTX_create();
+	if(ctx == NULL) {
+		close(fd);
+		free(buf);
+		return 1;
+	}
+
+	md = EVP_get_digestbyname("SHA256");
+	if(md == NULL || EVP_DigestInit_ex(ctx, md, NULL) != 1) {
+		EVP_MD_CTX_destroy(ctx);
+		close(fd);
+		free(buf);
+		return 1;
+	}
+
+#elif HAVE_LIBNETTLE
+	sha256_init(&ctx);
+#endif
+
+	while((n = read(fd, buf, KUZPKG_BUFFER_SIZE)) > 0 ||
+			errno == EINTR) {
+		if(n < 0) {
+			continue;
+		}
+
+#if HAVE_LIBSSL
+		if(EVP_DigestUpdate(ctx, buf, (size_t)n) != 1) {
+			EVP_MD_CTX_destroy(ctx);
+			close(fd);
+			free(buf);
+			return 1;
+		}
+
+#elif HAVE_LIBNETTLE
+		sha256_update(&ctx, (size_t)n, buf);
+#endif
+	}
+
+	close(fd);
+	free(buf);
+
+	if(n < 0) {
+#if HAVE_LIBSSL
+		EVP_MD_CTX_destroy(ctx);
+#endif
+		return 2;
+	}
+
+#if HAVE_LIBSSL
+	if(EVP_DigestFinal_ex(ctx, output, NULL) != 1) {
+		EVP_MD_CTX_destroy(ctx);
+		return 1;
+	}
+
+	EVP_MD_CTX_destroy(ctx);
+
+#elif HAVE_LIBNETTLE
+	sha256_digest(&ctx, SHA256_DIGEST_SIZE, output);
+#endif
+
+	return 0;
+}
+
+char SYMEXPORT *klpm_compute_md5sum(const char *filename)
+{
+	unsigned char output[16];
+
+	ASSERT(filename != NULL, return NULL);
+
+	if(md5_file(filename, output) > 0) {
 		return NULL;
 	}
-	if(!(cl_text = malloc(size))) {
+
+	return hex_representation(output, sizeof(output));
+}
+
+char SYMEXPORT *klpm_compute_sha256sum(const char *filename)
+{
+	unsigned char output[32];
+
+	ASSERT(filename != NULL, return NULL);
+
+	if(sha256_file(filename, output) > 0) {
 		return NULL;
 	}
-	for(p = cl_text, i = 0; i + 1 < argc; i++) {
-		strcpy(p, argv[i]);
-		p += strlen(argv[i]);
-		*p++ = ' ';
-	}
-	strcpy(p, argv[i]);
-	return cl_text;
+
+	return hex_representation(output, sizeof(output));
 }
 
-/* Moves console cursor `lines` up */
-void console_cursor_move_up(unsigned int lines)
+/**
+ * Calculates a file's MD5 or SHA-256 digest and compares it
+ * to an expected value.
+ */
+int _klpm_test_checksum(const char *filepath, const char *expected,
+		klpm_pkgvalidation_t type)
 {
-	printf("\x1B[%dF", lines);
-}
+	char *computed;
+	int ret;
 
-/* Moves console cursor `lines` down */
-void console_cursor_move_down(unsigned int lines)
-{
-	printf("\x1B[%dE", lines);
-}
-
-/* Erases line from the current cursor position till the end of the line */
-void console_erase_line(void)
-{
-	printf("\x1B[K");
-}
-
-char *resolve_path(const char *path, const char *option)
-{
-	char *resolved = realpath(path, NULL);
-
-	if(resolved == NULL) {
-		pm_printf(KUZPKG_LOG_ERROR, "'failed to resolve path '%s' passed to '%s': %s\n", path, option, strerror(errno));
+	if(type == KUZPKG_PKG_VALIDATION_MD5SUM) {
+		computed = klpm_compute_md5sum(filepath);
+	} else if(type == KUZPKG_PKG_VALIDATION_SHA256SUM) {
+		computed = klpm_compute_sha256sum(filepath);
+	} else {
+		return -1;
 	}
 
-	return resolved;
+	if(expected == NULL || computed == NULL) {
+		ret = -1;
+	} else if(strcmp(expected, computed) != 0) {
+		ret = 1;
+	} else {
+		ret = 0;
+	}
+
+	FREE(computed);
+	return ret;
+}
+
+/* Note: does NOT handle sparse files on purpose for speed. */
+int _klpm_archive_fgets(struct archive *a, struct archive_read_buffer *b)
+{
+	b->line_offset = b->line;
+
+	while(1) {
+		size_t block_remaining;
+		char *eol;
+
+		if(b->block + b->block_size == b->block_offset) {
+			int64_t offset;
+
+			if(b->ret == ARCHIVE_EOF) {
+				goto cleanup;
+			}
+
+			b->ret = archive_read_data_block(a,
+					(void *)&b->block,
+					&b->block_size,
+					&offset);
+
+			b->block_offset = b->block;
+			block_remaining = b->block_size;
+
+			if(b->ret < ARCHIVE_OK) {
+				goto cleanup;
+			}
+		} else {
+			block_remaining =
+				b->block + b->block_size - b->block_offset;
+		}
+
+		eol = memchr(b->block_offset, '\n', block_remaining);
+
+		if(!eol) {
+			eol = memchr(b->block_offset, '\0',
+					block_remaining);
+		}
+
+		if(!b->line) {
+			CALLOC(b->line,
+					b->block_size + 1,
+					sizeof(char),
+					b->ret = -ENOMEM;
+					goto cleanup);
+
+			b->line_size = b->block_size + 1;
+			b->line_offset = b->line;
+		} else {
+			size_t new = eol ?
+				(size_t)(eol - b->block_offset) :
+				block_remaining;
+
+			size_t needed =
+				(size_t)((b->line_offset - b->line) +
+						new + 1);
+
+			if(needed > b->max_line_size) {
+				b->ret = -ERANGE;
+				goto cleanup;
+			}
+
+			if(needed > b->line_size) {
+				char *new_line;
+
+				CALLOC(new_line,
+						needed,
+						sizeof(char),
+						b->ret = -ENOMEM;
+						goto cleanup);
+
+				memcpy(new_line,
+						b->line,
+						b->line_size);
+
+				b->line_size = needed;
+				b->line_offset =
+					new_line +
+					(b->line_offset - b->line);
+
+				free(b->line);
+				b->line = new_line;
+			}
+		}
+
+		if(eol) {
+			size_t len =
+				(size_t)(eol - b->block_offset);
+
+			memcpy(b->line_offset,
+					b->block_offset,
+					len);
+
+			b->line_offset[len] = '\0';
+			b->block_offset = eol + 1;
+			b->real_line_size =
+				b->line_offset + len - b->line;
+
+			return ARCHIVE_OK;
+		}
+
+		{
+			size_t len =
+				(size_t)(b->block +
+						b->block_size -
+						b->block_offset);
+
+			memcpy(b->line_offset,
+					b->block_offset,
+					len);
+
+			b->line_offset += len;
+			b->block_offset =
+				b->block + b->block_size;
+
+			if(len == 0) {
+				b->line_offset[0] = '\0';
+				b->real_line_size =
+					b->line_offset - b->line;
+				return ARCHIVE_OK;
+			}
+		}
+	}
+
+cleanup:
+	{
+		int ret = b->ret;
+
+		FREE(b->line);
+		*b = (struct archive_read_buffer){0};
+
+		return ret;
+	}
+}
+
+/** Parse a full package specifier. */
+int _klpm_splitname(const char *target, char **name, char **version,
+		unsigned long *name_hash)
+{
+	const char *pkgver, *end;
+
+	if(target == NULL) {
+		return -1;
+	}
+
+	end = strchr(target, '/');
+
+	if(!end) {
+		end = target + strlen(target);
+	}
+
+	for(pkgver = end - 1;
+			*pkgver && *pkgver != '-';
+			pkgver--);
+
+	for(pkgver = pkgver - 1;
+			*pkgver && *pkgver != '-';
+			pkgver--);
+
+	if(*pkgver != '-' || pkgver == target) {
+		return -1;
+	}
+
+	if(version) {
+		if(*version) {
+			FREE(*version);
+		}
+
+		STRNDUP(*version,
+				pkgver + 1,
+				end - pkgver - 1,
+				return -1);
+	}
+
+	if(name) {
+		if(*name) {
+			FREE(*name);
+		}
+
+		STRNDUP(*name,
+				target,
+				pkgver - target,
+				return -1);
+
+		if(name_hash) {
+			*name_hash = _klpm_hash_sdbm(*name);
+		}
+	}
+
+	return 0;
+}
+
+/** Hash the given string using sdbm. */
+unsigned long _klpm_hash_sdbm(const char *str)
+{
+	unsigned long hash = 0;
+	int c;
+
+	if(!str) {
+		return hash;
+	}
+
+	while((c = *str++)) {
+		hash = c + hash * 65599;
+	}
+
+	return hash;
+}
+
+/** Convert a string to a file offset. */
+off_t _klpm_strtoofft(const char *line)
+{
+	char *end;
+	unsigned long long result;
+
+	errno = 0;
+
+	if(!isdigit((unsigned char)line[0])) {
+		return (off_t)-1;
+	}
+
+	result = strtoull(line, &end, 10);
+
+	if(result == 0 && end == line) {
+		return (off_t)-1;
+	}
+
+	if(result == ULLONG_MAX && errno == ERANGE) {
+		return (off_t)-1;
+	}
+
+	if(*end) {
+		return (off_t)-1;
+	}
+
+	return (off_t)result;
+}
+
+/** Parse a date into a klpm_time_t. */
+klpm_time_t _klpm_parsedate(const char *line)
+{
+	char *end;
+	long long result;
+
+	errno = 0;
+
+	result = strtoll(line, &end, 10);
+
+	if(result == 0 && end == line) {
+		errno = EINVAL;
+		return 0;
+	}
+
+	if(errno == ERANGE) {
+		return 0;
+	}
+
+	if(*end) {
+		errno = EINVAL;
+		return 0;
+	}
+
+	return (klpm_time_t)result;
+}
+
+/** Wrapper around access(). */
+int _klpm_access(klpm_handle_t *handle, const char *dir,
+		const char *file, int amode)
+{
+	size_t len = 0;
+	int ret = 0;
+	int flag = 0;
+
+#ifdef AT_SYMLINK_NOFOLLOW
+	flag |= AT_SYMLINK_NOFOLLOW;
+#endif
+
+	if(dir) {
+		char *check_path;
+
+		len = strlen(dir) + strlen(file) + 1;
+
+		CALLOC(check_path,
+				len,
+				sizeof(char),
+				RET_ERR(handle, KUZPKG_ERR_MEMORY, -1));
+
+		snprintf(check_path, len, "%s%s", dir, file);
+
+		ret = faccessat(AT_FDCWD,
+				check_path,
+				amode,
+				flag);
+
+		free(check_path);
+	} else {
+		dir = "";
+		ret = faccessat(AT_FDCWD,
+				file,
+				amode,
+				flag);
+	}
+
+	if(ret != 0) {
+		if(amode & R_OK) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"\"%s%s\" is not readable: %s\n",
+					dir, file, strerror(errno));
+		}
+
+		if(amode & W_OK) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"\"%s%s\" is not writable: %s\n",
+					dir, file, strerror(errno));
+		}
+
+		if(amode & X_OK) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"\"%s%s\" is not executable: %s\n",
+					dir, file, strerror(errno));
+		}
+
+		if(amode == F_OK) {
+			_klpm_log(handle, KUZPKG_LOG_DEBUG,
+					"\"%s%s\" does not exist: %s\n",
+					dir, file, strerror(errno));
+		}
+	}
+
+	return ret;
+}
+
+/** Check whether a string matches a shell wildcard pattern. */
+int _klpm_fnmatch_patterns(klpm_list_t *patterns, const char *string)
+{
+	klpm_list_t *i;
+	char *pattern;
+	short inverted;
+
+	for(i = klpm_list_last(patterns);
+			i;
+			i = klpm_list_previous(i)) {
+		pattern = i->data;
+
+		inverted = pattern[0] == '!';
+
+		if(inverted || pattern[0] == '\\') {
+			pattern++;
+		}
+
+		if(_klpm_fnmatch(pattern, string) == 0) {
+			return inverted;
+		}
+	}
+
+	return -1;
+}
+
+int _klpm_fnmatch(const void *pattern, const void *string)
+{
+	return fnmatch(pattern, string, 0);
+}
+
+void *_klpm_realloc(void **data, size_t *current,
+		const size_t required)
+{
+	REALLOC(*data, required, return NULL);
+
+	if(*current < required) {
+		memset((char *)*data + *current,
+				0,
+				required - *current);
+	}
+
+	*current = required;
+	return *data;
+}
+
+void *_klpm_greedy_grow(void **data, size_t *current,
+		const size_t required)
+{
+	size_t newsize = 0;
+
+	if(*current >= required) {
+		return data;
+	}
+
+	if(*current == 0) {
+		newsize = required;
+	} else {
+		newsize = *current * 2;
+	}
+
+	if(newsize < required) {
+		return NULL;
+	}
+
+	return _klpm_realloc(data, current, newsize);
+}
+
+void _klpm_alloc_fail(size_t size)
+{
+	fprintf(stderr,
+			"alloc failure: could not allocate %zu bytes\n",
+			size);
+}
+
+/** Read file content into a newly allocated buffer. */
+klpm_errno_t _klpm_read_file(const char *filepath,
+		unsigned char **data, size_t *data_len)
+{
+	struct stat st;
+	FILE *fp;
+
+	if((fp = fopen(filepath, "rb")) == NULL) {
+		return KUZPKG_ERR_NOT_A_FILE;
+	}
+
+	if(fstat(fileno(fp), &st) != 0) {
+		fclose(fp);
+		return KUZPKG_ERR_NOT_A_FILE;
+	}
+
+	*data_len = st.st_size;
+
+	MALLOC(*data,
+			*data_len,
+			fclose(fp);
+			return KUZPKG_ERR_MEMORY);
+
+	if(fread(*data, *data_len, 1, fp) != 1) {
+		FREE(*data);
+		fclose(fp);
+		return KUZPKG_ERR_SYSTEM;
+	}
+
+	fclose(fp);
+	return KUZPKG_ERR_OK;
 }
