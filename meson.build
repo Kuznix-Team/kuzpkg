@@ -262,7 +262,6 @@ strip_shared = '--strip-unneeded'
 strip_static = '--strip-debug'
 
 file_seccomp = get_option('file-seccomp')
-# meson-git has find_program('file', required: false, version: '>=5.38')
 filever = run_command('sh', '-c', 'file --version | sed -n "s/^file-\\(.*\\)/\\1/p"', check: true).stdout()
 if file_seccomp.enabled() or ( file_seccomp.auto() and filever.version_compare('>= 5.38') )
   filecmd = 'file -S'
@@ -347,7 +346,6 @@ endif
 libkuzpkg_a = static_library(
   'klpm_objlib',
   libkuzpkg_sources,
-  # https://github.com/mesonbuild/meson/issues/3937
   objects : libcommon.extract_all_objects(recursive: true),
   include_directories : includes,
   gnu_symbol_visibility : 'hidden',
@@ -410,6 +408,12 @@ executable(
   install : true,
 )
 
+executable(
+  'packinstall',
+  packinstall_sources,
+  install : true,
+)
+
 foreach wrapper : script_wrappers
   cdata = configuration_data()
   cdata.set_quoted('BASH', BASH.full_path())
@@ -447,66 +451,3 @@ configure_file(
   output : 'kuzpkg.conf',
   configuration : substs,
   install_dir : SYSCONFDIR)
-
-install_data(
-  'proto/PKGBUILD-split.proto',
-  'proto/PKGBUILD-vcs.proto',
-  'proto/PKGBUILD.proto',
-  'proto/proto.install',
-  install_dir : join_paths(DATAROOTDIR, 'kuzpkg'))
-
-foreach path : [
-  join_paths(LOCALSTATEDIR, 'lib/kuzpkg/'),
-  join_paths(LOCALSTATEDIR, 'cache/kuzpkg/pkg/'),
-  join_paths(DATAROOTDIR, 'makepkg-template/'),
-  join_paths(DATAROOTDIR, 'libkuzpkg/hooks/'),
-  ]
-  meson.add_install_script('sh', '-c', 'mkdir -p "$DESTDIR/@0@"'.format(path))
-endforeach
-
-TEST_ENV = environment()
-TEST_ENV.set('PMTEST_SCRIPTLIB_DIR', join_paths(meson.project_source_root(), 'scripts/library/'))
-TEST_ENV.set('PMTEST_LIBMAKEPKG_DIR', join_paths(meson.project_build_root(), 'scripts/libmakepkg/'))
-TEST_ENV.set('PMTEST_UTIL_DIR', meson.project_build_root() + '/')
-TEST_ENV.set('PMTEST_SCRIPT_DIR', join_paths(meson.project_build_root(), 'scripts/'))
-
-subdir('test/kuzpkg')
-subdir('test/scripts')
-subdir('test/util')
-
-summary({
-  'prefix': PREFIX,
-  'sysconfdir': SYSCONFDIR,
-  '    conf file': join_paths(SYSCONFDIR, 'kuzpkg.conf'),
-  'localstatedir': LOCALSTATEDIR,
-  '    database dir': join_paths(LOCALSTATEDIR, 'lib/kuzpkg/'),
-  '    cache dir': join_paths(LOCALSTATEDIR, 'cache/kuzpkg/pkg/'),
-  'keyringdir': KEYRINGDIR,
-  'compiler': '@0@ @1@\n'.format(cc.get_id(), cc.version()),
-  'Architecture': carch,
-  'Host Type': chost,
-  'File inode command': inodecmd,
-  'File seccomp command': filecmd,
-  'libkuzpkg version': libkuzpkg_version,
-  'kuzpkg version': PACKAGE_VERSION,
-}, section: 'Build information')
-
-summary({
-  'root working directory': ROOTDIR,
-  'package extension': get_option('pkg-ext'),
-  'source pkg extension': get_option('src-ext'),
-  'build script name': BUILDSCRIPT,
-  'template directory': get_option('makepkg-template-dir'),
-}, section: 'Directory and file information')
-
-summary({
-  'i18n support': get_option('i18n'),
-  'Build docs': build_doc,
-  'debug build': get_option('buildtype') == 'debug',
-  'O3 optimization': get_option('enable-o3'),
-  'Compiler optimization flags': optimization_cflags,
-  'Use libcurl': conf.get('HAVE_LIBCURL'),
-  'Use GPGME': conf.get('HAVE_LIBGPGME'),
-  'Use OpenSSL': conf.has('HAVE_LIBSSL') and conf.get('HAVE_LIBSSL') == 1,
-  'Use nettle': conf.has('HAVE_LIBNETTLE') and conf.get('HAVE_LIBNETTLE') == 1,
-}, section: 'Compilation options')
