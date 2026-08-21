@@ -26,11 +26,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <time.h>
 #include <unistd.h>
 #include <sys/utsname.h>
 
-#define VERSION "0.1"
 #define REL "1"
 
 static int exists(const char *path)
@@ -61,9 +59,8 @@ static int run_command(const char *command)
 	}
 	if(WIFEXITED(status))
 		return WEXITSTATUS(status);
-	if(WIFSIGNALED(status)) {
+	if(WIFSIGNALED(status))
 		fprintf(stderr, "packinstall: command terminated by signal %d\n", WTERMSIG(status));
-	}
 	return 128;
 }
 
@@ -91,46 +88,6 @@ static char *shell_quote(const char *s)
 	*p++ = '\'';
 	*p = '\0';
 	return out;
-}
-
-static int run_in_dir(const char *dir, const char *command)
-{
-	char *q = shell_quote(dir);
-	char *cmd;
-	int ret;
-	if(!q)
-		return -1;
-	if(asprintf(&cmd, "cd %s && %s", q, command) < 0) {
-		free(q);
-		return -1;
-	}
-	ret = run_command(cmd);
-	free(q);
-	free(cmd);
-	return ret;
-}
-
-static int run_in_stage(const char *src, const char *stage, const char *command)
-{
-	char *qsrc = shell_quote(src);
-	char *qstage = shell_quote(stage);
-	char *cmd;
-	int ret;
-	if(!qsrc || !qstage) {
-		free(qsrc);
-		free(qstage);
-		return -1;
-	}
-	if(asprintf(&cmd, "cd %s && DESTDIR=%s %s", qsrc, qstage, command) < 0) {
-		free(qsrc);
-		free(qstage);
-		return -1;
-	}
-	ret = run_command(cmd);
-	free(qsrc);
-	free(qstage);
-	free(cmd);
-	return ret;
 }
 
 static int clean_stage(const char *stage)
@@ -219,7 +176,6 @@ static char *package_name(const char *tree)
 	name = strdup(b);
 	if(!name)
 		return NULL;
-	/* Remove the version suffix where it is clearly separated. */
 	for(size_t i = 1; name[i]; i++) {
 		if(name[i] == '-' || name[i] == '_') {
 			const char *q = name + i + 1;
@@ -234,18 +190,12 @@ static char *package_name(const char *tree)
 
 static int build_project(const char *src, const char *stage)
 {
-	char *qsrc = shell_quote(src);
 	char *qstage = shell_quote(stage);
 	char *cmd = NULL;
 	int ret = -1;
-	if(!qsrc || !qstage) {
-		free(qsrc); free(qstage);
+	(void)src;
+	if(!qstage)
 		return -1;
-	}
-
-	if(exists("/dev/null")) {
-		/* Prefer explicit build-system files in a deterministic order. */
-	}
 
 	if(exists("configure")) {
 		if(asprintf(&cmd, "./configure --prefix=/usr && make && DESTDIR=%s make install", qstage) < 0) goto out;
@@ -276,7 +226,7 @@ static int build_project(const char *src, const char *stage)
 	}
 
 	if(exists("Cargo.toml")) {
-		if(asprintf(&cmd, "cargo install --path . --root %s --locked", qstage) < 0) goto out;
+		if(asprintf(&cmd, "mkdir -p %s/usr && cargo install --path . --root %s/usr --locked", qstage, qstage) < 0) goto out;
 		ret = run_command(cmd);
 		if(ret == 0) goto out;
 		free(cmd); cmd = NULL;
@@ -321,7 +271,6 @@ static int build_project(const char *src, const char *stage)
 	ret = 1;
 out:
 	free(cmd);
-	free(qsrc);
 	free(qstage);
 	return ret;
 }
@@ -329,13 +278,11 @@ out:
 static int write_pkgbuild(const char *work, const char *stage,
 		const char *name, const char *version, const char *arch)
 {
-	char *qwork = shell_quote(work);
 	char *qstage = shell_quote(stage);
-	char *qname = shell_quote(name);
 	char *cmd;
 	FILE *f;
 	int ret = -1;
-	if(!qwork || !qstage || !qname)
+	if(!qstage)
 		goto out;
 	if(asprintf(&cmd, "%s/PKGBUILD", work) < 0)
 		goto out;
@@ -361,7 +308,7 @@ static int write_pkgbuild(const char *work, const char *stage,
 	free(cmd);
 	ret = 0;
 out:
-	free(qwork); free(qstage); free(qname);
+	free(qstage);
 	return ret;
 }
 
@@ -379,10 +326,8 @@ static int package_and_install(const char *stage, const char *name,
 		fprintf(stderr, "packinstall: mkdtemp: %s\n", strerror(errno));
 		return 1;
 	}
-	if(write_pkgbuild(work, stage, name, version, arch) != 0) {
-		rmdir(work);
+	if(write_pkgbuild(work, stage, name, version, arch) != 0)
 		return 1;
-	}
 	qwork = shell_quote(work);
 	if(!qwork)
 		return 1;
@@ -393,20 +338,19 @@ static int package_and_install(const char *stage, const char *name,
 	ret = run_command(cmd);
 	free(cmd);
 	free(qwork);
-	if(ret != 0) {
-		run_command("rm -rf -- /tmp/packinstall.XXXXXX >/dev/null 2>&1 || true");
+	if(ret != 0)
 		return ret;
-	}
 
 	fprintf(stdout, "packinstall: package built in %s\n", work);
 	if(do_install) {
 		char *q;
+		FILE *p;
+		char pkg[PATH_MAX];
 		if(asprintf(&q, "find %s -maxdepth 1 -type f -name '*.pkg.tar.*' -print -quit", work) < 0)
 			return 1;
-		FILE *p = popen(q, "r");
+		p = popen(q, "r");
 		free(q);
 		if(!p) return 1;
-		char pkg[PATH_MAX];
 		if(!fgets(pkg, sizeof(pkg), p)) {
 			pclose(p);
 			return 1;
