@@ -5,6 +5,8 @@ option('buildstatic', type : 'boolean', value : false,
        description : 'if true, build statically linked binaries')
 option('enable-o3', type : 'boolean', value : false,
        description : 'enable -O3 optimization instead of the default -O2')
+option('packinstall-lfs', type : 'boolean', value : false,
+       description : 'build the LFS/MLFS-specific packinstall-lfs utility')
 
 # directories and filenames
 option('root-dir', type : 'string', value : '/',
