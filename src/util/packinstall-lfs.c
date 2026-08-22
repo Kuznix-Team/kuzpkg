@@ -15,7 +15,7 @@
 #define REL "1"
 #define DEFAULT_ROOT "/"
 #define DB_REL "/var/lib/packinstall-lfs"
-#define SUFFIX ".lfspkg.tar.zst"
+#define SUFFIX ".kuzpkg.tar.zst"
 
 static const char *root_dir = DEFAULT_ROOT;
 static FILE *manifest;
