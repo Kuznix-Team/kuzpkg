@@ -1,21 +1,32 @@
 /*
- * packinstall-lfs.c - LFS/MLFS source packager using makepkg.
+ * packinstall-lfs.c - LFS/MLFS source packager
  *
- * Modern/default workflow:
+ * Version: 0.1
+ *
+ * Modern usage:
  *
  *   packinstall-lfs create
  *   packinstall-lfs create .
  *   packinstall-lfs create /sources/kuzpkg
  *
- * Metadata:
+ * If PKGBUILD exists:
+ *   - makepkg --printsrcinfo is used for metadata
+ *   - pkgname/pkgver/pkgrel are detected
  *
- *   PKGINFO
+ * If PKGBUILD does not exist:
+ *   - build system is detected automatically
+ *   - project name/version are detected when possible
+ *   - a temporary PKGBUILD is generated
  *
  * Package format:
  *
  *   .kuzpkg.tar.zst
  *
- * Legacy raw-stage packaging is explicitly available through:
+ * Package metadata:
+ *
+ *   PKGINFO
+ *
+ * Legacy raw-stage mode:
  *
  *   packinstall-lfs create-legacy STAGE NAME VERSION [OUTPUT]
  *
@@ -50,13 +61,6 @@
  *   ppc64
  *   ppc64le
  *
- * Root builds:
- *
- *   - automatically create/use "builder"
- *   - use useradd when available
- *   - fall back to /etc/passwd and /etc/group
- *   - never run makepkg as UID 0
- *
  * Copyright (C) 2026 Kuznix
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -78,7 +82,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define VERSION "0.7"
+#define VERSION "0.1"
 #define SUFFIX ".kuzpkg.tar.zst"
 #define PKGINFO_NAME "PKGINFO"
 #define DB_REL "/var/lib/packinstall-lfs"
@@ -176,7 +180,7 @@ static const struct abi_profile abi_profiles[] = {
 	(sizeof(abi_profiles) / sizeof(abi_profiles[0]))
 
 /* ------------------------------------------------------------------------- */
-/* Error handling                                                            */
+/* Errors                                                                    */
 /* ------------------------------------------------------------------------- */
 
 static void die(const char *fmt, ...)
@@ -215,11 +219,11 @@ static void usage(void)
 {
 	puts("packinstall-lfs " VERSION " - LFS/MLFS makepkg packager");
 	puts("");
-	puts("Modern commands:");
+	puts("Usage:");
 	puts("  packinstall-lfs create [DIR] [options]");
 	puts("  packinstall-lfs package [DIR] [options]");
 	puts("");
-	puts("Package management:");
+	puts("Package operations:");
 	puts("  packinstall-lfs install PACKAGE [--root DIR]");
 	puts("  packinstall-lfs remove NAME VERSION [--abi ABI] [--root DIR]");
 	puts("  packinstall-lfs list [--root DIR]");
@@ -228,7 +232,7 @@ static void usage(void)
 	puts("Legacy:");
 	puts("  packinstall-lfs create-legacy STAGE NAME VERSION [OUTPUT]");
 	puts("");
-	puts("create/package options:");
+	puts("Options:");
 	puts("  --dir DIR");
 	puts("  --buildscript FILE");
 	puts("  --build-system auto|make|autotools|meson|ninja|cmake|");
@@ -239,8 +243,6 @@ static void usage(void)
 	puts("  --no-build");
 	puts("  --skip-checks");
 	puts("");
-	puts("create with no arguments uses the current directory.");
-	puts("");
 	puts("Examples:");
 	puts("  packinstall-lfs create");
 	puts("  packinstall-lfs create .");
@@ -248,12 +250,37 @@ static void usage(void)
 	puts("  packinstall-lfs create /sources/kuzpkg --no-build");
 	puts("  packinstall-lfs create /sources/foo --abi lib32");
 	puts("  packinstall-lfs create /sources/foo --build-system meson");
-	puts("  packinstall-lfs create-legacy /tmp/pkgroot kuzpkg 0.1.0");
+	puts("  packinstall-lfs create-legacy /tmp/pkgroot foo 1.0");
 }
 
 /* ------------------------------------------------------------------------- */
-/* Generic helpers                                                           */
+/* Basic helpers                                                             */
 /* ------------------------------------------------------------------------- */
+
+static int command_exists(const char *path)
+{
+	return access(path, X_OK) == 0;
+}
+
+static int is_file(const char *path)
+{
+	struct stat st;
+
+	if (stat(path, &st) != 0)
+		return 0;
+
+	return S_ISREG(st.st_mode);
+}
+
+static int is_directory(const char *path)
+{
+	struct stat st;
+
+	if (stat(path, &st) != 0)
+		return 0;
+
+	return S_ISDIR(st.st_mode);
+}
 
 static void shell_quote(const char *s, char *out, size_t n)
 {
@@ -287,9 +314,7 @@ static void shell_quote(const char *s, char *out, size_t n)
 
 static int run_command(const char *cmd)
 {
-	int rc;
-
-	rc = system(cmd);
+	int rc = system(cmd);
 
 	if (rc < 0)
 		return -1;
@@ -320,21 +345,19 @@ static void ensure_dir(const char *path)
 		*p = '\0';
 
 		if (mkdir(buffer, 0755) != 0 &&
-		    errno != EEXIST) {
+		    errno != EEXIST)
 			die("mkdir %s: %s",
 			    buffer,
 			    strerror(errno));
-		}
 
 		*p = '/';
 	}
 
 	if (mkdir(buffer, 0755) != 0 &&
-	    errno != EEXIST) {
+	    errno != EEXIST)
 		die("mkdir %s: %s",
 		    buffer,
 		    strerror(errno));
-	}
 }
 
 static const char *arg_value(int argc,
@@ -365,31 +388,6 @@ static int has_opt(int argc,
 	return 0;
 }
 
-static int is_file(const char *path)
-{
-	struct stat st;
-
-	if (stat(path, &st) != 0)
-		return 0;
-
-	return S_ISREG(st.st_mode);
-}
-
-static int is_directory(const char *path)
-{
-	struct stat st;
-
-	if (stat(path, &st) != 0)
-		return 0;
-
-	return S_ISDIR(st.st_mode);
-}
-
-static int command_exists(const char *path)
-{
-	return access(path, X_OK) == 0;
-}
-
 static void absolute_path(const char *input,
 			  char *output,
 			  size_t size)
@@ -410,362 +408,122 @@ static void absolute_path(const char *input,
 	}
 
 	strcpy(output, resolved);
-
 	free(resolved);
 }
 
-/* ------------------------------------------------------------------------- */
-/* Root/builder handling                                                     */
-/* ------------------------------------------------------------------------- */
-
-static struct passwd *lookup_builder(void)
+static const char *basename_const(const char *path)
 {
-	return getpwnam(BUILDER_USER);
-}
-
-static int group_exists(const char *name)
-{
-	return getgrnam(name) != NULL;
-}
-
-static int passwd_uid_in_use(uid_t uid)
-{
-	struct passwd *pw;
-
-	setpwent();
-
-	while ((pw = getpwent()) != NULL) {
-		if (pw->pw_uid == uid) {
-			endpwent();
-			return 1;
-		}
-	}
-
-	endpwent();
-
-	return 0;
-}
-
-static int group_gid_in_use(gid_t gid)
-{
-	struct group *gr;
-
-	setgrent();
-
-	while ((gr = getgrent()) != NULL) {
-		if (gr->gr_gid == gid) {
-			endgrent();
-			return 1;
-		}
-	}
-
-	endgrent();
-
-	return 0;
-}
-
-static uid_t choose_builder_uid(void)
-{
-	uid_t uid;
-
-	for (uid = 900; uid < 65000; ++uid) {
-		if (!passwd_uid_in_use(uid))
-			return uid;
-	}
-
-	die("cannot find an unused UID for builder");
-
-	return 0;
-}
-
-static gid_t choose_builder_gid(void)
-{
-	gid_t gid;
-
-	for (gid = 900; gid < 65000; ++gid) {
-		if (!group_gid_in_use(gid))
-			return gid;
-	}
-
-	die("cannot find an unused GID for builder");
-
-	return 0;
-}
-
-static void append_line_file(const char *path,
-			     const char *line,
-			     mode_t mode)
-{
-	int fd;
-	size_t remaining;
 	const char *p;
 
-	fd = open(path,
-		  O_WRONLY | O_APPEND | O_CREAT,
-		  mode);
+	p = strrchr(path, '/');
 
-	if (fd < 0)
-		die("cannot open %s: %s",
-		    path,
-		    strerror(errno));
+	if (!p)
+		return path;
 
-	p = line;
-	remaining = strlen(line);
+	if (*(p + 1))
+		return p + 1;
 
-	while (remaining > 0) {
-		ssize_t n;
-
-		n = write(fd,
-			  p,
-			  remaining);
-
-		if (n < 0) {
-			if (errno == EINTR)
-				continue;
-
-			close(fd);
-
-			die("cannot write %s: %s",
-			    path,
-			    strerror(errno));
-		}
-
-		p += n;
-		remaining -= (size_t)n;
-	}
-
-	close(fd);
+	return path;
 }
 
 /*
- * Fallback equivalent to appending to:
+ * Normalize a version enough for makepkg/pkgver.
  *
- *   /etc/group
- *   /etc/passwd
+ * Meson commonly uses:
  *
- * using cat >>, but implemented directly in C so it works on very small
- * LFS systems where useradd/cat may not both be available.
+ *   0.1.0-alpha
+ *
+ * Arch-style package versions cannot use '-' as a package-version separator
+ * in the same way, so normalize:
+ *
+ *   0.1.0-alpha -> 0.1.0_alpha
  */
-static void create_builder_from_files(void)
+static void normalize_version(const char *input,
+			      char *output,
+			      size_t output_size)
 {
-	uid_t uid;
-	gid_t gid;
+	size_t i;
+	size_t p = 0;
 
-	char group_line[256];
-	char passwd_line[512];
+	for (i = 0; input[i] && p + 1 < output_size; ++i) {
+		char c = input[i];
 
-	if (geteuid() != 0)
-		die("builder account creation requires root");
+		if (c == '-')
+			c = '_';
 
-	if (lookup_builder())
-		return;
-
-	uid = choose_builder_uid();
-
-	if (group_exists(BUILDER_GROUP)) {
-		struct group *gr = getgrnam(BUILDER_GROUP);
-
-		if (!gr)
-			die("builder group lookup failed");
-
-		gid = gr->gr_gid;
-	} else {
-		gid = choose_builder_gid();
+		output[p++] = c;
 	}
 
-	if (gid == 0)
-		die("refusing builder group with GID 0");
-
-	if (!group_exists(BUILDER_GROUP)) {
-		snprintf(group_line,
-			 sizeof(group_line),
-			 "%s:x:%lu:\n",
-			 BUILDER_GROUP,
-			 (unsigned long)gid);
-
-		append_line_file("/etc/group",
-				 group_line,
-				 0644);
-	}
-
-	{
-		const char *shell =
-			is_file(BUILDER_SHELL) ?
-			BUILDER_SHELL :
-			"/bin/sh";
-
-		snprintf(passwd_line,
-			 sizeof(passwd_line),
-			 "%s:x:%lu:%lu:LFS package builder:%s:%s\n",
-			 BUILDER_USER,
-			 (unsigned long)uid,
-			 (unsigned long)gid,
-			 BUILDER_HOME,
-			 shell);
-
-		append_line_file("/etc/passwd",
-				 passwd_line,
-				 0644);
-	}
-
-	endpwent();
-	endgrent();
-
-	if (!lookup_builder())
-		die("failed to create builder in /etc/passwd");
-
-	ensure_dir(BUILDER_HOME);
-
-	if (chown(BUILDER_HOME,
-		  uid,
-		  gid) != 0) {
-		die("cannot chown %s: %s",
-		    BUILDER_HOME,
-		    strerror(errno));
-	}
-
-	if (chmod(BUILDER_HOME,
-		  0700) != 0) {
-		die("cannot chmod %s: %s",
-		    BUILDER_HOME,
-		    strerror(errno));
-	}
-
-	printf("created builder account using /etc/passwd and /etc/group "
-	       "(uid=%lu gid=%lu)\n",
-	       (unsigned long)uid,
-	       (unsigned long)gid);
-}
-
-static void create_builder_user(void)
-{
-	struct passwd *pw;
-	char cmd[PATH_MAX * 3];
-
-	pw = lookup_builder();
-
-	if (pw) {
-		if (pw->pw_uid == 0)
-			die("builder user exists with UID 0");
-
-		return;
-	}
-
-	if (command_exists("/usr/sbin/useradd")) {
-		snprintf(cmd,
-			 sizeof(cmd),
-			 "/usr/sbin/useradd "
-			 "--system "
-			 "--create-home "
-			 "--user-group "
-			 "--home-dir %s "
-			 "--shell %s "
-			 "%s",
-			 BUILDER_HOME,
-			 BUILDER_SHELL,
-			 BUILDER_USER);
-
-		if (run_command(cmd) == 0) {
-			endpwent();
-			endgrent();
-
-			pw = lookup_builder();
-
-			if (pw && pw->pw_uid != 0) {
-				ensure_dir(BUILDER_HOME);
-
-				printf("created builder using useradd "
-				       "(uid=%lu gid=%lu)\n",
-				       (unsigned long)pw->pw_uid,
-				       (unsigned long)pw->pw_gid);
-
-				return;
-			}
-		}
-	}
-
-	if (command_exists("/usr/bin/useradd")) {
-		snprintf(cmd,
-			 sizeof(cmd),
-			 "/usr/bin/useradd "
-			 "--system "
-			 "--create-home "
-			 "--user-group "
-			 "--home-dir %s "
-			 "--shell %s "
-			 "%s",
-			 BUILDER_HOME,
-			 BUILDER_SHELL,
-			 BUILDER_USER);
-
-		if (run_command(cmd) == 0) {
-			endpwent();
-			endgrent();
-
-			pw = lookup_builder();
-
-			if (pw && pw->pw_uid != 0) {
-				ensure_dir(BUILDER_HOME);
-
-				printf("created builder using useradd "
-				       "(uid=%lu gid=%lu)\n",
-				       (unsigned long)pw->pw_uid,
-				       (unsigned long)pw->pw_gid);
-
-				return;
-			}
-		}
-	}
-
-	/*
-	 * useradd unavailable or failed: direct /etc/passwd/group fallback.
-	 */
-	create_builder_from_files();
-}
-
-static void ensure_builder(void)
-{
-	struct passwd *pw;
-
-	if (geteuid() != 0)
-		return;
-
-	pw = lookup_builder();
-
-	if (pw && pw->pw_uid != 0)
-		return;
-
-	create_builder_user();
-}
-
-static uid_t builder_uid(void)
-{
-	struct passwd *pw = lookup_builder();
-
-	if (!pw)
-		die("builder user does not exist");
-
-	if (pw->pw_uid == 0)
-		die("builder user has UID 0");
-
-	return pw->pw_uid;
-}
-
-static gid_t builder_gid(void)
-{
-	struct passwd *pw = lookup_builder();
-
-	if (!pw)
-		die("builder user does not exist");
-
-	if (pw->pw_gid == 0)
-		die("builder group has GID 0");
-
-	return pw->pw_gid;
+	output[p] = '\0';
 }
 
 /* ------------------------------------------------------------------------- */
-/* ABI helpers                                                               */
+/* CLI/source layout                                                         */
+/* ------------------------------------------------------------------------- */
+
+static void resolve_source_dir(int argc,
+			       char **argv,
+			       char *output,
+			       size_t output_size)
+{
+	const char *dir;
+
+	dir = arg_value(argc, argv, "--dir");
+
+	if (dir) {
+		absolute_path(dir, output, output_size);
+		return;
+	}
+
+	/*
+	 * Convenient form:
+	 *
+	 *   packinstall-lfs create /sources/kuzpkg
+	 */
+	if (argc >= 3 &&
+	    argv[2][0] != '-' &&
+	    strcmp(argv[2], "--help") &&
+	    strcmp(argv[2], "--version")) {
+		absolute_path(argv[2], output, output_size);
+		return;
+	}
+
+	absolute_path(".", output, output_size);
+}
+
+static void resolve_pkgbuild(const char *dir,
+			     const char *requested,
+			     char *output,
+			     size_t output_size)
+{
+	if (requested) {
+		if (requested[0] == '/') {
+			if (strlen(requested) >= output_size)
+				die("PKGBUILD path is too long");
+
+			strcpy(output, requested);
+			return;
+		}
+
+		if (snprintf(output,
+			     output_size,
+			     "%s/%s",
+			     dir,
+			     requested) >= (int)output_size)
+			die("PKGBUILD path is too long");
+
+		return;
+	}
+
+	if (snprintf(output,
+		     output_size,
+		     "%s/PKGBUILD",
+		     dir) >= (int)output_size)
+		die("PKGBUILD path is too long");
+}
+
+/* ------------------------------------------------------------------------- */
+/* ABI                                                                       */
 /* ------------------------------------------------------------------------- */
 
 static const struct abi_profile *find_abi(const char *name)
@@ -799,94 +557,56 @@ static const struct abi_profile *detect_default_abi(void)
 	return &abi_profiles[ABI_NATIVE];
 }
 
-/* ------------------------------------------------------------------------- */
-/* makepkg metadata                                                          */
-/* ------------------------------------------------------------------------- */
-
-static void read_srcinfo(const char *dir,
-			 char *name,
-			 size_t name_size,
-			 char *version,
-			 size_t version_size,
-			 char *release,
-			 size_t release_size)
+static void append_abi_environment(FILE *fp,
+				   const struct abi_profile *abi)
 {
-	char qdir[PATH_MAX * 2];
-	char cmd[PATH_MAX * 3];
-	FILE *fp;
-	char line[4096];
-	int rc;
+	fprintf(fp,
+		"_packinstall_abi='%s'\n",
+		abi->name);
 
-	name[0] = '\0';
-	version[0] = '\0';
-	release[0] = '\0';
+	fprintf(fp,
+		"_packinstall_libdir='%s'\n",
+		abi->libdir);
 
-	shell_quote(dir,
-		    qdir,
-		    sizeof(qdir));
+	fprintf(fp,
+		"export LIBDIR='%s'\n",
+		abi->libdir);
 
-	snprintf(cmd,
-		 sizeof(cmd),
-		 "cd %s && makepkg --printsrcinfo 2>/dev/null",
-		 qdir);
+	fprintf(fp,
+		"export libdir='%s'\n",
+		abi->libdir);
 
-	fp = popen(cmd, "r");
+	fprintf(fp,
+		"export INSTALL_LIBDIR='%s'\n",
+		abi->libdir);
 
-	if (!fp)
-		die("cannot execute makepkg --printsrcinfo");
+	if (abi->flag[0]) {
+		fprintf(fp,
+			"export CFLAGS=\"${CFLAGS:-} %s\"\n",
+			abi->flag);
 
-	while (fgets(line,
-		     sizeof(line),
-		     fp)) {
-		char *eq;
-		char *value;
+		fprintf(fp,
+			"export CXXFLAGS=\"${CXXFLAGS:-} %s\"\n",
+			abi->flag);
 
-		eq = strchr(line, '=');
+		fprintf(fp,
+			"export CPPFLAGS=\"${CPPFLAGS:-} %s\"\n",
+			abi->flag);
 
-		if (!eq)
-			continue;
-
-		*eq++ = '\0';
-
-		value = eq;
-
-		while (*value == ' ' ||
-		       *value == '\t')
-			++value;
-
-		value[strcspn(value,
-			      "\r\n")] = '\0';
-
-		if (!strcmp(line, "pkgname")) {
-			snprintf(name,
-				 name_size,
-				 "%s",
-				 value);
-		} else if (!strcmp(line, "pkgver")) {
-			snprintf(version,
-				 version_size,
-				 "%s",
-				 value);
-		} else if (!strcmp(line, "pkgrel")) {
-			snprintf(release,
-				 release_size,
-				 "%s",
-				 value);
-		}
+		fprintf(fp,
+			"export LDFLAGS=\"${LDFLAGS:-} -L%s\"\n",
+			abi->libdir);
 	}
 
-	rc = pclose(fp);
-
-	if (rc != 0 ||
-	    !name[0] ||
-	    !version[0]) {
-		die("makepkg could not read pkgname/pkgver from PKGBUILD");
+	if (abi->abi == ABI_LIBO32) {
+		fprintf(fp,
+			"export MIPS_ABI=o32\n");
 	}
 
-	if (!release[0])
-		snprintf(release,
-			 release_size,
-			 "1");
+	if (abi->abi == ABI_LIBM32) {
+		fprintf(fp,
+			"export MIPS_ABI=n32\n");
+	}
 }
 
 /* ------------------------------------------------------------------------- */
@@ -902,15 +622,17 @@ static int has_named_file(const char *dir,
 		     sizeof(path),
 		     "%s/%s",
 		     dir,
-		     name) >= (int)sizeof(path)) {
+		     name) >= (int)sizeof(path))
 		die("source path is too long");
-	}
 
 	return is_file(path);
 }
 
 static const char *detect_build_system(const char *dir)
 {
+	/*
+	 * Rust compiler sources have Cargo.toml too, so x.py wins.
+	 */
 	if (has_named_file(dir, "x.py"))
 		return "x.py";
 
@@ -977,10 +699,7 @@ static const char *detect_build_system(const char *dir)
 static const char *normalize_build_system(const char *system,
 					  const char *dir)
 {
-	char path[PATH_MAX];
-
-	if (!system ||
-	    !strcmp(system, "auto"))
+	if (!system || !strcmp(system, "auto"))
 		return detect_build_system(dir);
 
 	if (!strcmp(system, "make"))
@@ -997,16 +716,13 @@ static const char *normalize_build_system(const char *system,
 		return "CMakeLists.txt";
 
 	if (!strcmp(system, "python")) {
-		if (has_named_file(dir,
-				   "pyproject.toml"))
+		if (has_named_file(dir, "pyproject.toml"))
 			return "pyproject.toml";
 
-		if (has_named_file(dir,
-				   "setup.py"))
+		if (has_named_file(dir, "setup.py"))
 			return "setup.py";
 
-		if (has_named_file(dir,
-				   "setup.cfg"))
+		if (has_named_file(dir, "setup.cfg"))
 			return "setup.cfg";
 
 		return "pyproject.toml";
@@ -1032,12 +748,7 @@ static const char *normalize_build_system(const char *system,
 
 	if (!strcmp(system, "rust") ||
 	    !strcmp(system, "rustc")) {
-		snprintf(path,
-			 sizeof(path),
-			 "%s/x.py",
-			 dir);
-
-		if (is_file(path))
+		if (has_named_file(dir, "x.py"))
 			return "x.py";
 
 		return "Cargo.toml";
@@ -1056,59 +767,525 @@ static const char *normalize_build_system(const char *system,
 }
 
 /* ------------------------------------------------------------------------- */
-/* ABI environment                                                           */
+/* Metadata detection without PKGBUILD                                       */
 /* ------------------------------------------------------------------------- */
 
-static void append_abi_environment(FILE *fp,
-				   const struct abi_profile *abi)
+static int read_meson_project(const char *dir,
+			      char *name,
+			      size_t name_size,
+			      char *version,
+			      size_t version_size)
 {
-	fprintf(fp,
-		"_packinstall_abi='%s'\n",
-		abi->name);
+	char path[PATH_MAX];
+	FILE *fp;
+	char line[4096];
 
-	fprintf(fp,
-		"_packinstall_libdir='%s'\n",
-		abi->libdir);
+	if (snprintf(path,
+		     sizeof(path),
+		     "%s/meson.build",
+		     dir) >= (int)sizeof(path))
+		return -1;
 
-	fprintf(fp,
-		"export LIBDIR='%s'\n",
-		abi->libdir);
+	fp = fopen(path, "r");
 
-	fprintf(fp,
-		"export libdir='%s'\n",
-		abi->libdir);
+	if (!fp)
+		return -1;
 
-	if (abi->flag[0]) {
-		fprintf(fp,
-			"export CFLAGS=\"${CFLAGS:-} %s\"\n",
-			abi->flag);
+	name[0] = '\0';
+	version[0] = '\0';
 
-		fprintf(fp,
-			"export CXXFLAGS=\"${CXXFLAGS:-} %s\"\n",
-			abi->flag);
+	while (fgets(line,
+		     sizeof(line),
+		     fp)) {
+		char *p;
 
-		fprintf(fp,
-			"export CPPFLAGS=\"${CPPFLAGS:-} %s\"\n",
-			abi->flag);
+		/*
+		 * project('kuzpkg',
+		 *         'c',
+		 *         version : '0.1.0-alpha')
+		 */
+		if (!name[0]) {
+			p = strstr(line, "project(");
 
-		fprintf(fp,
-			"export LDFLAGS=\"${LDFLAGS:-} -L%s\"\n",
-			abi->libdir);
+			if (p) {
+				char *q;
+				char quote;
+				char *end;
+
+				q = strchr(p, '\'');
+
+				if (!q)
+					q = strchr(p, '"');
+
+				if (q) {
+					quote = *q++;
+					end = strchr(q, quote);
+
+					if (end) {
+						size_t len =
+							(size_t)(end - q);
+
+						if (len >= name_size)
+							len = name_size - 1;
+
+						memcpy(name, q, len);
+						name[len] = '\0';
+					}
+				}
+			}
+		}
+
+		if (!version[0]) {
+			p = strstr(line, "version");
+
+			if (p) {
+				char *q;
+				char quote;
+				char *end;
+
+				q = strchr(p, '\'');
+
+				if (!q)
+					q = strchr(p, '"');
+
+				if (q) {
+					quote = *q++;
+					end = strchr(q, quote);
+
+					if (end) {
+						size_t len =
+							(size_t)(end - q);
+
+						if (len >= version_size)
+							len = version_size - 1;
+
+						memcpy(version, q, len);
+						version[len] = '\0';
+					}
+				}
+			}
+		}
+
+		if (name[0] && version[0])
+			break;
 	}
 
-	if (abi->abi == ABI_LIBO32) {
-		fprintf(fp,
-			"export MIPS_ABI=o32\n");
+	fclose(fp);
+
+	if (!name[0] || !version[0])
+		return -1;
+
+	return 0;
+}
+
+static int read_cmake_project(const char *dir,
+			      char *name,
+			      size_t name_size,
+			      char *version,
+			      size_t version_size)
+{
+	char path[PATH_MAX];
+	FILE *fp;
+	char line[4096];
+
+	if (snprintf(path,
+		     sizeof(path),
+		     "%s/CMakeLists.txt",
+		     dir) >= (int)sizeof(path))
+		return -1;
+
+	fp = fopen(path, "r");
+
+	if (!fp)
+		return -1;
+
+	name[0] = '\0';
+	version[0] = '\0';
+
+	while (fgets(line,
+		     sizeof(line),
+		     fp)) {
+		char *p;
+
+		p = strstr(line, "project(");
+
+		if (p && !name[0]) {
+			char *q;
+			char quote;
+			char *end;
+
+			q = strchr(p, '(');
+
+			if (q)
+				++q;
+
+			while (q && (*q == ' ' ||
+				     *q == '\t'))
+				++q;
+
+			if (q) {
+				quote = (*q == '\'' || *q == '"') ?
+					*q++ :
+					0;
+
+				if (quote)
+					end = strchr(q, quote);
+				else {
+					end = q;
+
+					while (*end &&
+					       *end != ' ' &&
+					       *end != '\t' &&
+					       *end != ')')
+						++end;
+				}
+
+				if (end) {
+					size_t len =
+						(size_t)(end - q);
+
+					if (len >= name_size)
+						len = name_size - 1;
+
+					memcpy(name, q, len);
+					name[len] = '\0';
+				}
+			}
+		}
+
+		p = strstr(line, "VERSION");
+
+		if (p && !version[0]) {
+			char *q = strchr(p, '=');
+
+			if (q) {
+				++q;
+
+				while (*q == ' ' ||
+				       *q == '\t' ||
+				       *q == '"' ||
+				       *q == '\'')
+					++q;
+
+				{
+					char *end = q;
+
+					while (*end &&
+					       *end != '"' &&
+					       *end != '\'' &&
+					       *end != ')' &&
+					       *end != '\n' &&
+					       *end != '\r')
+						++end;
+
+					if (end > q) {
+						size_t len =
+							(size_t)(end - q);
+
+						if (len >= version_size)
+							len = version_size - 1;
+
+						memcpy(version,
+						       q,
+						       len);
+
+						version[len] = '\0';
+					}
+				}
+			}
+		}
 	}
 
-	if (abi->abi == ABI_LIBM32) {
-		fprintf(fp,
-			"export MIPS_ABI=n32\n");
+	fclose(fp);
+
+	if (!name[0] || !version[0])
+		return -1;
+
+	return 0;
+}
+
+static int read_python_project(const char *dir,
+			       char *name,
+			       size_t name_size,
+			       char *version,
+			       size_t version_size)
+{
+	char path[PATH_MAX];
+	FILE *fp;
+	char line[4096];
+
+	if (snprintf(path,
+		     sizeof(path),
+		     "%s/pyproject.toml",
+		     dir) >= (int)sizeof(path))
+		return -1;
+
+	fp = fopen(path, "r");
+
+	if (!fp)
+		return -1;
+
+	name[0] = '\0';
+	version[0] = '\0';
+
+	while (fgets(line,
+		     sizeof(line),
+		     fp)) {
+		char *eq;
+
+		if (!strstr(line, "name"))
+			goto check_version;
+
+		eq = strchr(line, '=');
+
+		if (eq &&
+		    !name[0]) {
+			char *q;
+
+			q = strchr(eq + 1, '"');
+
+			if (!q)
+				q = strchr(eq + 1, '\'');
+
+			if (q) {
+				char quote = *q++;
+				char *end = strchr(q, quote);
+
+				if (end) {
+					size_t len =
+						(size_t)(end - q);
+
+					if (len >= name_size)
+						len = name_size - 1;
+
+					memcpy(name, q, len);
+					name[len] = '\0';
+				}
+			}
+		}
+
+check_version:
+		if (!strstr(line, "version"))
+			continue;
+
+		eq = strchr(line, '=');
+
+		if (eq &&
+		    !version[0]) {
+			char *q;
+
+			q = strchr(eq + 1, '"');
+
+			if (!q)
+				q = strchr(eq + 1, '\'');
+
+			if (q) {
+				char quote = *q++;
+				char *end = strchr(q, quote);
+
+				if (end) {
+					size_t len =
+						(size_t)(end - q);
+
+					if (len >= version_size)
+						len = version_size - 1;
+
+					memcpy(version, q, len);
+					version[len] = '\0';
+				}
+			}
+		}
 	}
+
+	fclose(fp);
+
+	if (!name[0] || !version[0])
+		return -1;
+
+	return 0;
+}
+
+static void detect_metadata(const char *dir,
+			    const char *system,
+			    char *name,
+			    size_t name_size,
+			    char *version,
+			    size_t version_size,
+			    char *release,
+			    size_t release_size)
+{
+	char normalized_version[256];
+
+	name[0] = '\0';
+	version[0] = '\0';
+
+	snprintf(release,
+		 release_size,
+		 "1");
+
+	if (!strcmp(system, "meson.build")) {
+		if (read_meson_project(dir,
+				       name,
+				       name_size,
+				       version,
+				       version_size) == 0) {
+			normalize_version(version,
+					  normalized_version,
+					  sizeof(normalized_version));
+
+			snprintf(version,
+				 version_size,
+				 "%s",
+				 normalized_version);
+
+			return;
+		}
+	}
+
+	if (!strcmp(system, "CMakeLists.txt")) {
+		if (read_cmake_project(dir,
+				       name,
+				       name_size,
+				       version,
+				       version_size) == 0) {
+			normalize_version(version,
+					  normalized_version,
+					  sizeof(normalized_version));
+
+			snprintf(version,
+				 version_size,
+				 "%s",
+				 normalized_version);
+
+			return;
+		}
+	}
+
+	if (!strcmp(system, "pyproject.toml")) {
+		if (read_python_project(dir,
+					name,
+					name_size,
+					version,
+					version_size) == 0) {
+			normalize_version(version,
+					  normalized_version,
+					  sizeof(normalized_version));
+
+			snprintf(version,
+				 version_size,
+				 "%s",
+				 normalized_version);
+
+			return;
+		}
+	}
+
+	/*
+	 * Generic fallback.
+	 */
+	snprintf(name,
+		 name_size,
+		 "%s",
+		 basename_const(dir));
+
+	snprintf(version,
+		 version_size,
+		 "0.0.0");
 }
 
 /* ------------------------------------------------------------------------- */
-/* Generated build()                                                         */
+/* PKGBUILD metadata                                                         */
+/* ------------------------------------------------------------------------- */
+
+static void read_srcinfo(const char *dir,
+			 char *name,
+			 size_t name_size,
+			 char *version,
+			 size_t version_size,
+			 char *release,
+			 size_t release_size)
+{
+	char qdir[PATH_MAX * 2];
+	char cmd[PATH_MAX * 3];
+	FILE *fp;
+	char line[4096];
+	int rc;
+
+	name[0] = '\0';
+	version[0] = '\0';
+	release[0] = '\0';
+
+	shell_quote(dir,
+		    qdir,
+		    sizeof(qdir));
+
+	snprintf(cmd,
+		 sizeof(cmd),
+		 "cd %s && makepkg --printsrcinfo 2>/dev/null",
+		 qdir);
+
+	fp = popen(cmd,
+		   "r");
+
+	if (!fp)
+		die("cannot execute makepkg --printsrcinfo");
+
+	while (fgets(line,
+		     sizeof(line),
+		     fp)) {
+		char *eq;
+		char *value;
+
+		eq = strchr(line, '=');
+
+		if (!eq)
+			continue;
+
+		*eq++ = '\0';
+
+		value = eq;
+
+		while (*value == ' ' ||
+		       *value == '\t')
+			++value;
+
+		value[strcspn(value,
+			      "\r\n")] = '\0';
+
+		if (!strcmp(line, "pkgname")) {
+			snprintf(name,
+				 name_size,
+				 "%s",
+				 value);
+		} else if (!strcmp(line, "pkgver")) {
+			snprintf(version,
+				 version_size,
+				 "%s",
+				 value);
+		} else if (!strcmp(line, "pkgrel")) {
+			snprintf(release,
+				 release_size,
+				 "%s",
+				 value);
+		}
+	}
+
+	rc = pclose(fp);
+
+	if (rc != 0 ||
+	    !name[0] ||
+	    !version[0]) {
+		die("makepkg could not read pkgname/pkgver from PKGBUILD");
+	}
+
+	if (!release[0])
+		snprintf(release,
+			 release_size,
+			 "1");
+}
+
+/* ------------------------------------------------------------------------- */
+/* Generate build()                                                          */
 /* ------------------------------------------------------------------------- */
 
 static void append_generated_build(FILE *fp,
@@ -1120,7 +1297,6 @@ static void append_generated_build(FILE *fp,
 			"build() {\n"
 			"  :\n"
 			"}\n");
-
 		return;
 	}
 
@@ -1263,7 +1439,7 @@ static void append_generated_build(FILE *fp,
 }
 
 /* ------------------------------------------------------------------------- */
-/* Generated package()                                                       */
+/* Generate package()                                                        */
 /* ------------------------------------------------------------------------- */
 
 static void append_generated_package(FILE *fp,
@@ -1427,18 +1603,18 @@ static void append_generated_package(FILE *fp,
 }
 
 /* ------------------------------------------------------------------------- */
-/* PKGINFO creation                                                          */
+/* PKGINFO generation                                                        */
 /* ------------------------------------------------------------------------- */
 
-static void append_pkginfo_generation(FILE *fp,
-				      const char *name,
-				      const char *version,
-				      const char *release,
-				      const struct abi_profile *abi)
+static void append_pkginfo_function(FILE *fp,
+				    const char *name,
+				    const char *version,
+				    const char *release,
+				    const struct abi_profile *abi)
 {
 	fprintf(fp,
 		"packinstall_lfs_pkginfo() {\n"
-		"  mkdir -p \"$pkgdir/etc/packinstall-lfs\"\n"
+		"  mkdir -p \"$pkgdir\"\n"
 		"  {\n"
 		"    printf 'format=packinstall-lfs/%s\\n'\n"
 		"    printf 'pkgname=%s\\n'\n"
@@ -1447,7 +1623,7 @@ static void append_pkginfo_generation(FILE *fp,
 		"    printf 'abi=%s\\n'\n"
 		"    printf 'libdir=%s\\n'\n"
 		"    printf 'machine=%s\\n'\n"
-		"  } > \"$pkgdir/etc/packinstall-lfs/package-info\"\n"
+		"  } > \"$pkgdir/%s\"\n"
 		"}\n",
 		VERSION,
 		name,
@@ -1455,11 +1631,12 @@ static void append_pkginfo_generation(FILE *fp,
 		release,
 		abi->name,
 		abi->libdir,
-		abi->machine);
+		abi->machine,
+		PKGINFO_NAME);
 }
 
 /* ------------------------------------------------------------------------- */
-/* Existing PKGBUILD functions                                               */
+/* Save original PKGBUILD functions                                         */
 /* ------------------------------------------------------------------------- */
 
 static void save_original_function(FILE *fp,
@@ -1476,89 +1653,34 @@ static void save_original_function(FILE *fp,
 		function);
 }
 
-static void append_prepare_function(FILE *fp)
-{
-	fprintf(fp,
-		"prepare() {\n"
-		"  if declare -F "
-		"_packinstall_original_prepare "
-		">/dev/null 2>&1; then\n"
-		"    _packinstall_original_prepare\n"
-		"  fi\n"
-		"}\n");
-}
-
-static void append_check_function(FILE *fp,
-				  int skip_checks,
-				  int no_build)
-{
-	fprintf(fp,
-		"check() {\n");
-
-	if (!skip_checks && !no_build) {
-		fprintf(fp,
-			"  if declare -F "
-			"_packinstall_original_check "
-			">/dev/null 2>&1; then\n"
-			"    _packinstall_original_check\n"
-			"  fi\n");
-	} else {
-		fprintf(fp,
-			"  :\n");
-	}
-
-	fprintf(fp,
-		"}\n");
-}
-
 /* ------------------------------------------------------------------------- */
-/* Create generated PKGBUILD                                                 */
+/* Generate wrapper PKGBUILD                                                 */
 /* ------------------------------------------------------------------------- */
 
-static void create_wrapper_pkgbuid(
+static void create_generated_pkgbuid(
 	const char *work_source,
-	const char *original_pkgbuild,
+	const char *real_pkgbuild,
 	const char *temp,
-	const char *system_override,
+	const char *system,
 	const struct abi_profile *abi,
 	const char *name,
 	const char *version,
 	const char *release,
+	int have_original_pkgbuild,
 	int skip_checks,
 	int no_build)
 {
-	char wrapper[PATH_MAX];
-	char qoriginal[PATH_MAX * 2];
-
-	const char *system;
-	int forced_system;
-
+	char path[PATH_MAX];
+	char qreal[PATH_MAX * 2];
 	FILE *fp;
 
-	if (snprintf(wrapper,
-		     sizeof(wrapper),
+	if (snprintf(path,
+		     sizeof(path),
 		     "%s/PKGBUILD",
-		     temp) >= (int)sizeof(wrapper)) {
-		die("generated PKGBUILD path is too long");
-	}
+		     temp) >= (int)sizeof(path))
+		die("temporary PKGBUILD path too long");
 
-	system = normalize_build_system(system_override,
-					work_source);
-
-	if (!system)
-		die("unable to detect a supported build system in %s",
-		    work_source);
-
-	forced_system =
-		system_override &&
-		strcmp(system_override, "auto") != 0;
-
-	shell_quote(original_pkgbuild,
-		    qoriginal,
-		    sizeof(qoriginal));
-
-	fp = fopen(wrapper,
-		   "w");
+	fp = fopen(path, "w");
 
 	if (!fp)
 		die("cannot create generated PKGBUILD: %s",
@@ -1569,34 +1691,50 @@ static void create_wrapper_pkgbuid(
 		VERSION);
 
 	/*
-	 * Load the user's PKGBUILD definitions.
+	 * Existing PKGBUILD:
+	 *
+	 * source it so dependencies/custom functions/variables remain visible.
 	 */
-	fprintf(fp,
-		"source %s\n",
-		qoriginal);
+	if (have_original_pkgbuild) {
+		shell_quote(real_pkgbuild,
+			    qreal,
+			    sizeof(qreal));
+
+		fprintf(fp,
+			"source %s\n",
+			qreal);
+
+		save_original_function(fp,
+				       "prepare");
+
+		save_original_function(fp,
+				       "build");
+
+		save_original_function(fp,
+				       "check");
+
+		save_original_function(fp,
+				       "package");
+	}
 
 	fprintf(fp,
-		"_packinstall_source='%s'\n",
-		work_source);
-
-	fprintf(fp,
-		"_packinstall_pkgname='%s'\n",
-		name);
-
-	fprintf(fp,
-		"_packinstall_pkgver='%s'\n",
-		version);
-
-	fprintf(fp,
-		"_packinstall_pkgrel='%s'\n",
-		release);
-
-	fprintf(fp,
+		"_packinstall_source='%s'\n"
+		"_packinstall_pkgname='%s'\n"
+		"_packinstall_pkgver='%s'\n"
+		"_packinstall_pkgrel='%s'\n"
+		"_packinstall_abi='%s'\n"
+		"_packinstall_libdir='%s'\n"
 		"_packinstall_basename=$(basename "
-		"\"$_packinstall_source\")\n");
+		"\"$_packinstall_source\")\n",
+		work_source,
+		name,
+		version,
+		release,
+		abi->name,
+		abi->libdir);
 
 	/*
-	 * Do not make makepkg extract a second source tree.
+	 * We don't want makepkg to fetch/extract another source tree.
 	 */
 	fprintf(fp,
 		"source=()\n"
@@ -1605,9 +1743,6 @@ static void create_wrapper_pkgbuid(
 		"b2sums=()\n"
 		"md5sums=()\n");
 
-	/*
-	 * ABI-specific pkgname.
-	 */
 	if (abi->abi == ABI_NATIVE) {
 		fprintf(fp,
 			"pkgname='%s'\n",
@@ -1625,139 +1760,444 @@ static void create_wrapper_pkgbuid(
 		version,
 		release);
 
-	if (abi->abi == ABI_NATIVE) {
-		fprintf(fp,
-			"arch=('auto')\n");
-	} else {
+	if (abi->abi == ABI_NATIVE)
+		fprintf(fp, "arch=('auto')\n");
+	else
 		fprintf(fp,
 			"arch=('%s')\n",
 			abi->name);
-	}
-
-	append_pkginfo_generation(fp,
-				      name,
-				      version,
-				      release,
-				      abi);
-
-	save_original_function(fp,
-			       "prepare");
-
-	save_original_function(fp,
-			       "build");
-
-	save_original_function(fp,
-			       "check");
-
-	save_original_function(fp,
-			       "package");
 
 	append_abi_environment(fp,
 			       abi);
 
-	append_prepare_function(fp);
+	/*
+	 * prepare()
+	 */
+	fprintf(fp,
+		"prepare() {\n");
+
+	if (have_original_pkgbuild) {
+		fprintf(fp,
+			"  if declare -F "
+			"_packinstall_original_prepare "
+			">/dev/null 2>&1; then\n"
+			"    _packinstall_original_prepare\n"
+			"  fi\n");
+	}
+
+	fprintf(fp,
+		"  :\n"
+		"}\n");
 
 	/*
-	 * Build.
+	 * build()
 	 */
 	if (no_build) {
 		fprintf(fp,
 			"build() {\n"
 			"  :\n"
 			"}\n");
-	} else if (forced_system) {
-		append_generated_build(fp,
-				       system,
-				       0);
-	} else {
+	} else if (have_original_pkgbuild) {
 		fprintf(fp,
-			"if declare -F "
+			"build() {\n"
+			"  if declare -F "
 			"_packinstall_original_build "
 			">/dev/null 2>&1; then\n"
-			"  build() {\n"
 			"    _packinstall_original_build\n"
-			"  }\n"
-			"else\n");
+			"  else\n");
 
+		/*
+		 * Do not generate another build if the user's PKGBUILD already
+		 * has one.
+		 */
 		append_generated_build(fp,
 				       system,
 				       0);
 
 		fprintf(fp,
-			"fi\n");
+			"  fi\n"
+			"}\n");
+	} else {
+		append_generated_build(fp,
+				       system,
+				       0);
 	}
 
-	append_check_function(fp,
-			      skip_checks,
-			      no_build);
-
 	/*
-	 * package() selection.
+	 * check()
 	 */
-	if (forced_system) {
-		append_generated_package(fp,
-					 system,
-					 abi);
+	fprintf(fp,
+		"check() {\n");
+
+	if (have_original_pkgbuild &&
+	    !skip_checks &&
+	    !no_build) {
+		fprintf(fp,
+			"  if declare -F "
+			"_packinstall_original_check "
+			">/dev/null 2>&1; then\n"
+			"    _packinstall_original_check\n"
+			"  fi\n");
 	} else {
 		fprintf(fp,
-			"if declare -F "
-			"_packinstall_original_package "
-			">/dev/null 2>&1; then\n"
-			"  package() {\n"
-			"    _packinstall_original_package\n"
-			"  }\n"
-			"else\n");
-
-		append_generated_package(fp,
-					 system,
-					 abi);
-
-		fprintf(fp,
-			"fi\n");
+			"  :\n");
 	}
 
-	/*
-	 * PKGINFO must be placed in $pkgdir after package() has staged files.
-	 */
 	fprintf(fp,
-		"_packinstall_finish() {\n"
-		"  packinstall_lfs_pkginfo\n"
 		"}\n");
 
 	/*
-	 * Replace package() one final time so PKGINFO is guaranteed to be
-	 * generated after the actual package() implementation.
+	 * package()
 	 */
-	fprintf(fp,
-		"_packinstall_package_impl() {\n"
-		"  package\n"
-		"}\n");
+	if (have_original_pkgbuild) {
+		fprintf(fp,
+			"package() {\n"
+			"  if declare -F "
+			"_packinstall_original_package "
+			">/dev/null 2>&1; then\n"
+			"    _packinstall_original_package\n"
+			"  else\n");
 
-	fprintf(fp,
-		"package() {\n"
-		"  _packinstall_package_impl\n"
-		"  packinstall_lfs_pkginfo\n"
-		"}\n");
+		append_generated_package(fp,
+				       system,
+				       abi);
 
-	/*
-	 * The replacement above would recurse. Instead, redefine the actual
-	 * implementation safely by capturing the generated package function.
-	 */
-	fprintf(fp,
-		"eval \"$(declare -f package | "
-		"sed '1s/^package /_packinstall_final_package /')\"\n");
+		fprintf(fp,
+			"  fi\n"
+			"  packinstall_lfs_pkginfo\n"
+			"}\n");
+	} else {
+		append_generated_package(fp,
+					system,
+					abi);
 
-	fprintf(fp,
-		"package() {\n"
-		"  _packinstall_final_package\n"
-		"  packinstall_lfs_pkginfo\n"
-		"}\n");
+		/*
+		 * Rename generated implementation and wrap it.
+		 */
+		fprintf(fp,
+			"eval \"$(declare -f package | "
+			"sed '1s/^package /_packinstall_generated_package /')\"\n"
+			"package() {\n"
+			"  _packinstall_generated_package\n"
+			"  packinstall_lfs_pkginfo\n"
+			"}\n");
+	}
+
+	append_pkginfo_function(fp,
+				name,
+				version,
+				release,
+				abi);
 
 	fclose(fp);
 }
 
 /* ------------------------------------------------------------------------- */
-/* Copy source tree for root builds                                          */
+/* Builder account                                                           */
+/* ------------------------------------------------------------------------- */
+
+static int passwd_uid_in_use(uid_t uid)
+{
+	struct passwd *pw;
+
+	setpwent();
+
+	while ((pw = getpwent()) != NULL) {
+		if (pw->pw_uid == uid) {
+			endpwent();
+			return 1;
+		}
+	}
+
+	endpwent();
+
+	return 0;
+}
+
+static int group_gid_in_use(gid_t gid)
+{
+	struct group *gr;
+
+	setgrent();
+
+	while ((gr = getgrent()) != NULL) {
+		if (gr->gr_gid == gid) {
+			endgrent();
+			return 1;
+		}
+	}
+
+	endgrent();
+
+	return 0;
+}
+
+static uid_t choose_builder_uid(void)
+{
+	uid_t uid;
+
+	for (uid = 900; uid < 65000; ++uid) {
+		if (!passwd_uid_in_use(uid))
+			return uid;
+	}
+
+	die("cannot find unused UID for builder");
+	return 0;
+}
+
+static gid_t choose_builder_gid(void)
+{
+	gid_t gid;
+
+	for (gid = 900; gid < 65000; ++gid) {
+		if (!group_gid_in_use(gid))
+			return gid;
+	}
+
+	die("cannot find unused GID for builder");
+	return 0;
+}
+
+static void append_line_file(const char *path,
+			     const char *line,
+			     mode_t mode)
+{
+	int fd;
+	const char *p;
+	size_t remaining;
+
+	fd = open(path,
+		  O_WRONLY | O_APPEND | O_CREAT,
+		  mode);
+
+	if (fd < 0)
+		die("cannot open %s: %s",
+		    path,
+		    strerror(errno));
+
+	p = line;
+	remaining = strlen(line);
+
+	while (remaining) {
+		ssize_t n =
+			write(fd,
+			      p,
+			      remaining);
+
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+
+			close(fd);
+
+			die("cannot write %s: %s",
+			    path,
+			    strerror(errno));
+		}
+
+		p += n;
+		remaining -= (size_t)n;
+	}
+
+	close(fd);
+}
+
+static void create_builder_from_files(void)
+{
+	uid_t uid;
+	gid_t gid;
+
+	char group_line[256];
+	char passwd_line[512];
+
+	struct group *existing_group;
+
+	if (geteuid() != 0)
+		die("builder creation requires root");
+
+	if (getpwnam(BUILDER_USER))
+		return;
+
+	uid = choose_builder_uid();
+
+	existing_group = getgrnam(BUILDER_GROUP);
+
+	if (existing_group)
+		gid = existing_group->gr_gid;
+	else
+		gid = choose_builder_gid();
+
+	if (gid == 0)
+		die("refusing GID 0 for builder");
+
+	if (!existing_group) {
+		snprintf(group_line,
+			 sizeof(group_line),
+			 "%s:x:%lu:\n",
+			 BUILDER_GROUP,
+			 (unsigned long)gid);
+
+		append_line_file("/etc/group",
+				 group_line,
+				 0644);
+	}
+
+	{
+		const char *shell =
+			is_file(BUILDER_SHELL) ?
+			BUILDER_SHELL :
+			"/bin/sh";
+
+		snprintf(passwd_line,
+			 sizeof(passwd_line),
+			 "%s:x:%lu:%lu:LFS package builder:%s:%s\n",
+			 BUILDER_USER,
+			 (unsigned long)uid,
+			 (unsigned long)gid,
+			 BUILDER_HOME,
+			 shell);
+
+		append_line_file("/etc/passwd",
+				 passwd_line,
+				 0644);
+	}
+
+	endpwent();
+	endgrent();
+
+	if (!getpwnam(BUILDER_USER))
+		die("failed to create builder account");
+
+	ensure_dir(BUILDER_HOME);
+
+	if (chown(BUILDER_HOME,
+		  uid,
+		  gid) != 0)
+		die("cannot chown %s: %s",
+		    BUILDER_HOME,
+		    strerror(errno));
+
+	if (chmod(BUILDER_HOME,
+		  0700) != 0)
+		die("cannot chmod %s: %s",
+		    BUILDER_HOME,
+		    strerror(errno));
+
+	printf("created builder using /etc/passwd and /etc/group "
+	       "(uid=%lu gid=%lu)\n",
+	       (unsigned long)uid,
+	       (unsigned long)gid);
+}
+
+static void ensure_builder(void)
+{
+	struct passwd *pw;
+	char cmd[PATH_MAX * 3];
+
+	if (geteuid() != 0)
+		return;
+
+	pw = getpwnam(BUILDER_USER);
+
+	if (pw) {
+		if (pw->pw_uid == 0)
+			die("builder account has UID 0");
+
+		return;
+	}
+
+	if (command_exists("/usr/sbin/useradd")) {
+		snprintf(cmd,
+			 sizeof(cmd),
+			 "/usr/sbin/useradd "
+			 "--system "
+			 "--create-home "
+			 "--user-group "
+			 "--home-dir %s "
+			 "--shell %s "
+			 "%s",
+			 BUILDER_HOME,
+			 BUILDER_SHELL,
+			 BUILDER_USER);
+
+		if (run_command(cmd) == 0) {
+			endpwent();
+			endgrent();
+
+			pw = getpwnam(BUILDER_USER);
+
+			if (pw &&
+			    pw->pw_uid != 0) {
+				ensure_dir(BUILDER_HOME);
+				return;
+			}
+		}
+	}
+
+	if (command_exists("/usr/bin/useradd")) {
+		snprintf(cmd,
+			 sizeof(cmd),
+			 "/usr/bin/useradd "
+			 "--system "
+			 "--create-home "
+			 "--user-group "
+			 "--home-dir %s "
+			 "--shell %s "
+			 "%s",
+			 BUILDER_HOME,
+			 BUILDER_SHELL,
+			 BUILDER_USER);
+
+		if (run_command(cmd) == 0) {
+			endpwent();
+			endgrent();
+
+			pw = getpwnam(BUILDER_USER);
+
+			if (pw &&
+			    pw->pw_uid != 0) {
+				ensure_dir(BUILDER_HOME);
+				return;
+			}
+		}
+	}
+
+	/*
+	 * No useradd:
+	 *
+	 * append builder entries directly to /etc/group and /etc/passwd.
+	 */
+	create_builder_from_files();
+}
+
+static uid_t builder_uid(void)
+{
+	struct passwd *pw = getpwnam(BUILDER_USER);
+
+	if (!pw)
+		die("builder user does not exist");
+
+	if (pw->pw_uid == 0)
+		die("builder UID is 0");
+
+	return pw->pw_uid;
+}
+
+static gid_t builder_gid(void)
+{
+	struct passwd *pw = getpwnam(BUILDER_USER);
+
+	if (!pw)
+		die("builder user does not exist");
+
+	if (pw->pw_gid == 0)
+		die("builder GID is 0");
+
+	return pw->pw_gid;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Source tree copy                                                          */
 /* ------------------------------------------------------------------------- */
 
 static void copy_source_tree(const char *source,
@@ -1778,21 +2218,14 @@ static void copy_source_tree(const char *source,
 		die("cannot create builder temporary directory: %s",
 		    strerror(errno));
 
-	base = strrchr(source,
-		       '/');
-
-	if (base)
-		++base;
-	else
-		base = source;
+	base = basename_const(source);
 
 	if (snprintf(destination,
 		     destination_size,
 		     "%s/%s",
 		     templ,
-		     base) >= (int)destination_size) {
-		die("builder source path is too long");
-	}
+		     base) >= (int)destination_size)
+		die("builder source path too long");
 
 	shell_quote(source,
 		    qsource,
@@ -1809,7 +2242,7 @@ static void copy_source_tree(const char *source,
 		 qdestination);
 
 	if (run_command(cmd) != 0)
-		die("cannot copy source tree");
+		die("failed to copy source tree");
 
 	snprintf(cmd,
 		 sizeof(cmd),
@@ -1819,7 +2252,7 @@ static void copy_source_tree(const char *source,
 		 qdestination);
 
 	if (run_command(cmd) != 0)
-		die("cannot chown source tree to builder");
+		die("failed to chown source tree");
 
 	snprintf(cmd,
 		 sizeof(cmd),
@@ -1827,7 +2260,7 @@ static void copy_source_tree(const char *source,
 		 qdestination);
 
 	if (run_command(cmd) != 0)
-		die("cannot chmod builder source tree");
+		die("failed to chmod builder source tree");
 }
 
 static void remove_tree(const char *path)
@@ -1848,7 +2281,7 @@ static void remove_tree(const char *path)
 }
 
 /* ------------------------------------------------------------------------- */
-/* Execute makepkg                                                           */
+/* makepkg execution                                                         */
 /* ------------------------------------------------------------------------- */
 
 static void execute_makepkg(const char *workdir,
@@ -1860,7 +2293,6 @@ static void execute_makepkg(const char *workdir,
 	char qworkdir[PATH_MAX * 2];
 	char qwrapper[PATH_MAX * 2];
 	char qoutput[PATH_MAX * 2];
-
 	char command[PATH_MAX * 8];
 
 	shell_quote(workdir,
@@ -1894,6 +2326,9 @@ static void execute_makepkg(const char *workdir,
 		 "--nocheck" :
 		 "");
 
+	/*
+	 * Already non-root.
+	 */
 	if (geteuid() != 0) {
 		if (run_command(command) != 0)
 			die("makepkg failed");
@@ -1902,16 +2337,17 @@ static void execute_makepkg(const char *workdir,
 	}
 
 	/*
-	 * Preferred path: runuser.
+	 * Root -> builder.
 	 */
 	{
-		struct passwd *pw;
-
-		pw = lookup_builder();
+		struct passwd *pw = getpwnam(BUILDER_USER);
 
 		if (!pw)
-			die("builder user disappeared");
+			die("builder user is missing");
 
+		/*
+		 * runuser
+		 */
 		if (command_exists("/usr/sbin/runuser")) {
 			char qcommand[PATH_MAX * 9];
 			char qhome[PATH_MAX * 2];
@@ -1946,6 +2382,9 @@ static void execute_makepkg(const char *workdir,
 			return;
 		}
 
+		/*
+		 * su
+		 */
 		if (command_exists("/bin/su")) {
 			char qcommand[PATH_MAX * 9];
 			char run_cmd[PATH_MAX * 10];
@@ -1976,7 +2415,8 @@ static void execute_makepkg(const char *workdir,
 
 			snprintf(run_cmd,
 				 sizeof(run_cmd),
-				 "/usr/bin/su -s /bin/bash %s -c %s",
+				 "/usr/bin/su -s /bin/bash "
+				 "%s -c %s",
 				 BUILDER_USER,
 				 qcommand);
 
@@ -1987,7 +2427,8 @@ static void execute_makepkg(const char *workdir,
 		}
 
 		/*
-		 * Minimal-LFS fallback: fork + drop privileges directly.
+		 * Minimal LFS fallback:
+		 * fork, initgroups, setgid, setuid, exec.
 		 */
 		{
 			pid_t pid;
@@ -2000,21 +2441,14 @@ static void execute_makepkg(const char *workdir,
 				    strerror(errno));
 
 			if (pid == 0) {
-				struct passwd *child_pw;
-
-				child_pw = lookup_builder();
-
-				if (!child_pw)
-					_exit(126);
-
 				if (initgroups(BUILDER_USER,
-					       child_pw->pw_gid) != 0)
+					       pw->pw_gid) != 0)
 					_exit(126);
 
-				if (setgid(child_pw->pw_gid) != 0)
+				if (setgid(pw->pw_gid) != 0)
 					_exit(126);
 
-				if (setuid(child_pw->pw_uid) != 0)
+				if (setuid(pw->pw_uid) != 0)
 					_exit(126);
 
 				execl("/bin/bash",
@@ -2028,30 +2462,28 @@ static void execute_makepkg(const char *workdir,
 
 			if (waitpid(pid,
 				     &status,
-				     0) < 0) {
+				     0) < 0)
 				die("waitpid failed: %s",
 				    strerror(errno));
-			}
 
 			if (!WIFEXITED(status) ||
-			    WEXITSTATUS(status) != 0) {
+			    WEXITSTATUS(status) != 0)
 				die("makepkg failed as builder");
-			}
 		}
 	}
 }
 
 /* ------------------------------------------------------------------------- */
-/* Modern create/package                                                     */
+/* Modern create                                                             */
 /* ------------------------------------------------------------------------- */
 
-static void modern_package(const char *source_dir,
-			   const char *pkgbuild,
-			   const char *system_override,
-			   const struct abi_profile *abi,
-			   const char *output,
-			   int skip_checks,
-			   int no_build)
+static void modern_create(const char *source_dir,
+			  const char *pkgbuild_path,
+			  const char *system_override,
+			  const struct abi_profile *abi,
+			  const char *output,
+			  int skip_checks,
+			  int no_build)
 {
 	char name[256];
 	char version[256];
@@ -2062,18 +2494,67 @@ static void modern_package(const char *source_dir,
 	char wrapper[PATH_MAX];
 	char output_dir[PATH_MAX];
 
+	char system_buffer[128];
+	const char *system;
+
+	int have_pkgbuid;
 	int root_build;
 
-	read_srcinfo(source_dir,
-		     name,
-		     sizeof(name),
-		     version,
-		     sizeof(version),
-		     release,
-		     sizeof(release));
+	memset(name, 0, sizeof(name));
+	memset(version, 0, sizeof(version));
+	memset(release, 0, sizeof(release));
+
+	have_pkgbuid = is_file(pkgbuild_path);
+
+	if (have_pkgbuid) {
+		read_srcinfo(source_dir,
+			     name,
+			     sizeof(name),
+			     version,
+			     sizeof(version),
+			     release,
+			     sizeof(release));
+
+		system = normalize_build_system(system_override,
+						source_dir);
+	} else {
+		system = normalize_build_system(system_override,
+						source_dir);
+
+		if (!system)
+			die("no PKGBUILD and no supported build system found");
+
+		detect_metadata(source_dir,
+				system,
+				name,
+				sizeof(name),
+				version,
+				sizeof(version),
+				release,
+				sizeof(release));
+	}
+
+	if (!name[0])
+		die("could not determine package name");
+
+	if (!version[0])
+		die("could not determine package version");
+
+	if (!release[0])
+		strcpy(release, "1");
+
+	snprintf(system_buffer,
+		 sizeof(system_buffer),
+		 "%s",
+		 system);
+
+	system = system_buffer;
 
 	root_build = geteuid() == 0;
 
+	/*
+	 * Root packaging gets a private builder-owned source tree.
+	 */
 	if (root_build) {
 		copy_source_tree(source_dir,
 				 workdir,
@@ -2091,23 +2572,15 @@ static void modern_package(const char *source_dir,
 		 workdir,
 		 (long)getpid());
 
-	if (mkdir(temp,
-		  0700) != 0) {
+	if (mkdir(temp, 0700) != 0)
 		die("cannot create package temporary directory: %s",
 		    strerror(errno));
-	}
 
 	if (root_build) {
 		if (chown(temp,
 			  builder_uid(),
-			  builder_gid()) != 0) {
+			  builder_gid()) != 0)
 			die("cannot chown package temporary directory");
-		}
-
-		if (chmod(temp,
-			  0700) != 0) {
-			die("cannot chmod package temporary directory");
-		}
 	}
 
 	snprintf(wrapper,
@@ -2116,9 +2589,7 @@ static void modern_package(const char *source_dir,
 		 temp);
 
 	/*
-	 * If no output was supplied, put the resulting archive beside the
-	 * source tree for non-root builds. Root gets a temporary output
-	 * directory and the package is copied back afterwards.
+	 * Output.
 	 */
 	if (output) {
 		absolute_path(output,
@@ -2135,15 +2606,13 @@ static void modern_package(const char *source_dir,
 			 (long)getpid());
 
 		if (mkdir(output_dir,
-			  0755) != 0) {
-			die("cannot create temporary output directory");
-		}
+			  0755) != 0)
+			die("cannot create package output directory");
 
 		if (chown(output_dir,
 			  builder_uid(),
-			  builder_gid()) != 0) {
-			die("cannot chown output directory");
-		}
+			  builder_gid()) != 0)
+			die("cannot chown package output directory");
 	} else {
 		snprintf(output_dir,
 			 sizeof(output_dir),
@@ -2154,22 +2623,48 @@ static void modern_package(const char *source_dir,
 	if (root_build) {
 		if (chown(output_dir,
 			  builder_uid(),
-			  builder_gid()) != 0) {
+			  builder_gid()) != 0)
 			die("cannot chown output directory");
-		}
 	}
 
-	create_wrapper_pkgbuid(
-		workdir,
-		pkgbuild,
-		temp,
-		system_override,
-		abi,
-		name,
-		version,
-		release,
-		skip_checks,
-		no_build);
+	/*
+	 * If the original source has PKGBUILD, point the temporary PKGBUILD
+	 * to its copied version when root is used.
+	 */
+	{
+		char copied_pkgbuild[PATH_MAX];
+		const char *real_pkgbuild = pkgbuild_path;
+
+		if (root_build) {
+			snprintf(copied_pkgbuild,
+				 sizeof(copied_pkgbuild),
+				 "%s/%s",
+				 workdir,
+				 basename_const(pkgbuild_path));
+
+			if (!is_file(copied_pkgbuild))
+				real_pkgbuild = "";
+			else
+				real_pkgbuild = copied_pkgbuild;
+		}
+
+		/*
+		 * For source directories without PKGBUILD, create_generated_pkgbuid
+		 * does not source anything.
+		 */
+		create_generated_pkgbuid(
+			workdir,
+			real_pkgbuild,
+			temp,
+			system,
+			abi,
+			name,
+			version,
+			release,
+			have_pkgbuid,
+			skip_checks,
+			no_build);
+	}
 
 	execute_makepkg(
 		temp,
@@ -2181,6 +2676,11 @@ static void modern_package(const char *source_dir,
 	unlink(wrapper);
 	rmdir(temp);
 
+	/*
+	 * Root/no-output:
+	 *
+	 * copy package back to the original source directory.
+	 */
 	if (root_build && !output) {
 		char qout[PATH_MAX * 2];
 		char qsource[PATH_MAX * 2];
@@ -2200,20 +2700,20 @@ static void modern_package(const char *source_dir,
 			 qout,
 			 qsource);
 
-		if (run_command(cmd) != 0) {
+		if (run_command(cmd) != 0)
 			warnx("could not copy generated package back to %s",
 			      source_dir);
-		}
 
 		remove_tree(output_dir);
 		remove_tree(workdir);
 	}
 
-	printf("packaged %s-%s-%s [%s]\n",
+	printf("packaged %s-%s-%s [%s] using %s\n",
 	       name,
 	       version,
 	       release,
-	       abi->name);
+	       abi->name,
+	       system);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2228,16 +2728,15 @@ static void create_legacy(const char *stage,
 	struct stat st;
 
 	char qstage[PATH_MAX * 2];
-	char qout[PATH_MAX * 2];
-	char cmd[PATH_MAX * 4];
+	char qoutput[PATH_MAX * 2];
+	char cmd[PATH_MAX * 5];
 	char pkginfo[PATH_MAX];
 
 	if (stat(stage,
 		 &st) != 0 ||
-	    !S_ISDIR(st.st_mode)) {
+	    !S_ISDIR(st.st_mode))
 		die("stage directory does not exist: %s",
 		    stage);
-	}
 
 	if (!output) {
 		static char generated[PATH_MAX];
@@ -2252,9 +2751,6 @@ static void create_legacy(const char *stage,
 		output = generated;
 	}
 
-	/*
-	 * Legacy archives contain PKGINFO, never .LFSINFO.
-	 */
 	snprintf(pkginfo,
 		 sizeof(pkginfo),
 		 "%s/%s",
@@ -2262,10 +2758,8 @@ static void create_legacy(const char *stage,
 		 PKGINFO_NAME);
 
 	{
-		FILE *fp;
-
-		fp = fopen(pkginfo,
-			   "w");
+		FILE *fp = fopen(pkginfo,
+				 "w");
 
 		if (!fp)
 			die("cannot create %s: %s",
@@ -2279,7 +2773,7 @@ static void create_legacy(const char *stage,
 			"pkgrel=1\n"
 			"abi=native\n"
 			"libdir=/usr/lib\n"
-			"arch=native\n",
+			"machine=native\n",
 			VERSION,
 			name,
 			version);
@@ -2292,15 +2786,14 @@ static void create_legacy(const char *stage,
 		    sizeof(qstage));
 
 	shell_quote(output,
-		    qout,
-		    sizeof(qout));
+		    qoutput,
+		    sizeof(qoutput));
 
 	snprintf(cmd,
 		 sizeof(cmd),
-		 "tar --zstd -C %s "
-		 "-cf %s .",
+		 "tar --zstd -C %s -cf %s .",
 		 qstage,
-		 qout);
+		 qoutput);
 
 	if (run_command(cmd) != 0) {
 		unlink(pkginfo);
@@ -2348,7 +2841,6 @@ static void validate_archive(const char *package)
 {
 	char qpackage[PATH_MAX * 2];
 	char cmd[PATH_MAX * 3];
-
 	FILE *fp;
 	char line[PATH_MAX];
 
@@ -2361,8 +2853,7 @@ static void validate_archive(const char *package)
 		 "tar --zstd -tf %s",
 		 qpackage);
 
-	fp = popen(cmd,
-		   "r");
+	fp = popen(cmd, "r");
 
 	if (!fp)
 		die("cannot inspect %s",
@@ -2388,7 +2879,7 @@ static void validate_archive(const char *package)
 }
 
 /* ------------------------------------------------------------------------- */
-/* Read PKGINFO                                                              */
+/* info                                                                      */
 /* ------------------------------------------------------------------------- */
 
 static void package_info(const char *package)
@@ -2402,8 +2893,7 @@ static void package_info(const char *package)
 
 	snprintf(cmd,
 		 sizeof(cmd),
-		 "tar --zstd -xOf %s "
-		 "./%s 2>/dev/null",
+		 "tar --zstd -xOf %s ./%s 2>/dev/null",
 		 qpackage,
 		 PKGINFO_NAME);
 
@@ -2413,7 +2903,7 @@ static void package_info(const char *package)
 }
 
 /* ------------------------------------------------------------------------- */
-/* Install                                                                    */
+/* install                                                                   */
 /* ------------------------------------------------------------------------- */
 
 static void install_package(const char *package)
@@ -2457,8 +2947,7 @@ static void install_package(const char *package)
 
 	snprintf(cmd,
 		 sizeof(cmd),
-		 "tar --zstd -xOf %s "
-		 "./%s > %s 2>/dev/null",
+		 "tar --zstd -xOf %s ./%s > %s 2>/dev/null",
 		 qpackage,
 		 PKGINFO_NAME,
 		 qtmp);
@@ -2500,19 +2989,14 @@ static void install_package(const char *package)
 	unlink(tmp);
 
 	if (!name[0] ||
-	    !version[0]) {
+	    !version[0])
 		die("PKGINFO is missing pkgname/pkgver");
-	}
 
 	if (!release[0])
-		snprintf(release,
-			 sizeof(release),
-			 "1");
+		strcpy(release, "1");
 
 	if (!abi[0])
-		snprintf(abi,
-			 sizeof(abi),
-			 "native");
+		strcpy(abi, "native");
 
 	if (snprintf(db,
 		     sizeof(db),
@@ -2521,29 +3005,25 @@ static void install_package(const char *package)
 		     DB_REL,
 		     name,
 		     version,
-		     abi) >= (int)sizeof(db)) {
-		die("package database path is too long");
-	}
+		     abi) >= (int)sizeof(db))
+		die("package database path too long");
 
 	if (snprintf(files,
 		     sizeof(files),
 		     "%s/files",
-		     db) >= (int)sizeof(files)) {
-		die("package database path is too long");
-	}
+		     db) >= (int)sizeof(files))
+		die("package database path too long");
 
 	ensure_dir(db);
 
 	/*
-	 * Don't install PKGINFO itself into the target filesystem root.
-	 * Keep package metadata in the package database.
+	 * PKGINFO is package metadata, not a target-system file.
 	 */
 	snprintf(cmd,
 		 sizeof(cmd),
 		 "tar --zstd -xpf %s "
 		 "-C %s "
 		 "--exclude=./%s "
-		 "--exclude=./etc/packinstall-lfs "
 		 "--no-same-owner "
 		 "--no-same-permissions",
 		 qpackage,
@@ -2555,7 +3035,7 @@ static void install_package(const char *package)
 		    package);
 
 	/*
-	 * Generate a file manifest from the archive.
+	 * Create an installation manifest.
 	 */
 	snprintf(cmd,
 		 sizeof(cmd),
@@ -2567,24 +3047,9 @@ static void install_package(const char *package)
 
 	if (run_command(cmd) == 0) {
 		if (rename(tmp,
-			   files) != 0) {
+			   files) != 0)
 			warnx("cannot save package manifest: %s",
 			      strerror(errno));
-		}
-	} else {
-		fp = fopen(files,
-			   "w");
-
-		if (fp) {
-			fprintf(fp,
-				"# package %s-%s-%s [%s]\n",
-				name,
-				version,
-				release,
-				abi);
-
-			fclose(fp);
-		}
 	}
 
 	printf("installed %s-%s-%s [%s]\n",
@@ -2595,7 +3060,7 @@ static void install_package(const char *package)
 }
 
 /* ------------------------------------------------------------------------- */
-/* Remove                                                                    */
+/* remove                                                                    */
 /* ------------------------------------------------------------------------- */
 
 static void remove_package(const char *name,
@@ -2618,16 +3083,14 @@ static void remove_package(const char *name,
 		     DB_REL,
 		     name,
 		     version,
-		     abi_name) >= (int)sizeof(db)) {
-		die("package database path is too long");
-	}
+		     abi_name) >= (int)sizeof(db))
+		die("package database path too long");
 
 	if (snprintf(files,
 		     sizeof(files),
 		     "%s/files",
-		     db) >= (int)sizeof(files)) {
-		die("package database path is too long");
-	}
+		     db) >= (int)sizeof(files))
+		die("package database path too long");
 
 	fp = fopen(files,
 		   "r");
@@ -2658,23 +3121,20 @@ static void remove_package(const char *name,
 		    strlen(path) >= PATH_MAX)
 			continue;
 
-		strcpy(full,
-		       root_dir);
-
-		strcat(full,
-		       "/");
-
-		strcat(full,
-		       path);
+		snprintf(full,
+			 sizeof(full),
+			 "%s/%s",
+			 root_dir,
+			 path);
 
 		if (lstat(full,
 			  &st) != 0)
 			continue;
 
-		if (S_ISDIR(st.st_mode)) {
+		if (S_ISDIR(st.st_mode))
 			(void)rmdir(full);
-		} else if (unlink(full) != 0 &&
-			   errno != ENOENT) {
+		else if (unlink(full) != 0 &&
+			 errno != ENOENT) {
 			fprintf(stderr,
 				"packinstall-lfs: cannot remove %s: %s\n",
 				full,
@@ -2694,7 +3154,7 @@ static void remove_package(const char *name,
 }
 
 /* ------------------------------------------------------------------------- */
-/* List                                                                      */
+/* list                                                                      */
 /* ------------------------------------------------------------------------- */
 
 static void list_packages(void)
@@ -2707,9 +3167,8 @@ static void list_packages(void)
 		     sizeof(base),
 		     "%s%s",
 		     root_dir,
-		     DB_REL) >= (int)sizeof(base)) {
-		die("package database path is too long");
-	}
+		     DB_REL) >= (int)sizeof(base))
+		die("package database path too long");
 
 	shell_quote(base,
 		    qbase,
@@ -2729,55 +3188,6 @@ static void list_packages(void)
 }
 
 /* ------------------------------------------------------------------------- */
-/* Find PKGBUILD                                                             */
-/* ------------------------------------------------------------------------- */
-
-static void resolve_pkgbuild(const char *dir,
-			     const char *requested,
-			     char *output,
-			     size_t output_size)
-{
-	const char *name;
-
-	if (requested) {
-		if (requested[0] == '/') {
-			if (strlen(requested) >= output_size)
-				die("PKGBUILD path is too long");
-
-			strcpy(output, requested);
-			return;
-		}
-
-		if (strlen(dir) +
-		    1 +
-		    strlen(requested) >= output_size) {
-			die("PKGBUILD path is too long");
-		}
-
-		snprintf(output,
-			 output_size,
-			 "%s/%s",
-			 dir,
-			 requested);
-
-		return;
-	}
-
-	name = "PKGBUILD";
-
-	if (strlen(dir) +
-	    1 +
-	    strlen(name) >= output_size)
-		die("PKGBUILD path is too long");
-
-	snprintf(output,
-		 output_size,
-		 "%s/%s",
-		 dir,
-		 name);
-}
-
-/* ------------------------------------------------------------------------- */
 /* Main                                                                      */
 /* ------------------------------------------------------------------------- */
 
@@ -2793,6 +3203,19 @@ int main(int argc, char **argv)
 
 	command = argv[1];
 
+	if (!strcmp(command, "--version") ||
+	    !strcmp(command, "-V")) {
+		printf("packinstall-lfs %s\n",
+		       VERSION);
+		return EXIT_SUCCESS;
+	}
+
+	if (!strcmp(command, "--help") ||
+	    !strcmp(command, "-h")) {
+		usage();
+		return EXIT_SUCCESS;
+	}
+
 	root = arg_value(argc,
 			 argv,
 			 "--root");
@@ -2801,68 +3224,64 @@ int main(int argc, char **argv)
 		root_dir = root;
 
 	/*
-	 * Modern create and package are the same packaging path.
+	 * Modern create/package path.
 	 */
 	if (!strcmp(command, "create") ||
 	    !strcmp(command, "package")) {
-		const char *dir;
+		const char *source_dir;
 		const char *requested_pkgbuild;
-		const char *system;
+		const char *system_override;
 		const char *abi_name;
 		const char *output;
 
 		const struct abi_profile *abi;
 
-		char absdir[PATH_MAX];
 		char pkgbuild[PATH_MAX];
 
-		dir = arg_value(argc,
-				argv,
-				"--dir");
+		resolve_source_dir(argc,
+				   argv,
+				   pkgbuild,
+				   sizeof(pkgbuild));
 
-		/*
-		 * Also allow:
-		 *
-		 *   packinstall-lfs create /sources/kuzpkg
-		 *
-		 * rather than requiring --dir.
-		 */
-		if (!dir) {
-			if (argc >= 3 &&
-			    argv[2][0] != '-' &&
-			    strcmp(argv[2], "--dir") &&
-			    strcmp(argv[2], "--abi") &&
-			    strcmp(argv[2], "--output")) {
-				dir = argv[2];
-			} else {
-				dir = ".";
-			}
-		}
+		source_dir =
+			pkgbuild;
 
-		if (!dir || !*dir)
-			dir = ".";
-
-		if (!is_directory(dir))
-			die("source directory does not exist: %s",
-			    dir);
-
-		absolute_path(dir,
-			      absdir,
-			      sizeof(absdir));
+		resolve_pkgbuild(
+			source_dir,
+			arg_value(argc,
+				  argv,
+				  "--buildscript"),
+			pkgbuild,
+			sizeof(pkgbuild));
 
 		requested_pkgbuild =
 			arg_value(argc,
 				  argv,
 				  "--buildscript");
 
-		resolve_pkgbuild(absdir,
-				 requested_pkgbuild,
-				 pkgbuild,
-				 sizeof(pkgbuild));
+		(void)requested_pkgbuild;
 
-		if (!is_file(pkgbuild))
-			die("build script not found: %s",
-			    pkgbuild);
+		/*
+		 * A PKGBUILD is optional now.
+		 *
+		 * No error if it doesn't exist.
+		 */
+		if (!is_file(pkgbuild)) {
+			system_override =
+				arg_value(argc,
+					  argv,
+					  "--build-system");
+
+			if (system_override &&
+			    strcmp(system_override, "auto") != 0) {
+				if (!normalize_build_system(
+					system_override,
+					source_dir)) {
+					die("unsupported build system: %s",
+					    system_override);
+				}
+			}
+		}
 
 		abi_name =
 			arg_value(argc,
@@ -2879,7 +3298,7 @@ int main(int argc, char **argv)
 			abi = detect_default_abi();
 		}
 
-		system =
+		system_override =
 			arg_value(argc,
 				  argv,
 				  "--build-system");
@@ -2889,13 +3308,52 @@ int main(int argc, char **argv)
 				  argv,
 				  "--output");
 
+		/*
+		 * If the source is not a directory, this is an invocation error.
+		 */
+		if (!is_directory(source_dir))
+			die("source directory does not exist: %s",
+			    source_dir);
+
+		/*
+		 * The source argument may have been:
+		 *
+		 *   create .
+		 *   create /sources/kuzpkg
+		 *
+		 * but if --dir was used we need that actual directory.
+		 */
+		{
+			const char *explicit_dir =
+				arg_value(argc,
+					  argv,
+					  "--dir");
+
+			if (explicit_dir) {
+				absolute_path(
+					explicit_dir,
+					pkgbuild,
+					sizeof(pkgbuild));
+
+				source_dir = pkgbuild;
+
+				resolve_pkgbuild(
+					source_dir,
+					arg_value(argc,
+						  argv,
+						  "--buildscript"),
+					pkgbuild,
+					sizeof(pkgbuild));
+			}
+		}
+
 		if (geteuid() == 0)
 			ensure_builder();
 
-		modern_package(
-			absdir,
+		modern_create(
+			source_dir,
 			pkgbuild,
-			system,
+			system_override,
 			abi,
 			output,
 			has_opt(argc,
@@ -2909,15 +3367,10 @@ int main(int argc, char **argv)
 	}
 
 	/*
-	 * Explicitly legacy. It is NOT the default create mode anymore.
+	 * Legacy is explicit and NOT the default.
 	 */
 	if (!strcmp(command,
 		    "create-legacy")) {
-		const char *stage;
-		const char *name;
-		const char *version;
-		const char *output;
-
 		if (argc < 5) {
 			fprintf(stderr,
 				"packinstall-lfs: create-legacy requires:\n"
@@ -2927,19 +3380,11 @@ int main(int argc, char **argv)
 			return EXIT_FAILURE;
 		}
 
-		stage = argv[2];
-		name = argv[3];
-		version = argv[4];
-
-		output =
-			argc >= 6 ?
-			argv[5] :
-			NULL;
-
-		create_legacy(stage,
-			      name,
-			      version,
-			      output);
+		create_legacy(
+			argv[2],
+			argv[3],
+			argv[4],
+			argc >= 6 ? argv[5] : NULL);
 
 		return EXIT_SUCCESS;
 	}
