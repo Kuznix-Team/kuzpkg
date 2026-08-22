@@ -86,6 +86,7 @@ static int manifest_walk(const char *fpath, const struct stat *sb, int typeflag,
     const char *rel = fpath;
     if (rel[0] == '.') rel++;
     if (rel[0] == '/') rel++;
+    if (!strcmp(rel, ".LFSINFO") || !strcmp(rel, ".FILES")) return 0;
     if (has_newline(rel)) {
         fprintf(stderr, "packinstall-lfs: refusing filename containing newline: %s\n", fpath);
         walk_failed = 1;
@@ -176,7 +177,7 @@ static void install_package(const char *package) {
     snprintf(db, sizeof(db), "%s%s/%s/%s", root_dir, DB_REL, name, version);
     ensure_dir(db); snprintf(files, sizeof(files), "%s/files", db);
     shell_quote(root_dir, qroot, sizeof(qroot));
-    snprintf(cmd, sizeof(cmd), "tar --zstd -xpf %s -C %s --no-same-owner --no-same-permissions", qpkg, qroot);
+    snprintf(cmd, sizeof(cmd), "tar --zstd -xpf %s -C %s --exclude=./.LFSINFO --exclude=./.FILES --no-same-owner --no-same-permissions", qpkg, qroot);
     if (run_command(cmd) != 0) die("failed to install %s", package);
     snprintf(cmd, sizeof(cmd), "tar --zstd -xOf %s ./.FILES > %s", qpkg, qinfo);
     if (run_command(cmd) != 0) die("package has no manifest");
