@@ -2,19 +2,19 @@
 
 **kuzpkg** is the package manager used by **Kuznix Linux**. It is a pacman fork, adapted for the Kuznix package format and workflow.
 
-> **Project status:** Active development. kuzpkg is currently being developed and tested on Linux From Scratch (LFS).
+> **Project status:** Early development and testing. kuzpkg is being developed and tested on Linux From Scratch (LFS).
 
 ## Current status
 
-kuzpkg is a real, working part of the Kuznix build environment. The project is currently maintained by a very small team, and at the moment I do not have additional developers working with me.
+kuzpkg is a small project with a serious lack of developers. Development is currently handled primarily by its maintainer, without a team of developers to work with.
 
-Despite that, development is active:
+The project is still being worked on, but the LFS and BLFS packaging work should be considered **testing/development work, not a claim of official or production-ready package repositories**.
 
 - kuzpkg is being developed and tested on **Linux From Scratch (LFS)**.
-- **All packages required by the current LFS build have been packaged with kuzpkg.**
-- Packaging work has also started for **BLFS (Beyond Linux From Scratch)**.
-- Some BLFS packages are already available in kuzpkg format.
-- The package manager is being developed alongside the Kuznix Linux system.
+- LFS packages have been packaged with kuzpkg for **testing**.
+- Some **BLFS** packages have also been packaged for **testing**.
+- The LFS/BLFS packages are experimental test packages and are not presented as an official, complete, or production-ready package collection.
+- kuzpkg is being developed alongside the Kuznix Linux system.
 
 ## What is kuzpkg?
 
@@ -28,17 +28,19 @@ Kuznix packages use the `.kuzpkg.tar.zst` package format.
 
 The format is designed for the Kuznix package ecosystem while keeping the familiar archive-based package workflow used by pacman.
 
-## LFS and BLFS
+## LFS and BLFS testing
 
-One of the main goals of kuzpkg is to make it possible to build and maintain a complete Kuznix system starting from Linux From Scratch.
+A major part of kuzpkg development is testing it while building systems based on **Linux From Scratch** and experimenting with software from **Beyond Linux From Scratch**.
 
-The current packaging work follows the LFS dependency chain. Packages needed to construct the LFS system are packaged first, followed by additional software from BLFS.
-
-This means kuzpkg is not just a package manager being developed independently of a distribution: it is being developed while building the actual Kuznix system.
+The packages created during this work are primarily useful for testing kuzpkg, its dependency handling, package installation, upgrades, and the wider Kuznix build system. They should not currently be interpreted as a finished LFS/BLFS distribution repository.
 
 ## Development
 
-kuzpkg is currently a small project and development is primarily handled by the Kuznix project maintainer. Contributions, testing, bug reports, documentation improvements, and packaging help are welcome.
+kuzpkg currently has a lack of developers, and the project is primarily maintained by its creator. This makes development slower and limits how much can be done at once.
+
+The project is nevertheless active. Contributions, testing, bug reports, documentation improvements, and packaging help are welcome.
+
+The maintainer was born on **December 2, 2011**, and grew up around technology from a later generation while working on a project inspired by the Linux ecosystem of earlier eras. In that sense, kuzpkg is a modern project with a bit of a **2009-era Linux feel**.
 
 If you are interested in helping with development or packaging, open an issue or pull request.
 
