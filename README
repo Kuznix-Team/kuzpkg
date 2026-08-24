@@ -6,7 +6,9 @@
 
 ## Current status
 
-kuzpkg is a small project with a serious lack of developers. Development is currently handled primarily by its maintainer, without a team of developers to work with.
+kuzpkg is a small project with a serious lack of developers. There is currently **only one developer in the kuzpkg GitHub repository**.
+
+You may see a much larger contributor count associated with the original **pacman** project, including around 253 developers/contributors. Those people are **not developers of kuzpkg** and are not contributors to this repository. kuzpkg is a separate project with its own development community, which is currently very small.
 
 The project is still being worked on, but the LFS and BLFS packaging work should be considered **testing/development work, not a claim of official or production-ready package repositories**.
 
@@ -36,7 +38,7 @@ The packages created during this work are primarily useful for testing kuzpkg, i
 
 ## Development
 
-kuzpkg currently has a lack of developers, and the project is primarily maintained by its creator. This makes development slower and limits how much can be done at once.
+kuzpkg currently has a lack of developers, with **one developer in this GitHub repository**. This makes development slower and limits how much can be done at once.
 
 The project is nevertheless active. Contributions, testing, bug reports, documentation improvements, and packaging help are welcome.
 
