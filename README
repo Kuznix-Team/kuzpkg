@@ -1,207 +1,53 @@
-KUZPKG library overview & internals
-=================================
+# kuzpkg
 
-Here is a list of the main objects and files from the KUZPKG (i.e. Kuznix Linux
-Package Management) library. This document, while not exhaustive, also
-indicates some limitations (on purpose, or sometimes due to its poor design) of
-the library at the present time.
+**kuzpkg** is the package manager used by **Kuznix Linux**. It is a pacman fork, adapted for the Kuznix package format and workflow.
 
-There is one special file, "klpm.h", which is the public interface that
-should be distributed and installed on systems with the library. Only
-structures, data and functions declared within this file are made available to
-the frontend. Lots of structures are of an opaque type and their fields are
-only accessible in read-only mode, through some clearly defined functions.
+> **Project status:** Active development. kuzpkg is currently being developed and tested on Linux From Scratch (LFS).
 
-In addition to "klpm.h", the interfaces of "klpm_list.h" have also been made
-available to the frontend, for allowing it to manipulate the lists returned by
-the backend.
+## Current status
 
-Several structures and functions have been renamed compared to kuzpkg 2.9 code.
-This was done at first for the sake of naming scheme consistency, and then
-primarily because of potential namespace conflicts between library and frontend
-spaces. Indeed, it is not possible to have two different functions with the
-same name declared in both spaces. To avoid such conflicts, internal function
-names have been prepended with "_klpm_".
+kuzpkg is a real, working part of the Kuznix build environment. The project is currently maintained by a very small team, and at the moment I do not have additional developers working with me.
 
-In a general manner, public library functions are named "klpm_<type>_<action>"
-(examples: klpm_trans_commit(), klpm_release(), klpm_pkg_get_name(), ...).
-Internal (and thus private) functions should be named "_klpm_XXX" for instance
-(examples: _klpm_needbackup(), _klpm_runscriplet(), ...). Functions defined and
-used inside a single file should be defined as "static".
+Despite that, development is active:
 
+- kuzpkg is being developed and tested on **Linux From Scratch (LFS)**.
+- **All packages required by the current LFS build have been packaged with kuzpkg.**
+- Packaging work has also started for **BLFS (Beyond Linux From Scratch)**.
+- Some BLFS packages are already available in kuzpkg format.
+- The package manager is being developed alongside the Kuznix Linux system.
 
-[Initialization]
+## What is kuzpkg?
 
-klpm_initialize() is used to initialize library internals and to create
-a transparent handle object. Before its call, the library can't be used.
+kuzpkg provides package management functionality for Kuznix Linux, including package installation, removal, upgrades, dependency handling, package databases, repositories, and package transactions.
 
-klpm_release() just does the opposite (memory used by the library, and the
-handle is freed). After its call, the library is no longer available.
+It is based on pacman/libalpm concepts, with Kuznix-specific changes and package handling.
 
+## Package format
 
-[Options]
+Kuznix packages use the `.kuzpkg.tar.zst` package format.
 
-The library does not use any configuration file. It is up to the front end to
-configure the library as needed; the handle holds a number of configuration
-options instead.
+The format is designed for the Kuznix package ecosystem while keeping the familiar archive-based package workflow used by pacman.
 
-All of the following options have a klpm_option_get_* and klpm_option_set_*
-function for getting and setting the value. They cannot be set before the
-library is initialized.
+## LFS and BLFS
 
-* logcb: The callback function for "log" operations.
-* dlcb: The callback function for download progress of each package.
-* fetchcb: Callback for custom download function.
-* eventcb: Callback for transaction messages.
-* questioncb: Callback for selecting amongst choices.
-* progresscb: Callback to handle display of transaction progress.
-* gpgdir: Directory where GnuPG files are stored.
-* arch: Allowed package architecture.
-* checkspace: Check disk space before installing.
-* default_siglevel: Default signature verification level.
-* local_file_siglevel: Signature verification level for local file upgrades.
-* remote_file_siglevel: Signature verification level for remote file upgrades.
-* logfile: The base path to kuzpkg's log file (Default: /var/log/kuzpkg.log)
-* usesyslog: Log to syslog instead of `logfile` for file-base logging.
+One of the main goals of kuzpkg is to make it possible to build and maintain a complete Kuznix system starting from Linux From Scratch.
 
-The following options also have `klpm_option_{add,remove}_*` functions, as the
-values are list structures.
-NOTE: The add and remove functions are NOT plural, as they are in English:
-klpm_option_{get,set}_noupgrades -> klpm_option_{add,remove}_noupgrade.
+The current packaging work follows the LFS dependency chain. Packages needed to construct the LFS system are packaged first, followed by additional software from BLFS.
 
-* cachedirs: Paths to kuzpkg's download caches (Default: /var/cache/kuzpkg/pkg)
-* noupgrades: Files which will never be touched by kuzpkg (extracted as .pacnew)
-* noextracts: Files which will never be extracted at all (no .pacnew file)
-* ignorepkgs: Packages to ignore when upgrading.
-* ignoregrps: Groups to ignore when upgrading.
+This means kuzpkg is not just a package manager being developed independently of a distribution: it is being developed while building the actual Kuznix system.
 
-The following options are read-only, having ONLY klpm_option_get_* functions:
+## Development
 
-* root: The root directory for kuzpkg to install to
-* dbpath: The toplevel database directory
-* lockfile: The file used for locking the database (Default: <dbpath>/db.lck)
+kuzpkg is currently a small project and development is primarily handled by the Kuznix project maintainer. Contributions, testing, bug reports, documentation improvements, and packaging help are welcome.
 
+If you are interested in helping with development or packaging, open an issue or pull request.
 
-[Transactions]
+## License
 
-The transaction structure permits easy manipulations of several packages
-at a time (i.e. adding, upgrade and removal operations).
+kuzpkg is licensed under the **GNU General Public License version 2.0 (GPL-2.0)**.
 
-A transaction can be initiated with a type (SYNC, UPGRADE or REMOVE),
-and some flags (NODEPS, FORCE, CASCADE, ...).
+## Kuznix
 
-Note: there can only be one type at a time: a transaction is either
-created to add packages to the system, or either created to remove packages.
-The frontend can't request for mixed operations: it has to run several
-transactions, one at a time, in such a case.
+kuzpkg is part of the **Kuznix Linux** project.
 
-The flags allow to tweak the library behaviour during its resolution.
-Note, that some options of the handle can also modify the behavior of a
-transaction (NOUPGRADE, IGNOREPKG, ...).
-
-Note: once a transaction has been initiated, it is not possible anymore
-to modify its type or its flags.
-
-One can also add some targets to a transaction (klpm_trans_addtarget()).
-These targets represent the list of packages to be handled.
-
-Then, a transaction needs to be prepared (klpm_trans_prepare()). It
-means that the various targets added, will be inspected and challenged
-against the set of already installed packages (dependency checking, etc...)
-
-Last, a callback is associated with each transaction. During the
-transaction resolution, each time a new step is started or done (i.e
-dependency or conflict checking, package adding or removal, ...), the
-callback is called, allowing the frontend to be aware of the progress of
-the resolution. Can be useful to implement a progress bar.
-
-
-[Package Cache]
-
-libkuzpkg maintains two caches for each DB. One is a general package cache, the
-other is a group cache (for package groups). These caches are loaded on demand,
-and freed when the library is.
-
-It is important to note that, as a general rule, package structures should NOT
-be freed manually, as they SHOULD be part of the cache.  The cache of a
-database is always updated by the library after an operation changing the
-database content (adding and/or removal of packages).  Beware frontends ;)
-
-
-[Package]
-
-The package structure maintains all information for a package. In general,
-packages should never be freed from front-ends, as they should always be part
-of the package cache.
-
-The 'origin' data member indicates whether the package is from a file (i.e. -U
-operations) or from the package cache. In the case of a file, all data members
-available are present in the structure. Packages indicated as being from the
-cache have data members filled on demand. For this reason, the klpm_pkg_get_*
-functions will load the data from the DB as needed.
-
-
-[Errors]
-
-The library provides a global variable pm_errno.
-It aims at being to the library what errno is for C system calls.
-
-Almost all public library functions are returning an integer value: 0
-indicating success, -1 indicating a failure.
-If -1 is returned, the variable pm_errno is set to a meaningful value
-Wise frontends should always care for these returned values.
-
-Note: the helper function klpm_strerror() can also be used to translate one
-specified error code into a more friendly sentence, and klpm_strerrorlast()
-does the same for the last error encountered (represented by pm_errno).
-
-
-[List - klpm_list_t]
-
-The klpm_list_t structure is a doubly-linked list for use with the libkuzpkg
-routines. This type is provided publicly so that frontends are free to use it
-if they have no native list type (C++, glib, python, etc all have list types).
-See the proper man pages for klpm_list_t references.
-
-
-
-KUZPKG frontend overview & internals
-====================================
-
-Here are some words about the frontend responsibilities.
-The library can operate only a small set of well defined operations and
-dummy operations.
-
-High level features are left to the frontend ;)
-
-For instance, during a sysupgrade, the library returns the whole list of
-packages to be upgraded, without any care for its content.
-The frontend can inspect the list and perhaps notice that "kuzpkg"
-itself has to be upgraded. In such a case, the frontend can choose to
-perform a special action.
-
-
-[MAIN] (see kuzpkg.c)
-
-Calls for klpm_initialize(), and klpm_release().
-Read the configuration file, and parse command line arguments.
-Based on the action requested, it initiates the appropriate transactions
-(see kuzpkg_upgrade(), kuzpkg_remove(), kuzpkg_sync() in files upgrade.c,
-remove.c and sync.c).
-
-
-[CONFIGURATION] (see conf.h)
-
-The frontend is using a configuration file, usually "/etc/kuzpkg.conf".  Some
-of these options are only useful for the frontend only (mainly the ones used to
-control the output like verbosepkglist, or the behavior with cleanmethod).
-The rest is used to configure the library.
-
-
-[UPGRADE/REMOVE/SYNC]
-
-The file kuzpkg.c has been divided into several smaller files, namely
-upgrade.c, remove.c, sync.c and query.c, to hold the big parts: kuzpkg_upgrade,
-kuzpkg_remove, kuzpkg_sync.
-
-These 3 functions have been split to ease the code reading.
+The long-term goal is to provide a complete Linux distribution built around Kuznix's own package management and system tooling, with kuzpkg serving as a core part of that ecosystem.
