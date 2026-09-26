@@ -105,8 +105,22 @@ static void usage(int op, const char * const myname)
 
 	/* please limit your strings to 80 characters in width */
 	if(op == PM_OP_MAIN) {
-		printf("%s:  %s <%s> [...]\n", str_usg, myname, str_opr);
-		printf(_("operations:\n"));
+		printf("%s:  %s <command> [options] [targets...]\n", str_usg, myname);
+		printf(_("commands:\n"));
+		printf("    %s install <pkg>...       install packages (replaces -S)\n", myname);
+		printf("    %s remove <pkg>...        remove packages (replaces -R)\n", myname);
+		printf("    %s update                 refresh package databases (replaces -Sy)\n", myname);
+		printf("    %s upgrade                upgrade the system (replaces -Syu/-Su)\n", myname);
+		printf("    %s search <term>...       search repositories (replaces -Ss)\n", myname);
+		printf("    %s info <pkg>...          show package information (replaces -Qi)\n", myname);
+		printf("    %s build [options]        build a PKGBUILD (replaces makepkg)\n", myname);
+		printf("    %s files [options]        query package files (replaces -F)\n", myname);
+		printf("    %s query [options]        query installed packages (replaces -Q)\n", myname);
+		printf("    %s clean                  clean the package cache (replaces -Sc)\n", myname);
+		printf("    %s groups                 list package groups (replaces -Sg)\n", myname);
+		printf("    %s check                  check installed package files (replaces -Qk)\n", myname);
+		printf(_("\nlegacy pacman-style operation flags remain available during the transition.\n"));
+		printf(_("\nlegacy operations:\n"));
 		printf("    %s {-h --help}\n", myname);
 		printf("    %s {-V --version}\n", myname);
 		printf("    %s {-D --database} <%s> <%s>\n", myname, str_opt, str_pkg);
