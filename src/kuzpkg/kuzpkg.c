@@ -955,6 +955,89 @@ static void checkargs_sync(void)
 	}
 }
 
+
+/*
+ * Translate the user-facing subcommand interface into the existing
+ * operation flags. The short/long pacman-compatible operations remain
+ * available internally so the implementation can be migrated incrementally.
+ */
+static int parse_subcommand(int argc, char *argv[])
+{
+	const char *cmd;
+	const char *operation = NULL;
+
+	if(argc < 2 || argv[1][0] == '-') {
+		return 0;
+	}
+
+	cmd = argv[1];
+
+	if(strcmp(cmd, "install") == 0) {
+		operation = "-S";
+	} else if(strcmp(cmd, "remove") == 0) {
+		operation = "-R";
+	} else if(strcmp(cmd, "update") == 0) {
+		operation = "-Sy";
+	} else if(strcmp(cmd, "upgrade") == 0) {
+		operation = "-Syu";
+	} else if(strcmp(cmd, "search") == 0) {
+		operation = "-Ss";
+	} else if(strcmp(cmd, "info") == 0) {
+		operation = "-Qi";
+	} else if(strcmp(cmd, "files") == 0) {
+		operation = "-F";
+	} else if(strcmp(cmd, "sync") == 0) {
+		operation = "-S";
+	} else if(strcmp(cmd, "query") == 0) {
+		operation = "-Q";
+	} else if(strcmp(cmd, "database") == 0) {
+		operation = "-D";
+	} else if(strcmp(cmd, "deptest") == 0 || strcmp(cmd, "depcheck") == 0) {
+		operation = "-T";
+	} else if(strcmp(cmd, "clean") == 0) {
+		operation = "-Sc";
+	} else if(strcmp(cmd, "groups") == 0) {
+		operation = "-Sg";
+	} else if(strcmp(cmd, "check") == 0) {
+		operation = "-Qk";
+	} else if(strcmp(cmd, "build") == 0) {
+		char **makepkg_argv;
+		int i;
+
+		/*
+		 * PKGBUILD parsing/building is still provided by the existing
+		 * makepkg backend. The build subcommand is the stable frontend;
+		 * the backend can be replaced independently later.
+		 */
+		makepkg_argv = calloc((size_t)argc, sizeof(char *));
+		if(makepkg_argv == NULL) {
+			pm_printf(KUZPKG_LOG_ERROR, _("failed to allocate argument list for build\n"));
+			return 1;
+		}
+
+		makepkg_argv[0] = (char *)"makepkg";
+		for(i = 2; i < argc; i++) {
+			makepkg_argv[i - 1] = argv[i];
+		}
+		makepkg_argv[argc - 1] = NULL;
+
+		execvp("makepkg", makepkg_argv);
+		pm_printf(KUZPKG_LOG_ERROR, _("failed to execute makepkg: %s\n"), strerror(errno));
+		free(makepkg_argv);
+		return 1;
+	} else {
+		return 0;
+	}
+
+	/*
+	 * getopt_long() expects the operation to be in argv[1]. Keep all
+	 * arguments after the subcommand untouched, including package names
+	 * and options such as --noconfirm.
+	 */
+	argv[1] = (char *)operation;
+	return 0;
+}
+
 /** Parse command-line arguments for each operation.
  * @param argc argc
  * @param argv argv
@@ -1038,6 +1121,11 @@ static int parseargs(int argc, char *argv[])
 		{"disable-sandbox-syscalls", no_argument, 0, OP_DISABLESANDBOXSYSCALLS},
 		{0, 0, 0, 0}
 	};
+
+	/* Accept the modern verb-first interface before getopt sees the arguments. */
+	if(parse_subcommand(argc, argv) != 0) {
+		return 1;
+	}
 
 	/* parse operation */
 	while((opt = getopt_long(argc, argv, optstring, opts, &option_index)) != -1) {
