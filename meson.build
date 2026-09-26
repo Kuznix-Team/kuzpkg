@@ -382,13 +382,6 @@ kuzpkg_bin = executable(
   install : true,
 )
 
-test_script = files('tests/test-subcommands.sh')
-test('kuzpkg-subcommands',
-  find_program('bash'),
-  args : [test_script[0].full_path(), kuzpkg_bin.full_path()],
-  timeout : 30,
-)
-
 executable(
   'kuzpkg-conf',
   kuzpkg_conf_sources,
@@ -407,12 +400,19 @@ executable(
   install : true,
 )
 
-executable(
+vercmp_bin = executable(
   'vercmp',
   vercmp_sources,
   include_directories : includes,
   link_with : [libkuzpkg_a],
   install : true,
+)
+
+test_script = files('tests/test-kuzpkg.sh')
+test('kuzpkg-cli-suite',
+  find_program('bash'),
+  args : [test_script[0].full_path(), kuzpkg_bin.full_path(), vercmp_bin.full_path()],
+  timeout : 60,
 )
 
 executable(
