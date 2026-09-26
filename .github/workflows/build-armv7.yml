@@ -262,7 +262,6 @@ jobs:
                 "/etc/kuzpkg.conf" \
                 "/etc/makepkg.conf" \
                 "/etc/makepkg.conf.d/*" \
-                "/var/*" \
                 "" \
                 "%changelog" \
                 "* $(date -u "+%a %b %d %Y") Kuznix Team - ${RPM_VERSION}-1" \
