@@ -24,6 +24,35 @@ kuzpkg provides package management functionality for Kuznix Linux, including pac
 
 It is based on pacman/libalpm concepts, with Kuznix-specific changes and package handling.
 
+## Command interface
+
+kuzpkg provides a verb-first command interface for normal package-management tasks. The
+pacman-style operation flags are retained during the transition, but new documentation
+should prefer the subcommands below.
+
+| Command | Equivalent legacy operation |
+| --- | --- |
+| `kuzpkg install firefox` | `kuzpkg -S firefox` |
+| `kuzpkg remove firefox` | `kuzpkg -R firefox` |
+| `kuzpkg update` | `kuzpkg -Sy` |
+| `kuzpkg upgrade` | `kuzpkg -Syu` / `kuzpkg -Su` |
+| `kuzpkg search firefox` | `kuzpkg -Ss firefox` |
+| `kuzpkg info firefox` | `kuzpkg -Qi firefox` |
+| `kuzpkg build PKGBUILD` | `makepkg PKGBUILD` |
+| `kuzpkg files ...` | `kuzpkg -F ...` |
+| `kuzpkg query ...` | `kuzpkg -Q ...` |
+| `kuzpkg clean` | `kuzpkg -Sc` |
+| `kuzpkg groups` | `kuzpkg -Sg` |
+| `kuzpkg check` | `kuzpkg -Qk` |
+
+The `build` subcommand currently uses the existing `makepkg` backend, keeping PKGBUILD
+compatibility while making `kuzpkg build` the user-facing entry point. The backend can
+be replaced later without changing the command users type.
+
+The long-term command-line interface is intended to be verb-first; pacman-style
+operations such as `kuzpkg -S` may be deprecated and eventually removed after the
+subcommand interface has matured.
+
 ## Package format
 
 Kuznix packages use the `.kuzpkg.tar.zst` package format.
