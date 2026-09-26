@@ -44,21 +44,21 @@ vercmp_is() {
 
 printf 'TAP version 13\n'
 
-run_test "install maps to sync" contains "Usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" install --help
-run_test "remove maps to remove" contains "Usage:  $kuzpkg_name {-R --remove}" "$kuzpkg" remove --help
-run_test "update maps to sync" contains "Usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" update --help
-run_test "upgrade maps to sync" contains "Usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" upgrade --help
-run_test "search maps to sync" contains "Usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" search --help
-run_test "info maps to query" contains "Usage:  $kuzpkg_name {-Q --query}" "$kuzpkg" info --help
-run_test "files maps to files" contains "Usage:  $kuzpkg_name {-F --files}" "$kuzpkg" files --help
-run_test "sync maps to sync" contains "Usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" sync --help
-run_test "query maps to query" contains "Usage:  $kuzpkg_name {-Q --query}" "$kuzpkg" query --help
-run_test "database maps to database" contains "Usage:  $kuzpkg_name {-D --database}" "$kuzpkg" database --help
-run_test "deptest maps to deptest" contains "Usage:  $kuzpkg_name {-T --deptest}" "$kuzpkg" deptest --help
-run_test "depcheck aliases deptest" contains "Usage:  $kuzpkg_name {-T --deptest}" "$kuzpkg" depcheck --help
-run_test "clean maps to sync" contains "Usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" clean --help
-run_test "groups maps to sync" contains "Usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" groups --help
-run_test "check maps to query" contains "Usage:  $kuzpkg_name {-Q --query}" "$kuzpkg" check --help
+run_test "install maps to sync" contains "usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" install --help
+run_test "remove maps to remove" contains "usage:  $kuzpkg_name {-R --remove}" "$kuzpkg" remove --help
+run_test "update maps to sync" contains "usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" update --help
+run_test "upgrade maps to sync" contains "usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" upgrade --help
+run_test "search maps to sync" contains "usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" search --help
+run_test "info maps to query" contains "usage:  $kuzpkg_name {-Q --query}" "$kuzpkg" info --help
+run_test "files maps to files" contains "usage:  $kuzpkg_name {-F --files}" "$kuzpkg" files --help
+run_test "sync maps to sync" contains "usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" sync --help
+run_test "query maps to query" contains "usage:  $kuzpkg_name {-Q --query}" "$kuzpkg" query --help
+run_test "database maps to database" contains "usage:  $kuzpkg_name {-D --database}" "$kuzpkg" database --help
+run_test "deptest maps to deptest" contains "usage:  $kuzpkg_name {-T --deptest}" "$kuzpkg" deptest --help
+run_test "depcheck aliases deptest" contains "usage:  $kuzpkg_name {-T --deptest}" "$kuzpkg" depcheck --help
+run_test "clean maps to sync" contains "usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" clean --help
+run_test "groups maps to sync" contains "usage:  $kuzpkg_name {-S --sync}" "$kuzpkg" groups --help
+run_test "check maps to query" contains "usage:  $kuzpkg_name {-Q --query}" "$kuzpkg" check --help
 
 run_test "remove exposes cascade" contains "--cascade" "$kuzpkg" remove --help
 run_test "remove exposes recursive" contains "--recursive" "$kuzpkg" remove --help
