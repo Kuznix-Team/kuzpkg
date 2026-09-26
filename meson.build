@@ -382,6 +382,13 @@ kuzpkg_bin = executable(
   install : true,
 )
 
+test_script = files('tests/test-subcommands.sh')
+test('kuzpkg-subcommands',
+  find_program('bash'),
+  args : [test_script[0].full_path(), kuzpkg_bin.full_path()],
+  timeout : 30,
+)
+
 executable(
   'kuzpkg-conf',
   kuzpkg_conf_sources,
