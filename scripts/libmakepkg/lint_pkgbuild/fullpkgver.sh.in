@@ -32,9 +32,8 @@ check_fullpkgver() {
 	local fullver=$1 type=$2
 	local ret=0
 
-	# If there are multiple colons or multiple hyphens, there's a
-	# question of how we split it--it's invalid either way, but it
-	# will affect error messages.  Let's mimic version.c:parseEVR().
+	# pkgver cannot contain hyphens, so the first hyphen unambiguously
+	# separates pkgver from pkgrel. pkgrel may contain additional hyphens.
 
 	if [[ $fullver = *:* ]]; then
 		# split at the *first* colon
@@ -47,9 +46,9 @@ check_fullpkgver() {
 	# contain hyphens" is more helpful than "pkgver isn't allowed
 	# to be empty".
 	if [[ $fullver = ?*-* ]]; then
-		# split at the *last* hyphen
-		check_pkgrel "${fullver##*-}" "$type" || ret=1
-		fullver=${fullver%-*}
+		# split at the *first* hyphen so pkgrel may contain hyphens
+		check_pkgrel "${fullver#*-}" "$type" || ret=1
+		fullver=${fullver%%-*}
 	fi
 
 	check_pkgver "$fullver" "$type" || ret=1
