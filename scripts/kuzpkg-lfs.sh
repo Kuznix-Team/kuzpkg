@@ -105,7 +105,18 @@ detect_metadata() {
         [ -n "$value" ] && PACKAGE_NAME=$value
     fi
     if [ -z "$VERSION" ] && [ -f CMakeLists.txt ]; then
-        value=$(sed -n 's/^[[:space:]]*project[[:space:]]*(.*VERSION[[:space:]]*\([0-9][0-9A-Za-z._+-]*\).*/\1/p' CMakeLists.txt | head -n1)
+        # Supports both one-line and multiline CMake project() declarations.
+        value=$(awk '
+            /project[[:space:]]*\(/ { in_project=1 }
+            in_project && /VERSION[[:space:]]+[0-9][0-9A-Za-z._+-]*/ {
+                line=$0
+                sub(/.*VERSION[[:space:]]+/, "", line)
+                sub(/[[:space:])].*/, "", line)
+                print line
+                exit
+            }
+            in_project && /\)/ { exit }
+        ' CMakeLists.txt)
         [ -n "$value" ] && VERSION=$value
     fi
 
