@@ -158,10 +158,11 @@ static int init_gpgme(klpm_handle_t *handle)
 	if(_klpm_access(handle, sigdir, "pubring.gpg", R_OK)
 			|| _klpm_access(handle, sigdir, "trustdb.gpg", R_OK)) {
 		handle->pm_errno = KUZPKG_ERR_NOT_A_FILE;
-		_klpm_log(handle, KUZPKG_LOG_DEBUG, "Signature verification will fail!\n");
-		_klpm_log(handle, KUZPKG_LOG_WARNING,
-				_("Public keyring not found; have you run '%s'?\n"),
+		_klpm_log(handle, KUZPKG_LOG_DEBUG, "Signature verification unavailable: keyring is not initialized.\n");
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("Public keyring not found; run '%s' before synchronizing signed repositories.\n"),
 				"kuzpkg-key --init");
+		return -1;
 	}
 
 	/* calling gpgme_check_version() returns the current version and runs
@@ -401,6 +402,12 @@ static int key_import_keyserver(klpm_handle_t *handle, klpm_pgpkey_t *key)
 	gpgme_import_result_t result;
 	int ret = -1;
 
+	if(_klpm_access(handle, handle->gpgdir, "pubring.gpg", F_OK)) {
+		_klpm_log(handle, KUZPKG_LOG_ERROR,
+				_("Public keyring not found; run '%s' first.\n"),
+				"kuzpkg-key --init");
+		return -1;
+	}
 	if(_klpm_access(handle, handle->gpgdir, "pubring.gpg", W_OK)) {
 		/* no chance of import succeeding if pubring isn't writable */
 		_klpm_log(handle, KUZPKG_LOG_ERROR, _("keyring is not writable\n"));
