@@ -165,6 +165,14 @@ if [ "$KUZPKG_LFS_SKIP_BUILD" != 1 ]; then
         msg "detected Meson project"
         [ -d build ] || run_builder "meson setup build --prefix=$PREFIX"
         run_builder "meson compile -C build"
+    elif [ -f CMakeLists.txt ] && grep -q 'KDEInstallDirs' CMakeLists.txt; then
+        msg "detected KDE CMake project"
+        [ -d build ] || run_builder "cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_TESTING=OFF"
+        if [ -f build/build.ninja ]; then
+            run_builder "ninja -C build -j$JOBS"
+        else
+            run_builder "cmake --build build --parallel $JOBS"
+        fi
     elif [ -f CMakeLists.txt ]; then
         msg "detected CMake project"
         [ -d build ] || run_builder "cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=$PREFIX"
