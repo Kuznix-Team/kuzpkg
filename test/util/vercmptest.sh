@@ -39,7 +39,7 @@ tap_runtest() {
 	tap_is_str "$($bin "$ver2" "$ver1")" "$exp" "$ver2 $ver1"
 }
 
-tap_plan 92
+tap_plan 100
 
 # all similar length, no pkgrel
 tap_runtest 1.5.0 1.5.0  0
@@ -87,6 +87,12 @@ tap_runtest 1.5.1    1.5.b   1
 # alpha dots and dashes
 tap_runtest 1.5.b-1  1.5.b   0
 tap_runtest 1.5-1    1.5.b  -1
+
+# extended pkgrel syntax
+tap_runtest 1.0-1+kuznix1~lts16.1  1.0-1+kuznix1~lts16.2  -1
+tap_runtest 1.0-1+kuznix1~lts16.1  1.0-2+kuznix1~lts16.1  -1
+tap_runtest 1.0-1-kuznix  1.0-1-kuznix  0
+tap_runtest 1.0-1-kuznix  1.0-2-kuznix  -1
 
 # same/similar content, differing separators
 tap_runtest 2.0    2_0     0
