@@ -704,6 +704,17 @@ fi
 
 KEYRING_IMPORT_DIR=${KEYRING_IMPORT_DIR:-"@keyringdir@"}
 
+# On Arch-based systems, including CachyOS, pacman installs distribution
+# keyrings in /usr/share/pacman/keyrings. Use that directory automatically
+# when kuzpkg's own bundled keyring directory is unavailable or empty.
+if [[ -z ${KEYRING_IMPORT_DIR} || ! -d ${KEYRING_IMPORT_DIR} || \
+		-z $(compgen -G "${KEYRING_IMPORT_DIR}/*.gpg" || true) ]]; then
+	if [[ -d /usr/share/pacman/keyrings ]] && \
+		compgen -G "/usr/share/pacman/keyrings/*.gpg" >/dev/null; then
+		KEYRING_IMPORT_DIR=/usr/share/pacman/keyrings
+	fi
+fi
+
 # if KUZPKG_KEYRING_DIR isn't assigned, try to get it from the config
 # file, falling back on a hard default
 KUZPKG_KEYRING_DIR=${KUZPKG_KEYRING_DIR:-$(kuzpkg-conf --config="$CONFIG" gpgdir)}
