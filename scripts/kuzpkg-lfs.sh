@@ -109,6 +109,12 @@ detect_metadata() {
         [ -n "$value" ] && VERSION=$value
     fi
 
+    # KDE projects commonly keep PROJECT_VERSION in a separate set() call.
+    if [ -z "$VERSION" ] && [ -f CMakeLists.txt ]; then
+        value=$(sed -n 's/^[[:space:]]*set[[:space:]]*(PROJECT_VERSION[[:space:]]*"\([^"]*\)".*/\1/p' CMakeLists.txt | head -n1)
+        [ -n "$value" ] && VERSION=$value
+    fi
+
     if [ -z "$PACKAGE_NAME" ] && compgen -G '*.gemspec' >/dev/null; then
         f=$(printf '%s\n' *.gemspec | head -n1)
         value=$(sed -n 's/.*\.name[[:space:]]*=[[:space:]]*["'\''"]\([^"'\''"]*\)["'\''"].*/\1/p' "$f" | head -n1)
