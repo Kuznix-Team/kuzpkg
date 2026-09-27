@@ -44,41 +44,94 @@ DEST_DIR=$(readlink -f "$2") || die "cannot resolve destination directory"
 PACKAGE_NAME=$3
 VERSION=$4
 
-[ -n "$PACKAGE_NAME" ] || PACKAGE_NAME=$(basename "$SOURCE_DIR")
 [ -d "$SOURCE_DIR" ] || die "source directory does not exist: $SOURCE_DIR"
 [ "$DEST_DIR" != "/" ] || die "refusing to use / as DESTDIR"
 
-KUZPKG=$KUZPKG
-MAKEPKG=$MAKEPKG
-PKGREL=$PKGREL
-PKGOUT=$PKGOUT
-BUILDER=$BUILDER
-PREFIX=$PREFIX
-JOBS=$JOBS
-PKGARCH=$PKGARCH
-INSTALL_CMD=$KUZPKG_LFS_INSTALL_CMD
+# Detect package metadata from common build-system files. Explicit arguments
+# always take precedence.
+detect_metadata() {
+    local f value
 
-[ -n "$KUZPKG" ] || KUZPKG=kuzpkg
-[ -n "$MAKEPKG" ] || MAKEPKG=makepkg
-[ -n "$PKGREL" ] || PKGREL=1
-[ -n "$PKGOUT" ] || PKGOUT=/var/lib/packages
-[ -n "$BUILDER" ] || BUILDER=builder
-[ -n "$PREFIX" ] || PREFIX=/usr
-[ -n "$JOBS" ] || JOBS=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')
-[ -n "$PKGARCH" ] || PKGARCH=$(uname -m)
+    if [ -z "$PACKAGE_NAME" ] && [ -f Cargo.toml ]; then
+        value=$(awk '
+            /^\[package\]/{in_package=1; next}
+            /^\[/{in_package=0}
+            in_package && /^[[:space:]]*name[[:space:]]*=/ {
+                gsub(/[[:space:]]/, "", $0); sub(/^name="/, "", $0); sub(/"$/, "", $0); print; exit
+            }' Cargo.toml)
+        [ -n "$value" ] && PACKAGE_NAME=$value
+    fi
+    if [ -z "$VERSION" ] && [ -f Cargo.toml ]; then
+        value=$(awk '
+            /^\[package\]/{in_package=1; next}
+            /^\[/{in_package=0}
+            in_package && /^[[:space:]]*version[[:space:]]*=/ {
+                gsub(/[[:space:]]/, "", $0); sub(/^version="/, "", $0); sub(/"$/, "", $0); print; exit
+            }' Cargo.toml)
+        [ -n "$value" ] && VERSION=$value
+    fi
 
-case "$PKGARCH" in
-    x86_64) PKGARCH=x86_64 ;;
-    i?86) PKGARCH=i686 ;;
-    armv7*) PKGARCH=armv7h ;;
-esac
+    if [ -f pyproject.toml ]; then
+        if [ -z "$PACKAGE_NAME" ]; then
+            value=$(sed -n '/^\[project\]/,/^\[/{s/^[[:space:]]*name[[:space:]]*=[[:space:]]*["'\''"]\([^"'\''"]*\)["'\''"].*/\1/p;}' pyproject.toml | head -n1)
+            [ -n "$value" ] && PACKAGE_NAME=$value
+        fi
+        if [ -z "$VERSION" ]; then
+            value=$(sed -n '/^\[project\]/,/^\[/{s/^[[:space:]]*version[[:space:]]*=[[:space:]]*["'\''"]\([^"'\''"]*\)["'\''"].*/\1/p;}' pyproject.toml | head -n1)
+            [ -n "$value" ] && VERSION=$value
+        fi
+    fi
 
-command -v "$KUZPKG" >/dev/null 2>&1 || die "kuzpkg not found: $KUZPKG"
-command -v "$MAKEPKG" >/dev/null 2>&1 || die "makepkg not found: $MAKEPKG"
+    if [ -z "$PACKAGE_NAME" ] && [ -f configure.ac ]; then
+        value=$(sed -n 's/^[[:space:]]*AC_INIT[[:space:]]*(\[\([^]]*\)\].*/\1/p' configure.ac | head -n1)
+        [ -n "$value" ] && PACKAGE_NAME=$value
+    fi
+    if [ -z "$VERSION" ] && [ -f configure.ac ]; then
+        value=$(sed -n 's/^[[:space:]]*AC_INIT[[:space:]]*(\[[^]]*\][[:space:]]*,[[:space:]]*\[\([^]]*\)\].*/\1/p' configure.ac | head -n1)
+        [ -n "$value" ] && VERSION=$value
+    fi
 
-if [ -z "$VERSION" ]; then
-    VERSION=$(basename "$SOURCE_DIR" | sed -E 's/^.*-([0-9][0-9A-Za-z._+~-]*)$/\1/')
-fi
+    if [ -z "$PACKAGE_NAME" ] && [ -f meson.build ]; then
+        value=$(sed -n "s/^[[:space:]]*project[[:space:]]*(\(['\"]\)\([^'\"]*\)\1.*/\2/p" meson.build | head -n1)
+        [ -n "$value" ] && PACKAGE_NAME=$value
+    fi
+    if [ -z "$VERSION" ] && [ -f meson.build ]; then
+        value=$(sed -n "s/^[[:space:]]*project[[:space:]]*(.*version:[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/p" meson.build | head -n1)
+        [ -n "$value" ] && VERSION=$value
+    fi
+
+    if [ -z "$PACKAGE_NAME" ] && [ -f CMakeLists.txt ]; then
+        value=$(sed -n 's/^[[:space:]]*project[[:space:]]*(\([A-Za-z0-9_.+-][A-Za-z0-9_.+-]*\).*/\1/p' CMakeLists.txt | head -n1)
+        [ -n "$value" ] && PACKAGE_NAME=$value
+    fi
+    if [ -z "$VERSION" ] && [ -f CMakeLists.txt ]; then
+        value=$(sed -n 's/^[[:space:]]*project[[:space:]]*(.*VERSION[[:space:]]*\([0-9][0-9A-Za-z._+-]*\).*/\1/p' CMakeLists.txt | head -n1)
+        [ -n "$value" ] && VERSION=$value
+    fi
+
+    if [ -z "$PACKAGE_NAME" ] && compgen -G '*.gemspec' >/dev/null; then
+        f=$(printf '%s\n' *.gemspec | head -n1)
+        value=$(sed -n 's/.*\.name[[:space:]]*=[[:space:]]*["'\''"]\([^"'\''"]*\)["'\''"].*/\1/p' "$f" | head -n1)
+        [ -n "$value" ] && PACKAGE_NAME=$value
+    fi
+    if [ -z "$VERSION" ] && compgen -G '*.gemspec' >/dev/null; then
+        f=$(printf '%s\n' *.gemspec | head -n1)
+        value=$(sed -n 's/.*\.version[[:space:]]*=[[:space:]]*["'\''"]\([^"'\''"]*\)["'\''"].*/\1/p' "$f" | head -n1)
+        [ -n "$value" ] && VERSION=$value
+    fi
+
+    if [ -z "$PACKAGE_NAME" ]; then
+        PACKAGE_NAME=$(basename "$SOURCE_DIR")
+        PACKAGE_NAME=$(printf '%s\n' "$PACKAGE_NAME" | sed -E 's/-[0-9][0-9A-Za-z._+~-]*$//')
+    fi
+    if [ -z "$VERSION" ]; then
+        VERSION=$(basename "$SOURCE_DIR" | sed -E 's/^.*-([0-9][0-9A-Za-z._+~-]*)$/\1/')
+    fi
+}
+
+cd "$SOURCE_DIR"
+detect_metadata
+[ -n "$PACKAGE_NAME" ] || die "package name could not be determined; pass it explicitly"
 [ -n "$VERSION" ] || die "version could not be determined; pass it explicitly"
 
 WORK_DIR=$(mktemp -d "/tmp/kuzpkg-lfs.XXXXXX")
