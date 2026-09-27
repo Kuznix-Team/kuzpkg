@@ -64,6 +64,10 @@ pkgbuild_extract_to_srcinfo() {
 	if get_pkgbuild_attribute "$pkgname" "$attrname" "$isarray" 'outvalue'; then
 		srcinfo_write_attr "$attrname" "${outvalue[@]}"
 	fi
+
+	# Missing optional PKGBUILD attributes are normal when generating .SRCINFO.
+	# Do not propagate lookup failures into makepkg's ERR trap.
+	return 0
 }
 
 srcinfo_write_section_details() {
