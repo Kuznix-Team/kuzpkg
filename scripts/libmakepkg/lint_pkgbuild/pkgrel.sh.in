@@ -36,8 +36,8 @@ check_pkgrel() {
 		return 1
 	fi
 
-	if [[ $rel != +([0-9])?(.+([0-9])) ]]; then
-		error "$(gettext "%s must be of the form 'integer[.integer]', not %s.")" "pkgrel${type:+ in $type}" "$rel"
+	if [[ ! $rel =~ ^[0-9]+([.+~_-][0-9A-Za-z]+)*$ ]]; then
+		error "$(gettext "%s must start with an integer and may contain version suffixes using '.', '+', '~', '_' or '-'.")" "pkgrel${type:+ in $type}"
 		return 1
 	fi
 }
