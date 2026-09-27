@@ -47,8 +47,9 @@ static void parseEVR(char *evr, const char **ep, const char **vp,
 	s = evr;
 	/* s points to epoch terminator */
 	while (*s && isdigit(*s)) s++;
-	/* se points to version terminator */
-	se = strrchr(s, '-');
+	/* se points to release terminator. pkgver may not contain '-'.
+	 * Using the first '-' allows pkgrel itself to contain '-'. */
+	se = strchr(s, '-');
 
 	if(*s == ':') {
 		epoch = evr;
