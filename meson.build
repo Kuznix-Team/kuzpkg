@@ -369,7 +369,7 @@ pkgconfig.generate(
   name : 'libkuzpkg',
   description : 'Arch Linux package management library',
   version : libkuzpkg_version,
-  url : 'http://archlinux.org/kuzpkg/',
+  url : 'http://kuznix-team.github.io/kuzpkg/',
   extra_cflags: [ '-D_FILE_OFFSET_BITS=64' ],
 )
 
