@@ -1,6 +1,7 @@
 tests = [
   'parseopts_test.sh',
   'makepkg-template_test.sh',
+  'makepkg-pkgrel_test.sh',
 ]
 
 foreach tst : tests
