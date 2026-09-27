@@ -1,6 +1,6 @@
 project('kuzpkg',
         'c',
-        version : '0.1.0-alpha.1',
+        version : '0.1.0-alpha.2',
         license : 'GPLv2+',
         default_options : [
           'c_std=gnu99',
